@@ -1,0 +1,20 @@
+{
+    "name": "gaussian-ar",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Minimal WebXR AR experience: place a Gaussian Splat (SOG) on a real surface and materialise it with the classic Radial Reveal effect.",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc --noEmit && vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "playcanvas": "2.21.4"
+    },
+    "devDependencies": {
+        "typescript": "5.9.3",
+        "vite": "7.3.5",
+        "@types/webxr": "0.5.24"
+    }
+}
