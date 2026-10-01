@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <title>Gaussian-AR</title>
+        <style>
+            #overlay a.back {
+                display: inline-block;
+                margin-top: 18px;
+                font-size: 13px;
+                color: rgba(244, 242, 236, 0.72);
+                pointer-events: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="view"></canvas>
+
+        <!-- Also the WebXR dom-overlay root: transparent, taps pass through except on buttons. -->
+        <div id="overlay">
+            <section id="intro">
+                <h1>Gaussian&#8209;AR</h1>
+                <p id="status">Comprobando compatibilidad AR…</p>
+                <button type="button" id="enter" hidden>Entrar en AR</button>
+                <a class="back" href="./">Ver el visor 3D</a>
+            </section>
+
+            <div id="hud" hidden>
+                <p id="hint">Mueve el teléfono para detectar una superficie…</p>
+                <button type="button" id="exit">Salir</button>
+            </div>
+        </div>
+
+        <script type="module" src="/src/main.ts"></script>
+    </body>
+</html>
