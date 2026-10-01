@@ -331,6 +331,72 @@ body.edit #masthead {
     }
 }
 
+/* ---------- Teléfono en horizontal (pantalla baja) ---------- */
+@media (orientation: landscape) and (max-height: 600px) {
+    #chapter {
+        top: 0;
+        bottom: 58px;
+        left: 0;
+        right: auto;
+        width: min(27rem, 54vw);
+        max-height: none;
+        padding: 74px 24px 10px 28px;
+        background: linear-gradient(to right, rgba(15, 14, 12, 0.52) 76%, rgba(15, 14, 12, 0));
+        display: flex;
+        flex-direction: column;
+    }
+    #chapter > :first-child {
+        margin-top: auto;
+    }
+    #chapter-head {
+        margin-bottom: 8px;
+    }
+    #chapter-kicker {
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+    #chapter-title {
+        font-size: 1.9rem;
+        margin-bottom: 10px;
+    }
+    #chapter-text p {
+        font-size: 16px;
+        line-height: 1.5;
+        margin-bottom: 0.8em;
+    }
+    #chapter-text p:first-child::first-letter {
+        font-size: 2.8em;
+    }
+    #chapter-nav {
+        margin-top: 4px;
+        padding-top: 6px;
+    }
+    #index {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        justify-content: center;
+        gap: 22px;
+        min-height: 0;
+        padding: 0 16px max(6px, env(safe-area-inset-bottom));
+        background: linear-gradient(to top, rgba(15, 14, 12, 0.55), rgba(15, 14, 12, 0));
+    }
+    .chapter-link {
+        flex: 0 1 auto;
+        max-width: none;
+        padding: 8px 4px 6px;
+        font-size: 1.05rem;
+        white-space: nowrap;
+    }
+    #reopen {
+        bottom: 66px;
+        left: 22px;
+    }
+    #walk-hint {
+        top: 12px;
+    }
+}
+
 /* ---------- Carga ---------- */
 #loader {
     position: fixed;
