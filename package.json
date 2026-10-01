@@ -3,14 +3,15 @@
     "version": "1.0.0",
     "private": true,
     "type": "module",
-    "description": "Minimal WebXR AR experience: place a Gaussian Splat (SOG) on a real surface and materialise it with the classic Radial Reveal effect.",
+    "description": "Visor patrimonial de la plaza de San Sebastián (Cuenca): narrativa espacial editorial sobre el visor oficial de SuperSplat.",
     "scripts": {
         "dev": "vite",
         "build": "tsc --noEmit && vite build",
         "preview": "vite preview"
     },
     "dependencies": {
-        "playcanvas": "2.21.4"
+        "@playcanvas/supersplat-viewer": "1.36.2",
+        "playcanvas": "2.22.6"
     },
     "devDependencies": {
         "typescript": "5.9.3",

@@ -1,79 +1,62 @@
 // ---------------------------------------------------------------------------
-// Visor 3D de la plaza de San Sebastián (Cuenca).
+// San Sebastián · visor patrimonial.
 //
-//   maqueta completa a ~45° → animación de entrada → botones 1…5 que vuelan
-//   la cámara a cada punto y abren su texto (narrativa espacial).
+// Toda la navegación 3D es el visor oficial de SuperSplat (@playcanvas/supersplat-viewer),
+// incrustado sin su interfaz. Encima va la capa editorial: capítulos, textos y botones.
 //
-// `?editar`   modo edición: se navega, se captura la pose de cada punto y se
-//             copian los datos (para pegarlos en src/story.json).
-// `?sinintro` salta la animación de entrada.
+//   capítulo → `selectAnnotation()` (SuperSplat vuela a la pose)
+//   capítulo «walk» → además activa el modo caminata de SuperSplat
+//
+// `?editar`  muestra el editor: se navega con el visor, se captura la pose de su cámara,
+//            se escriben los textos y se copian los datos para `src/story.json`.
 // ---------------------------------------------------------------------------
+import '@playcanvas/supersplat-viewer/viewer.css';
 import './viewer.css';
 
-import {
-    AppBase,
-    AppOptions,
-    Asset,
-    BinaryHandler,
-    CameraComponentSystem,
-    Color,
-    ContainerHandler,
-    Entity,
-    FILLMODE_FILL_WINDOW,
-    GSplatComponentSystem,
-    GSplatHandler,
-    RESOLUTION_AUTO,
-    TextureHandler,
-    Vec3,
-    createGraphicsDevice
-} from 'playcanvas';
-import type { BoundingBox } from 'playcanvas';
+import { createViewer } from '@playcanvas/supersplat-viewer/viewer';
+import type { ViewerHandle } from '@playcanvas/supersplat-viewer/viewer';
+import { defaultSettings } from '@playcanvas/supersplat-viewer/settings';
+import type { ExperienceSettings } from '@playcanvas/supersplat-viewer/settings';
+import { Vec3 } from 'playcanvas';
+import type { CameraComponent, Entity } from 'playcanvas';
 
 import { defaultStory, round } from './story';
 import type { Pose, Story } from './story';
 
-const SCENE_URL = 'scene.sog';
-const EDIT_KEY = 'gaussian-ar:story-edit';
-
-const params = new URLSearchParams(location.search);
-const EDIT_MODE = params.has('editar');
-const SKIP_INTRO = params.has('sinintro');
-
-const DEG = Math.PI / 180;
-const OVERVIEW_FOV = 60;
-const OVERVIEW_PITCH = 45;
-const OVERVIEW_YAW = 35;
+const CONTENT_URL = './scene.sog';
+const EDIT_KEY = 'san-sebastian:story-edit';
+const EDIT_MODE = new URLSearchParams(location.search).has('editar');
+/** Tiempo aproximado del vuelo de SuperSplat hacia una anotación, antes de caminar. */
+const WALK_DELAY_MS = 1800;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-const canvas = $<HTMLCanvasElement>('view');
+const stage = $<HTMLElement>('stage');
 const loader = $<HTMLElement>('loader');
-const loaderMessage = $<HTMLElement>('loader-message');
 const loaderFill = $<HTMLElement>('loader-fill');
-const brandKicker = $<HTMLElement>('brand-kicker');
-const brandTitle = $<HTMLElement>('brand-title');
-const arLink = $<HTMLAnchorElement>('ar-link');
-const panel = $<HTMLElement>('panel');
-const panelKicker = $<HTMLElement>('panel-kicker');
-const panelTitle = $<HTMLElement>('panel-title');
-const panelText = $<HTMLElement>('panel-text');
-const panelCount = $<HTMLElement>('panel-count');
-const prevBtn = $<HTMLButtonElement>('prev');
-const nextBtn = $<HTMLButtonElement>('next');
-const stopsEl = $<HTMLElement>('stops');
-const editor = $<HTMLElement>('editor');
+const loaderMessage = $<HTMLElement>('loader-message');
+const mastKicker = $<HTMLElement>('masthead-kicker');
+const mastTitle = $<HTMLElement>('masthead-title');
+const chapterEl = $<HTMLElement>('chapter');
+const chNumeral = $<HTMLElement>('chapter-numeral');
+const chCount = $<HTMLElement>('chapter-count');
+const chKicker = $<HTMLElement>('chapter-kicker');
+const chTitle = $<HTMLElement>('chapter-title');
+const chText = $<HTMLElement>('chapter-text');
+const reopenBtn = $<HTMLButtonElement>('reopen');
+const walkHint = $<HTMLElement>('walk-hint');
+const indexEl = $<HTMLElement>('index');
 
 // ---------------------------------------------------------------------------
-// Datos de la narrativa
+// Datos
 // ---------------------------------------------------------------------------
 let story: Story = defaultStory();
-
 if (EDIT_MODE) {
     try {
         const saved = localStorage.getItem(EDIT_KEY);
         if (saved) story = JSON.parse(saved) as Story;
     } catch {
-        // sin almacenamiento: se usa story.json tal cual
+        // sin almacenamiento: se usa story.json
     }
 }
 
@@ -86,425 +69,216 @@ const persist = () => {
     }
 };
 
+/** Índice de anotación de SuperSplat para cada capítulo (solo los que tienen pose). */
+let annotationOf: (number | undefined)[] = [];
+
+/** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
+const buildSettings = (s: Story): ExperienceSettings => {
+    const settings = defaultSettings();
+    settings.background = { color: [0.059, 0.055, 0.047] };
+    const first = s.chapters[0]?.pose;
+    if (first) settings.cameras = [{ initial: first }];
+    annotationOf = [];
+    settings.annotations = [];
+    s.chapters.forEach((c, i) => {
+        if (!c.pose) return;
+        annotationOf[i] = settings.annotations.length;
+        settings.annotations.push({
+            position: c.pose.target,
+            title: c.nav.slice(0, 40),
+            text: '',
+            camera: { initial: c.pose }
+        });
+    });
+    settings.startMode = 'default';
+    return settings;
+};
+
 // ---------------------------------------------------------------------------
-// Motor
+// Visor SuperSplat
 // ---------------------------------------------------------------------------
-// WebGL2, igual que el visor oficial de SuperSplat: WebGPU en móviles todavía
-// puede colgarse con splats, así que no se usa.
-const fail = (msg: string, err?: unknown) => {
-    if (err) console.error(err);
+let viewer: ViewerHandle | null = null;
+let active = 0;
+let walkTimer = 0;
+
+const setProgress = (p: number) => {
+    loaderFill.style.transform = `scaleX(${Math.max(0, Math.min(1, p / 100))})`;
+};
+
+const mountViewer = async () => {
+    viewer?.destroy();
+    viewer = null;
+    stage.replaceChildren();
     loader.dataset.hidden = 'false';
-    loaderMessage.textContent = msg;
-};
+    loaderMessage.textContent = 'Cargando la plaza';
+    setProgress(0);
 
-const device = await createGraphicsDevice(canvas, {
-    deviceTypes: ['webgl2'],
-    antialias: false
-}).catch((err: unknown) => {
-    fail('Este navegador no puede mostrar la escena 3D (WebGL2 no disponible).', err);
-    throw err;
-});
-device.maxPixelRatio = Math.min(window.devicePixelRatio, 2);
-
-const options = new AppOptions();
-options.graphicsDevice = device;
-options.componentSystems = [CameraComponentSystem, GSplatComponentSystem];
-options.resourceHandlers = [TextureHandler, ContainerHandler, BinaryHandler, GSplatHandler];
-
-const app = new AppBase(canvas);
-app.init(options);
-app.setCanvasFillMode(FILLMODE_FILL_WINDOW);
-app.setCanvasResolution(RESOLUTION_AUTO);
-window.addEventListener('resize', () => app.resizeCanvas());
-app.start();
-
-const camera = new Entity('camera');
-camera.addComponent('camera', {
-    clearColor: new Color(0.02, 0.025, 0.035),
-    fov: OVERVIEW_FOV,
-    nearClip: 0.05,
-    farClip: 1000
-});
-app.root.addChild(camera);
-
-// ---------------------------------------------------------------------------
-// Cámara orbital: objetivo + yaw + pitch + distancia. Una pose guardada
-// (posición, objetivo, fov) se convierte a estos parámetros y viceversa.
-// ---------------------------------------------------------------------------
-type Orbit = { tx: number; ty: number; tz: number; yaw: number; pitch: number; distance: number; fov: number };
-
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-
-const target = new Vec3();
-const camPos = new Vec3();
-let yaw = OVERVIEW_YAW;
-let pitch = OVERVIEW_PITCH;
-let distance = 10;
-let fov = OVERVIEW_FOV;
-let sceneRadius = 5;
-/** Radio horizontal de la maqueta (el disco), sin contar la altura. */
-let discRadius = 5;
-const sceneCenter = new Vec3();
-
-const getOrbit = (): Orbit => ({ tx: target.x, ty: target.y, tz: target.z, yaw, pitch, distance, fov });
-
-const setOrbit = (o: Orbit) => {
-    target.set(o.tx, o.ty, o.tz);
-    yaw = o.yaw;
-    pitch = o.pitch;
-    distance = o.distance;
-    fov = o.fov;
-};
-
-const applyOrbit = () => {
-    const yawRad = yaw * DEG;
-    const pitchRad = pitch * DEG;
-    const cosPitch = Math.cos(pitchRad);
-    camPos.set(
-        target.x + distance * Math.sin(yawRad) * cosPitch,
-        target.y + distance * Math.sin(pitchRad),
-        target.z + distance * Math.cos(yawRad) * cosPitch
-    );
-    camera.setPosition(camPos);
-    camera.lookAt(target);
-    if (camera.camera) camera.camera.fov = fov;
-};
-
-const poseFromOrbit = (o: Orbit): Pose => {
-    const yawRad = o.yaw * DEG;
-    const pitchRad = o.pitch * DEG;
-    const cosPitch = Math.cos(pitchRad);
-    return {
-        position: [
-            o.tx + o.distance * Math.sin(yawRad) * cosPitch,
-            o.ty + o.distance * Math.sin(pitchRad),
-            o.tz + o.distance * Math.cos(yawRad) * cosPitch
-        ],
-        target: [o.tx, o.ty, o.tz],
-        fov: o.fov
-    };
-};
-
-const orbitFromPose = (p: Pose): Orbit | null => {
-    const dx = p.position[0] - p.target[0];
-    const dy = p.position[1] - p.target[1];
-    const dz = p.position[2] - p.target[2];
-    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (!Number.isFinite(d) || d < 1e-6) return null;
-    return {
-        tx: p.target[0],
-        ty: p.target[1],
-        tz: p.target[2],
-        yaw: Math.atan2(dx, dz) / DEG,
-        pitch: Math.asin(clamp(dy / d, -1, 1)) / DEG,
-        distance: d,
-        fov: p.fov
-    };
-};
-
-const roundPose = (p: Pose): Pose => ({
-    position: [round(p.position[0]), round(p.position[1]), round(p.position[2])],
-    target: [round(p.target[0]), round(p.target[1]), round(p.target[2])],
-    fov: round(p.fov, 1)
-});
-
-/** Distancia para que el disco entero quepa en pantalla, sea vertical (teléfono) u horizontal. */
-const overviewDistance = () => {
-    const aspect = (canvas.clientWidth || window.innerWidth) / (canvas.clientHeight || window.innerHeight);
-    const halfV = (OVERVIEW_FOV * DEG) / 2;
-    const halfH = Math.atan(Math.tan(halfV) * aspect);
-    // a 45° el borde cercano del disco ocupa más pantalla que el lejano
-    const byWidth = discRadius / Math.tan(halfH);
-    const byHeight = (discRadius * 1.1) / Math.tan(halfV);
-    return Math.max(byWidth, byHeight) * 1.12;
-};
-
-/** Maqueta completa: la pose guardada o, si no hay, un encuadre automático a ~45°. */
-const getOverview = (): Orbit => {
-    const saved = story.overview ? orbitFromPose(story.overview) : null;
-    if (saved) return saved;
-    return {
-        tx: sceneCenter.x,
-        ty: sceneCenter.y,
-        tz: sceneCenter.z,
-        yaw: OVERVIEW_YAW,
-        pitch: OVERVIEW_PITCH,
-        distance: overviewDistance(),
-        fov: OVERVIEW_FOV
-    };
-};
-
-/** Pose de un punto: la guardada o una vista provisional alrededor de la maqueta. */
-const getPointOrbit = (i: number): Orbit => {
-    const saved = story.points[i]?.pose ? orbitFromPose(story.points[i].pose as Pose) : null;
-    if (saved) return saved;
-    const o = getOverview();
-    return { ...o, yaw: o.yaw + 72 * (i + 1), pitch: 28, distance: o.distance * 0.55 };
-};
-
-// ---------------------------------------------------------------------------
-// Animaciones
-// ---------------------------------------------------------------------------
-type Anim = { t: number; dur: number; step: (k: number) => void };
-let anim: Anim | null = null;
-
-app.on('update', (dt: number) => {
-    if (!anim) return;
-    anim.t += dt;
-    const k = Math.min(1, anim.t / anim.dur);
-    anim.step(k);
-    if (k >= 1) anim = null;
-});
-
-const interrupt = () => {
-    anim = null;
-};
-
-/** Vuelo suave de la cámara actual a otra vista, con un pequeño arco hacia arriba. */
-const flyTo = (to: Orbit, dur: number) => {
-    const a = poseFromOrbit(getOrbit());
-    const b = poseFromOrbit(to);
-    const span = Math.hypot(b.position[0] - a.position[0], b.position[1] - a.position[1], b.position[2] - a.position[2]);
-    const arc = Math.min(sceneRadius * 0.25, span * 0.2);
-
-    anim = {
-        t: 0,
-        dur,
-        step: (k) => {
-            const e = easeInOut(k);
-            const pose: Pose = {
-                position: [
-                    lerp(a.position[0], b.position[0], e),
-                    lerp(a.position[1], b.position[1], e) + Math.sin(Math.PI * e) * arc,
-                    lerp(a.position[2], b.position[2], e)
-                ],
-                target: [
-                    lerp(a.target[0], b.target[0], e),
-                    lerp(a.target[1], b.target[1], e),
-                    lerp(a.target[2], b.target[2], e)
-                ],
-                fov: lerp(a.fov, b.fov, e)
-            };
-            const o = orbitFromPose(pose);
-            if (o) {
-                setOrbit(o);
-                applyOrbit();
-            }
-        }
-    };
-};
-
-/** Entra desde más cerca y más bajo, girando hasta la vista de la maqueta completa. */
-const playIntro = () => {
-    const end = getOverview();
-    const start: Orbit = { ...end, yaw: end.yaw - 150, pitch: 12, distance: end.distance * 0.5 };
-    setOrbit(start);
-    applyOrbit();
-    anim = {
-        t: 0,
-        dur: 8,
-        step: (k) => {
-            const e = easeOut(k);
-            setOrbit({
-                ...end,
-                yaw: lerp(start.yaw, end.yaw, e),
-                pitch: lerp(start.pitch, end.pitch, e),
-                distance: lerp(start.distance, end.distance, e)
-            });
-            applyOrbit();
-        }
-    };
-};
-
-// ---------------------------------------------------------------------------
-// Controles: arrastrar = orbitar, rueda / pellizco = zoom, clic derecho o
-// dos dedos = desplazar.
-// ---------------------------------------------------------------------------
-const pointers = new Map<number, { x: number; y: number }>();
-let pinchStart = 0;
-
-const pinchSpan = () => {
-    const [a, b] = [...pointers.values()];
-    return Math.hypot(a.x - b.x, a.y - b.y);
-};
-
-const zoomBy = (factor: number) => {
-    distance = clamp(distance * factor, sceneRadius * 0.05, sceneRadius * 6);
-    applyOrbit();
-};
-
-const pan = (dx: number, dy: number) => {
-    const k = (2 * distance * Math.tan((fov * DEG) / 2)) / (canvas.clientHeight || window.innerHeight);
-    const r = camera.right;
-    const u = camera.up;
-    target.set(
-        target.x + (-dx * r.x + dy * u.x) * k,
-        target.y + (-dx * r.y + dy * u.y) * k,
-        target.z + (-dx * r.z + dy * u.z) * k
-    );
-    applyOrbit();
-};
-
-canvas.addEventListener('pointerdown', (e) => {
-    interrupt();
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    canvas.setPointerCapture(e.pointerId);
-    if (pointers.size === 2) pinchStart = pinchSpan();
-});
-
-canvas.addEventListener('pointermove', (e) => {
-    const p = pointers.get(e.pointerId);
-    if (!p) return;
-    const dx = e.clientX - p.x;
-    const dy = e.clientY - p.y;
-    p.x = e.clientX;
-    p.y = e.clientY;
-
-    if (pointers.size === 1) {
-        if (e.buttons & 2 || e.shiftKey) {
-            pan(dx, dy);
-        } else {
-            yaw -= dx * 0.3;
-            pitch = clamp(pitch + dy * 0.3, -89, 89);
-            applyOrbit();
-        }
-    } else if (pointers.size === 2) {
-        const span = pinchSpan();
-        if (pinchStart > 0 && span > 0) zoomBy(pinchStart / span);
-        pinchStart = span;
-        pan(dx / 2, dy / 2);
+    try {
+        const v = await createViewer({
+            container: stage,
+            settings: buildSettings(story),
+            contentUrl: CONTENT_URL,
+            contentFilename: 'scene.sog',
+            collisionUrl: story.collision || undefined,
+            renderer: 'webgl',
+            ui: false,
+            lang: 'es'
+        });
+        viewer = v;
+        v.state.showAnnotations = false;
+        v.events.on('progress:changed', (p: number) => setProgress(p));
+        const onLoaded = () => {
+            loader.dataset.hidden = 'true';
+            if (EDIT_MODE) updateModeButton();
+            goTo(active);
+        };
+        if (v.state.loaded) onLoaded();
+        else v.events.once('loaded:changed', onLoaded);
+    } catch (err) {
+        console.error(err);
+        loaderMessage.textContent = 'Este navegador no pudo abrir la escena 3D.';
     }
-});
-
-const endPointer = (e: PointerEvent) => {
-    pointers.delete(e.pointerId);
-    pinchStart = 0;
-    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
 };
-canvas.addEventListener('pointerup', endPointer);
-canvas.addEventListener('pointercancel', endPointer);
-canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-canvas.addEventListener(
-    'wheel',
-    (e) => {
-        e.preventDefault();
-        interrupt();
-        zoomBy(1 + e.deltaY * 0.001);
-    },
-    { passive: false }
-);
 
 // ---------------------------------------------------------------------------
-// Narrativa: botones, panel y navegación
+// Capítulos
 // ---------------------------------------------------------------------------
-let active = -1; // -1 = maqueta completa
-
 const pad = (n: number) => String(n).padStart(2, '0');
 
-const updatePanel = () => {
-    const i = active;
-    if (EDIT_MODE || i < 0 || !story.points[i]) {
-        panel.hidden = true;
-        return;
-    }
-    const p = story.points[i];
-    panelKicker.textContent = p.kicker;
-    panelKicker.hidden = !p.kicker;
-    panelTitle.textContent = p.title;
-    panelText.textContent = p.text;
-    panelText.hidden = !p.text;
-    panelCount.textContent = `${pad(i + 1)} / ${pad(story.points.length)}`;
-    panel.hidden = false;
-    panel.scrollTop = 0;
+const renderChapterText = (text: string) => {
+    chText.replaceChildren();
+    text.split(/\n\s*\n/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .forEach((t) => {
+            const p = document.createElement('p');
+            p.textContent = t;
+            chText.append(p);
+        });
+    chText.hidden = !chText.childElementCount;
 };
 
-const updateStops = () => {
-    stopsEl.querySelectorAll<HTMLElement>('.stop').forEach((el) => {
+const renderChapter = () => {
+    const c = story.chapters[active];
+    if (!c) return;
+    chNumeral.textContent = c.numeral;
+    chCount.textContent = `${pad(active + 1)} / ${pad(story.chapters.length)}`;
+    chKicker.textContent = c.kicker;
+    chKicker.hidden = !c.kicker;
+    chTitle.textContent = c.title;
+    renderChapterText(c.text);
+    chapterEl.classList.toggle('walk', c.mode === 'walk');
+    if (!EDIT_MODE) {
+        chapterEl.hidden = false;
+        reopenBtn.hidden = true;
+    }
+    chapterEl.scrollTop = 0;
+    // reinicia la animación de entrada del texto
+    chapterEl.classList.remove('enter');
+    void chapterEl.offsetWidth;
+    chapterEl.classList.add('enter');
+
+    indexEl.querySelectorAll<HTMLElement>('.chapter-link').forEach((el) => {
         el.classList.toggle('on', Number(el.dataset.index) === active);
     });
 };
 
+const showWalkHint = (msg: string) => {
+    walkHint.textContent = msg;
+    walkHint.hidden = false;
+};
+
 const goTo = (i: number) => {
+    const c = story.chapters[i];
+    if (!c) return;
     active = i;
-    updateStops();
-    updatePanel();
-    flyTo(i < 0 ? getOverview() : getPointOrbit(i), i < 0 ? 2.4 : 2.8);
-    if (EDIT_MODE) syncEditorToActive();
+    window.clearTimeout(walkTimer);
+    walkHint.hidden = true;
+    renderChapter();
+    if (EDIT_MODE) syncEditor();
+
+    const v = viewer;
+    if (!v || !v.state.loaded) return;
+
+    const ai = annotationOf[i];
+    if (ai !== undefined) v.selectAnnotation(ai);
+    else if (i === 0) v.frameScene();
+
+    if (c.mode === 'walk') {
+        walkTimer = window.setTimeout(() => {
+            if (v.state.walkAllowed) {
+                v.state.cameraMode = 'walk';
+                showWalkHint('Toca el suelo para caminar · arrastra para mirar');
+            } else {
+                showWalkHint(
+                    EDIT_MODE ? 'Modo caminata: falta el archivo de colisión de la escena.' : 'Arrastra para mirar alrededor'
+                );
+            }
+        }, ai === undefined ? 0 : WALK_DELAY_MS);
+    }
 };
 
-const step = (delta: number) => {
-    const n = story.points.length;
-    if (!n) return;
-    goTo(active < 0 ? (delta > 0 ? 0 : n - 1) : (active + delta + n) % n);
+const step = (d: number) => {
+    const n = story.chapters.length;
+    goTo((active + d + n) % n);
 };
 
-const makeStop = (index: number, num: string, name: string) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'stop';
-    b.dataset.index = String(index);
-    const n = document.createElement('span');
-    n.className = 'num';
-    n.textContent = num;
-    const t = document.createElement('span');
-    t.className = 'name';
-    t.textContent = name;
-    b.append(n, t);
-    b.addEventListener('click', () => goTo(index));
-    return b;
+const renderIndex = () => {
+    indexEl.replaceChildren();
+    story.chapters.forEach((c, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chapter-link';
+        b.dataset.index = String(i);
+        const n = document.createElement('span');
+        n.className = 'n';
+        n.textContent = c.numeral;
+        const t = document.createElement('span');
+        t.className = 't';
+        t.textContent = c.nav;
+        b.append(n, t);
+        b.addEventListener('click', () => goTo(i));
+        indexEl.append(b);
+    });
 };
 
-const renderStops = () => {
-    stopsEl.replaceChildren(makeStop(-1, '◎', 'Plaza'));
-    story.points.forEach((p, i) => stopsEl.append(makeStop(i, String(i + 1), p.title)));
-    updateStops();
-};
-
-const renderBrand = () => {
-    brandKicker.textContent = story.place.kicker;
-    brandTitle.textContent = story.place.title;
+const renderMasthead = () => {
+    mastKicker.textContent = story.place.kicker;
+    mastTitle.textContent = story.place.title;
     document.title = `${story.place.title} · Cuenca`;
 };
 
-prevBtn.addEventListener('click', () => step(-1));
-nextBtn.addEventListener('click', () => step(1));
+$<HTMLButtonElement>('prev').addEventListener('click', () => step(-1));
+$<HTMLButtonElement>('next').addEventListener('click', () => step(1));
+$<HTMLButtonElement>('collapse').addEventListener('click', () => {
+    chapterEl.hidden = true;
+    reopenBtn.hidden = false;
+});
+reopenBtn.addEventListener('click', () => {
+    reopenBtn.hidden = true;
+    renderChapter();
+});
 
 window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement).closest('input, textarea, select')) return;
-    interrupt();
+    // en caminata/vuelo las flechas mueven la cámara de SuperSplat
+    if (viewer && (viewer.state.cameraMode === 'walk' || viewer.state.cameraMode === 'fly')) return;
     if (e.key === 'ArrowRight') step(1);
     else if (e.key === 'ArrowLeft') step(-1);
-    else if (e.key === 'Escape') goTo(-1);
-    else if (/^[1-9]$/.test(e.key) && Number(e.key) <= story.points.length) goTo(Number(e.key) - 1);
 });
 
-// Botón «Ver en AR» solo si el dispositivo lo soporta.
-if (navigator.xr?.isSessionSupported) {
-    navigator.xr
-        .isSessionSupported('immersive-ar')
-        .then((ok) => {
-            arLink.hidden = !ok;
-        })
-        .catch(() => {
-            arLink.hidden = true;
-        });
-}
-
 // ---------------------------------------------------------------------------
-// Modo edición
+// Modo edición: la pose se lee de la cámara del visor de SuperSplat
 // ---------------------------------------------------------------------------
-let editIndex = -1;
-
+let editIndex = 0;
 const edSelect = $<HTMLSelectElement>('ed-select');
 const edKicker = $<HTMLInputElement>('ed-kicker');
 const edTitle = $<HTMLInputElement>('ed-title');
 const edText = $<HTMLTextAreaElement>('ed-text');
 const edStatus = $<HTMLElement>('ed-status');
 const edExport = $<HTMLTextAreaElement>('ed-export');
+const edMode = $<HTMLButtonElement>('ed-mode');
+let posesDirty = false;
 
 const setStatus = (msg: string) => {
     edStatus.textContent = msg;
@@ -512,74 +286,113 @@ const setStatus = (msg: string) => {
 
 const renderEditorSelect = () => {
     edSelect.replaceChildren();
-    const first = document.createElement('option');
-    first.value = '-1';
-    first.textContent = 'Plaza completa (vista inicial)';
-    edSelect.append(first);
-    story.points.forEach((p, i) => {
+    story.chapters.forEach((c, i) => {
         const o = document.createElement('option');
         o.value = String(i);
-        o.textContent = `${i + 1}. ${p.title}`;
+        o.textContent = `${c.numeral}. ${c.title}${c.pose ? '' : ' (sin pose)'}`;
         edSelect.append(o);
     });
     edSelect.value = String(editIndex);
 };
 
-const fillEditorFields = () => {
-    const plaza = editIndex < 0;
-    const p = plaza ? null : story.points[editIndex];
-    edKicker.disabled = plaza;
-    edTitle.disabled = plaza;
-    edText.disabled = plaza;
-    edKicker.value = p?.kicker ?? '';
-    edTitle.value = p?.title ?? '';
-    edText.value = p?.text ?? '';
-};
-
-function syncEditorToActive() {
+function syncEditor() {
     editIndex = active;
     edSelect.value = String(editIndex);
-    fillEditorFields();
+    const c = story.chapters[editIndex];
+    edKicker.value = c?.kicker ?? '';
+    edTitle.value = c?.title ?? '';
+    edText.value = c?.text ?? '';
+}
+
+/** Pose actual de la cámara del visor: posición, punto de mira y campo de visión. */
+const currentViewerPose = (): Pose | null => {
+    const app = viewer?.app;
+    if (!app) return null;
+    const cams = app.root.findComponents('camera') as CameraComponent[];
+    const cam = cams.find((c) => c.enabled) ?? cams[0];
+    if (!cam) return null;
+    const entity = cam.entity as Entity;
+    const pos = entity.getPosition().clone();
+    const fwd = entity.forward.clone().normalize();
+
+    // distancia al punto de mira: la del capítulo si ya tenía pose, si no hasta el centro de la plaza
+    const prev = story.chapters[editIndex]?.pose ?? story.chapters[0]?.pose;
+    const center = prev ? new Vec3(...prev.target) : new Vec3(0, 0, 0);
+    const dist = Math.max(1, center.sub(pos).dot(fwd));
+    const target = pos.clone().add(fwd.mulScalar(dist));
+    return {
+        position: [round(pos.x), round(pos.y), round(pos.z)],
+        target: [round(target.x), round(target.y), round(target.z)],
+        fov: round(cam.fov, 1)
+    };
+};
+
+function updateModeButton() {
+    const m = viewer?.state.cameraMode;
+    edMode.textContent = m === 'fly' ? 'Cámara: Vuelo (W A S D)' : 'Cámara: Órbita';
 }
 
 const setupEditor = () => {
     document.body.classList.add('edit');
-    editor.hidden = false;
+    $<HTMLElement>('editor').hidden = false;
+    chapterEl.hidden = true;
     renderEditorSelect();
-    fillEditorFields();
+    syncEditor();
 
-    $<HTMLButtonElement>('ed-toggle').addEventListener('click', () => editor.classList.toggle('collapsed'));
-
-    edSelect.addEventListener('change', () => goTo(Number(edSelect.value)));
-
-    const onFieldInput = () => {
-        const p = story.points[editIndex];
-        if (!p) return;
-        p.kicker = edKicker.value;
-        p.title = edTitle.value;
-        p.text = edText.value;
-        persist();
-        renderStops();
-        const option = edSelect.options[editIndex + 1];
-        if (option) option.textContent = `${editIndex + 1}. ${p.title}`;
-    };
-    edKicker.addEventListener('input', onFieldInput);
-    edTitle.addEventListener('input', onFieldInput);
-    edText.addEventListener('input', onFieldInput);
-
-    $<HTMLButtonElement>('ed-capture').addEventListener('click', () => {
-        const pose = roundPose(poseFromOrbit(getOrbit()));
-        if (editIndex < 0) {
-            story.overview = pose;
-            setStatus('Pose de la plaza completa guardada.');
-        } else {
-            story.points[editIndex].pose = pose;
-            setStatus(`Pose del punto ${editIndex + 1} guardada.`);
-        }
-        persist();
+    $<HTMLButtonElement>('ed-toggle').addEventListener('click', () => {
+        $<HTMLElement>('editor').classList.toggle('collapsed');
     });
 
-    $<HTMLButtonElement>('ed-go').addEventListener('click', () => goTo(editIndex));
+    edSelect.addEventListener('change', () => {
+        editIndex = Number(edSelect.value);
+        active = editIndex;
+        syncEditor();
+    });
+
+    edMode.addEventListener('click', () => {
+        if (!viewer?.state.loaded) return;
+        viewer.state.cameraMode = viewer.state.cameraMode === 'fly' ? 'orbit' : 'fly';
+        updateModeButton();
+    });
+
+    const onField = () => {
+        const c = story.chapters[editIndex];
+        if (!c) return;
+        c.kicker = edKicker.value;
+        c.title = edTitle.value;
+        c.text = edText.value;
+        persist();
+        renderEditorSelect();
+    };
+    edKicker.addEventListener('input', onField);
+    edTitle.addEventListener('input', onField);
+    edText.addEventListener('input', onField);
+
+    $<HTMLButtonElement>('ed-capture').addEventListener('click', () => {
+        const pose = currentViewerPose();
+        if (!pose) {
+            setStatus('El visor todavía no está listo.');
+            return;
+        }
+        story.chapters[editIndex].pose = pose;
+        posesDirty = true;
+        persist();
+        renderEditorSelect();
+        setStatus(`Pose del capítulo ${story.chapters[editIndex].numeral} guardada.`);
+    });
+
+    $<HTMLButtonElement>('ed-go').addEventListener('click', async () => {
+        active = editIndex;
+        if (posesDirty) {
+            // las anotaciones del visor no se editan en vivo: se recarga con las poses nuevas
+            posesDirty = false;
+            setStatus('Recargando el visor con las poses nuevas…');
+            await mountViewer();
+            setStatus('');
+        } else {
+            goTo(editIndex);
+        }
+    });
 
     $<HTMLButtonElement>('ed-copy').addEventListener('click', async () => {
         const json = JSON.stringify(story, null, 2);
@@ -596,73 +409,32 @@ const setupEditor = () => {
         }
     });
 
-    $<HTMLButtonElement>('ed-reset').addEventListener('click', () => {
+    $<HTMLButtonElement>('ed-reset').addEventListener('click', async () => {
         try {
             localStorage.removeItem(EDIT_KEY);
         } catch {
             // ignorado
         }
         story = defaultStory();
-        editIndex = -1;
-        renderBrand();
-        renderStops();
+        editIndex = 0;
+        active = 0;
+        renderMasthead();
+        renderIndex();
         renderEditorSelect();
-        fillEditorFields();
-        goTo(-1);
+        syncEditor();
+        await mountViewer();
         setStatus('Cambios descartados: vuelve a los datos publicados.');
     });
+
+    // mientras se escribe, el teclado no mueve la cámara
+    for (const el of [edKicker, edTitle, edText]) {
+        el.addEventListener('focus', () => viewer && (viewer.state.inputEnabled = false));
+        el.addEventListener('blur', () => viewer && (viewer.state.inputEnabled = true));
+    }
 };
 
 // ---------------------------------------------------------------------------
-// Carga de la escena
-// ---------------------------------------------------------------------------
-renderBrand();
-renderStops();
+renderMasthead();
+renderIndex();
 if (EDIT_MODE) setupEditor();
-
-setOrbit({ tx: 0, ty: 0, tz: 0, yaw, pitch, distance, fov });
-applyOrbit();
-
-const asset = new Asset('plaza', 'gsplat', { url: SCENE_URL, filename: SCENE_URL });
-
-asset.on('progress', (received: number, length: number) => {
-    if (length > 0) {
-        const p = clamp(received / length, 0, 1);
-        loaderMessage.textContent = `Cargando la plaza… ${Math.floor(p * 100)}%`;
-        loaderFill.style.transform = `scaleX(${p})`;
-    }
-});
-
-asset.on('error', (err: unknown) => fail('No se pudo cargar la escena. Revisa la conexión y recarga.', err));
-
-// Si en 40 s no terminó, al menos decirlo en vez de quedarse mudo.
-const slowTimer = window.setTimeout(() => {
-    loaderMessage.textContent = 'La escena está tardando más de lo normal… (conexión lenta)';
-}, 40000);
-
-asset.on('load', () => {
-    const splat = new Entity('plaza');
-    splat.setLocalEulerAngles(0, 0, 180);
-    splat.addComponent('gsplat', { asset });
-    app.root.addChild(splat);
-
-    const aabb = (asset.resource as unknown as { aabb?: BoundingBox } | null)?.aabb;
-    if (aabb) {
-        splat.getWorldTransform().transformPoint(aabb.center, sceneCenter);
-        sceneRadius = Math.max(aabb.halfExtents.length(), 0.5);
-        discRadius = Math.max(aabb.halfExtents.x, aabb.halfExtents.z, 0.5);
-    }
-
-    window.clearTimeout(slowTimer);
-    loader.dataset.hidden = 'true';
-
-    if (story.intro && !SKIP_INTRO && !EDIT_MODE) {
-        playIntro();
-    } else {
-        setOrbit(getOverview());
-        applyOrbit();
-    }
-});
-
-app.assets.add(asset);
-app.assets.load(asset);
+void mountViewer();

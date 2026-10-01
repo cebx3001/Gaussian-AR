@@ -1,47 +1,45 @@
-# Gaussian-AR · Plaza de San Sebastián (Cuenca)
+# San Sebastián · visor patrimonial (Cuenca)
 
-La plaza de San Sebastián como una maqueta circular en Gaussian Splatting (formato **SOG**), con dos experiencias separadas:
+La plaza de San Sebastián como una maqueta circular en Gaussian Splatting, contada como una revista editorial en 3D: cuatro capítulos que llevan la cámara a cada lugar y muestran su historia.
 
-| Página | Qué es |
-|---|---|
-| `index.html` — **Visor 3D** | La maqueta completa vista desde arriba a ~45°, con una animación de entrada. Cinco botones llevan la cámara a cada punto y abren su texto (narrativa espacial). Funciona en cualquier navegador con WebGPU o WebGL2. |
-| `ar.html` — **AR** | Coloca la maqueta sobre una superficie real (WebXR `immersive-ar`) y la hace aparecer con el efecto Radial Reveal. |
+- **Navegación 3D:** el visor oficial de SuperSplat (`@playcanvas/supersplat-viewer`), incrustado sin su interfaz. Cada capítulo es una anotación de SuperSplat; el capítulo IV activa su modo caminata.
+- **Capa editorial:** capítulos, textos y botones encima del visor (`src/viewer-main.ts`, `src/viewer.css`). Tipografías: Cormorant Garamond (títulos) y Libre Franklin (texto).
 
-El visor muestra el botón «Ver en AR» solo si el dispositivo lo soporta.
+## Capítulos
 
-## Contenido
+| | Capítulo | Modo |
+|---|---|---|
+| I | Parque de San Sebastián (la plaza entera) | órbita |
+| II | Museo de Arte Moderno | órbita |
+| III | Iglesia y Cruz de San Sebastián | órbita |
+| IV | Recorre la plaza | caminata |
 
-- `public/scene.sog` — la escena (359 311 splats), publicada en <https://superspl.at/scene/ef51f7bb> (CC BY 4.0, autor: CB / drbrownlabs).
-- `src/story.json` — **los datos de la narrativa**: títulos, textos y poses de cámara de los 5 puntos.
-- `src/viewer-main.ts`, `src/viewer.css` — el visor 3D.
-- `src/ar-experience.ts`, `src/main.ts`, `src/style.css` — la experiencia AR.
+Textos y poses de cámara en `src/story.json`.
 
-## Cómo se editan los puntos (sin computadora)
+## Editar poses y textos (sin computadora)
 
-1. Abre el visor con `?editar` al final de la dirección: `…/Gaussian-AR/?editar`.
-2. Navega hasta el encuadre que quieres, elige el punto en el selector y toca **Capturar pose aquí**.
-3. Escribe etiqueta, título y texto del punto.
-4. Toca **Copiar datos** y pega el resultado en `src/story.json` (o pásalo en el chat).
+1. Abre `…/Gaussian-AR/?editar`.
+2. Elige el capítulo y navega con el visor (arrastra y pellizca; con «Cámara: Vuelo» se usa W A S D).
+3. Toca **Capturar pose aquí** y escribe etiqueta, título y texto.
+4. **Ir a la pose** recarga el visor con las poses nuevas para probarlas.
+5. **Copiar datos** y pega el resultado en `src/story.json` (o pásalo en el chat).
 
-Los cambios del modo edición se guardan solo en ese navegador hasta que se pasen a `story.json`. Sin `?editar`, la gente ve únicamente los botones y los textos.
+## Modo caminata
 
-En la URL también funciona `?sinintro` para saltar la animación de entrada.
+El modo caminata de SuperSplat necesita los datos de colisión de la escena. Cuando existan, se añaden en `public/` y su ruta en `"collision"` dentro de `src/story.json`.
 
-## Ejecutar / reconstruir
+## Publicación
+
+GitHub Actions compila con Vite y publica `dist/`. Como Pages de este repo sigue en modo «legacy» (publica también la rama sin compilar), el flujo espera a esa publicación, publica la versión compilada al final y verifica en línea que no se sirvan archivos `.ts`. Para quitar ese rodeo: Settings → Pages → Source: **GitHub Actions**.
+
+## AR
+
+Desactivado por ahora. Su código sigue en `src/ar-experience.ts` y `src/main.ts`.
+
+## Desarrollo
 
 ```bash
 npm install
-npm run dev       # servidor local (Vite)
-npm run build     # -> dist/
+npm run dev
+npm run build
 ```
-
-El despliegue en GitHub Pages es automático al hacer push a `main` (`.github/workflows/deploy.yml`).
-WebXR AR requiere HTTPS y un dispositivo compatible (p. ej. Chrome en Android con ARCore).
-
-## Parámetros del AR
-
-Centralizados en `CONFIG` dentro de [`src/ar-experience.ts`](src/ar-experience.ts): `scale`, `euler`, `yOffset`, `revealCenter`, `revealEndRadius`, `revealDuration`.
-
-## Stack
-
-[PlayCanvas](https://playcanvas.com/) `2.21.4` · [Vite](https://vitejs.dev/) `7` · TypeScript

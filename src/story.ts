@@ -1,5 +1,5 @@
-// Narrativa espacial de la plaza: los textos y las poses de cámara viven en
-// `story.json`. En el visor con `?editar` se capturan las poses y se copian los datos.
+// Narrativa espacial de la plaza. Los textos y las poses de cámara viven en `story.json`.
+// Las poses se capturan desde la cámara del visor de SuperSplat con `?editar`.
 import raw from './story.json';
 
 export type Vec3Tuple = [number, number, number];
@@ -10,22 +10,26 @@ export type Pose = {
     fov: number;
 };
 
-export type StoryPoint = {
+export type Chapter = {
     id: string;
+    /** Numeral romano del capítulo (I, II, III…). */
+    numeral: string;
+    /** Texto corto del botón. */
+    nav: string;
     kicker: string;
     title: string;
     text: string;
-    /** `null` = todavía sin capturar: el visor usa una vista provisional. */
+    /** `orbit`: vista fija con texto. `walk`: activa el modo caminata de SuperSplat al llegar. */
+    mode: 'orbit' | 'walk';
+    /** `null` = todavía sin capturar. */
     pose: Pose | null;
 };
 
 export type Story = {
     place: { kicker: string; title: string };
-    /** Animación de entrada al abrir el visor. */
-    intro: boolean;
-    /** Vista de la maqueta completa. `null` = encuadre automático a 45°. */
-    overview: Pose | null;
-    points: StoryPoint[];
+    /** Opcional: archivo de colisión (.glb o vóxeles) que el modo caminata necesita. */
+    collision?: string;
+    chapters: Chapter[];
 };
 
 export const defaultStory = (): Story => JSON.parse(JSON.stringify(raw)) as Story;

@@ -3,44 +3,61 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-        <meta name="theme-color" content="#0d0f0e" />
-        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2740%27 fill=%27%231ad9be%27/%3E%3C/svg%3E" />
-        <title>Plaza de San Sebastián · Cuenca</title>
+        <meta name="theme-color" content="#0f0e0c" />
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2738%27 fill=%27none%27 stroke=%27%23c9a96e%27 stroke-width=%278%27/%3E%3C/svg%3E" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Libre+Franklin:wght@300;400;500;600&display=swap"
+        />
+        <title>San Sebastián · Cuenca</title>
     </head>
     <body>
-        <canvas id="view"></canvas>
+        <div id="stage"></div>
 
-        <header id="brand">
-            <p id="brand-kicker"></p>
-            <h1 id="brand-title"></h1>
+        <header id="masthead">
+            <p id="masthead-kicker"></p>
+            <h1 id="masthead-title"></h1>
         </header>
 
-        <a id="ar-link" href="ar.html" hidden>Ver en AR</a>
-
-        <section id="panel" hidden>
-            <p id="panel-kicker"></p>
-            <h2 id="panel-title"></h2>
-            <p id="panel-text"></p>
-            <div id="panel-nav">
-                <button type="button" id="prev" aria-label="Punto anterior">&larr;</button>
-                <span id="panel-count"></span>
-                <button type="button" id="next" aria-label="Punto siguiente">&rarr;</button>
+        <article id="chapter" hidden>
+            <div id="chapter-head">
+                <span id="chapter-numeral"></span>
+                <span id="chapter-rule"></span>
+                <span id="chapter-count"></span>
             </div>
-        </section>
+            <p id="chapter-kicker"></p>
+            <h2 id="chapter-title"></h2>
+            <div id="chapter-text"></div>
+            <div id="chapter-nav">
+                <button type="button" id="prev" aria-label="Capítulo anterior">&larr;</button>
+                <button type="button" id="collapse">Ocultar texto</button>
+                <button type="button" id="next" aria-label="Capítulo siguiente">&rarr;</button>
+            </div>
+        </article>
 
-        <nav id="stops" aria-label="Puntos de la plaza"></nav>
+        <button type="button" id="reopen" hidden>Leer</button>
+
+        <p id="walk-hint" hidden></p>
+
+        <nav id="index" aria-label="Capítulos"></nav>
 
         <aside id="editor" hidden>
             <button type="button" id="ed-toggle">Modo edición &#9662;</button>
             <div id="ed-body">
-                <label>Punto <select id="ed-select"></select></label>
-                <label>Etiqueta <input id="ed-kicker" type="text" /></label>
-                <label>Título <input id="ed-title" type="text" /></label>
-                <label>Texto <textarea id="ed-text" rows="5"></textarea></label>
+                <p class="ed-help">Navega con el visor (arrastra, pellizca; en Vuelo usa W A S D) y captura la pose de cada capítulo.</p>
+                <label>Capítulo <select id="ed-select"></select></label>
                 <div class="ed-row">
                     <button type="button" id="ed-capture">Capturar pose aquí</button>
                     <button type="button" id="ed-go">Ir a la pose</button>
                 </div>
+                <div class="ed-row">
+                    <button type="button" id="ed-mode">Cámara: Órbita</button>
+                </div>
+                <label>Etiqueta <input id="ed-kicker" type="text" /></label>
+                <label>Título <input id="ed-title" type="text" /></label>
+                <label>Texto <textarea id="ed-text" rows="6"></textarea></label>
                 <div class="ed-row">
                     <button type="button" id="ed-copy">Copiar datos</button>
                     <button type="button" id="ed-reset">Descartar cambios</button>
@@ -51,8 +68,10 @@
         </aside>
 
         <div id="loader" role="status" aria-live="polite">
-            <p id="loader-message">Cargando la plaza…</p>
+            <p id="loader-kicker">Cuenca · Patrimonio</p>
+            <p id="loader-title">San Sebastián</p>
             <div id="loader-bar"><div id="loader-fill"></div></div>
+            <p id="loader-message">Cargando la plaza</p>
         </div>
 
         <script type="module" src="/src/viewer-main.ts"></script>

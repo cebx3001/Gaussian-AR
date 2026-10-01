@@ -1,22 +1,13 @@
-import { fileURLToPath } from 'node:url';
-
 import { defineConfig } from 'vite';
 
-// `base: './'` keeps every asset reference relative, so the built site works
-// unchanged whether it's served from a domain root or a GitHub Pages project
-// subpath (https://<user>.github.io/Gaussian-AR/).
-//
-// Two pages: `index.html` is the 3D viewer, `ar.html` is the WebXR AR experience.
+// `base: './'` mantiene todas las rutas relativas, así el sitio funciona igual en la raíz de un
+// dominio o en el subdirectorio de GitHub Pages (https://<usuario>.github.io/Gaussian-AR/).
+// El AR (ar.html) está desactivado por ahora: su código sigue en src/ar-experience.ts.
 export default defineConfig({
     base: './',
     build: {
         target: 'es2022',
         assetsInlineLimit: 0,
-        rollupOptions: {
-            input: {
-                main: fileURLToPath(new URL('./index.html', import.meta.url)),
-                ar: fileURLToPath(new URL('./ar.html', import.meta.url))
-            }
-        }
+        chunkSizeWarningLimit: 4000
     }
 });
