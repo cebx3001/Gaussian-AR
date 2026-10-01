@@ -26,8 +26,10 @@ import type { Pose, Story } from './story';
 const CONTENT_URL = './scene.sog';
 const EDIT_KEY = 'san-sebastian:story-edit';
 const EDIT_MODE = new URLSearchParams(location.search).has('editar');
-/** Tiempo aproximado del vuelo de SuperSplat hacia una anotación, antes de caminar. */
-const WALK_DELAY_MS = 1800;
+/** Distancia (m) a la pose del capítulo a la que se considera que el vuelo terminó. */
+const ARRIVAL_DISTANCE = 0.6;
+/** Si el vuelo no termina en este tiempo, se activa la caminata igual. */
+const ARRIVAL_TIMEOUT_MS = 12000;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -99,7 +101,8 @@ const buildSettings = (s: Story): ExperienceSettings => {
 // ---------------------------------------------------------------------------
 let viewer: ViewerHandle | null = null;
 let active = 0;
-let walkTimer = 0;
+/** Cancela la espera de llegada en curso (al cambiar de capítulo). */
+let cancelArrival: (() => void) | null = null;
 
 const setProgress = (p: number) => {
     loaderFill.style.transform = `scaleX(${Math.max(0, Math.min(1, p / 100))})`;
@@ -192,7 +195,8 @@ const goTo = (i: number) => {
     const c = story.chapters[i];
     if (!c) return;
     active = i;
-    window.clearTimeout(walkTimer);
+    cancelArrival?.();
+    cancelArrival = null;
     walkHint.hidden = true;
     renderChapter();
     if (EDIT_MODE) syncEditor();
@@ -205,7 +209,10 @@ const goTo = (i: number) => {
     else if (i === 0) v.frameScene();
 
     if (c.mode === 'walk') {
-        walkTimer = window.setTimeout(() => {
+        // El modo caminata de SuperSplat busca suelo a pocos metros de la cámara, así que se
+        // activa cuando el vuelo hacia la pose del capítulo ya llegó.
+        const enterWalk = () => {
+            if (v !== viewer || active !== i) return;
             if (v.state.walkAllowed) {
                 v.state.cameraMode = 'walk';
                 showWalkHint('Toca el suelo para caminar · arrastra para mirar');
@@ -214,8 +221,28 @@ const goTo = (i: number) => {
                     EDIT_MODE ? 'Modo caminata: falta el archivo de colisión de la escena.' : 'Arrastra para mirar alrededor'
                 );
             }
-        }, ai === undefined ? 0 : WALK_DELAY_MS);
+        };
+        if (c.pose && ai !== undefined) cancelArrival = waitForArrival(v, c.pose, enterWalk);
+        else enterWalk();
     }
+};
+
+/** Llama a `done` cuando la cámara del visor llega a `pose` (o al agotar el tiempo). */
+const waitForArrival = (v: ViewerHandle, pose: Pose, done: () => void) => {
+    const goal = new Vec3(...pose.position);
+    const start = performance.now();
+    let raf = 0;
+    const tick = () => {
+        const cam = (v.app.root.findComponents('camera') as CameraComponent[])[0];
+        const arrived = cam && cam.entity.getPosition().distance(goal) < ARRIVAL_DISTANCE;
+        if (arrived || performance.now() - start > ARRIVAL_TIMEOUT_MS) {
+            done();
+            return;
+        }
+        raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
 };
 
 const step = (d: number) => {
