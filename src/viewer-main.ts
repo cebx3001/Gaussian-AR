@@ -43,7 +43,6 @@ const chapterEl = $<HTMLElement>('chapter');
 const chKicker = $<HTMLElement>('chapter-kicker');
 const chTitle = $<HTMLElement>('chapter-title');
 const chText = $<HTMLElement>('chapter-text');
-const reopenBtn = $<HTMLButtonElement>('reopen');
 const walkHint = $<HTMLElement>('walk-hint');
 const indexEl = $<HTMLElement>('index');
 
@@ -171,18 +170,34 @@ const renderChapter = () => {
     });
 };
 
+/**
+ * Ajusta el tamaño de letra para que el texto quepa completo: parte de 18 px y no baja de 14 px
+ * (13.5 px solo en horizontal, con poca altura). Si aun así no cabe, el texto se puede desplazar.
+ */
+const shortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
+const fitChapter = () => {
+    const min = shortLandscape.matches ? 13.5 : 14;
+    chapterEl.classList.remove('scroll');
+    for (let fs = 18; fs >= min; fs -= 0.5) {
+        chapterEl.style.setProperty('--fs', `${fs}px`);
+        if (chapterEl.scrollHeight <= chapterEl.clientHeight + 1) return;
+    }
+    chapterEl.classList.add('scroll');
+};
+window.addEventListener('resize', fitChapter);
+
 /** Oculta el texto mientras la cámara vuela: primero se ve el recorrido. */
 const concealChapter = () => {
     chapterEl.classList.remove('shown', 'enter');
     chapterEl.hidden = false;
-    reopenBtn.hidden = true;
+    document.body.classList.remove('reading');
 };
 
 /** Muestra el texto con un fundido cuando la cámara ya llegó. */
 const revealChapter = () => {
     if (EDIT_MODE) return;
     chapterEl.hidden = false;
-    reopenBtn.hidden = true;
+    document.body.classList.add('reading');
     chapterEl.classList.add('shown');
     chapterEl.classList.remove('enter');
     void chapterEl.offsetWidth;
@@ -203,6 +218,7 @@ const goTo = (i: number) => {
     walkHint.hidden = true;
     renderChapter();
     concealChapter();
+    fitChapter();
     if (EDIT_MODE) syncEditor();
 
     const v = viewer;
@@ -218,10 +234,15 @@ const goTo = (i: number) => {
     // El texto (y la caminata, en ese lugar) esperan a que la cámara termine el vuelo.
     const arrived = () => {
         if (v !== viewer || active !== i) return;
+        cancelArrival = null;
         revealChapter();
-        if (c.mode !== 'walk') return;
+        if (c.mode !== 'walk') {
+            enterLookAround(v);
+            return;
+        }
         // El modo caminata de SuperSplat busca suelo cerca de la cámara: solo funciona al llegar.
         if (v.state.walkAllowed) {
+            v.state.gamingControls = false; // en caminata, tocar el suelo camina hasta allí
             v.state.cameraMode = 'walk';
             showWalkHint('Toca el suelo para caminar · arrastra para mirar');
         } else {
@@ -232,6 +253,17 @@ const goTo = (i: number) => {
     };
     if (c.pose && ai !== undefined) cancelArrival = waitForArrival(v, c.pose, arrived);
     else arrived();
+};
+
+/**
+ * Al llegar a un lugar, la cámara gira siempre sobre su propio eje: modo de vuelo de SuperSplat
+ * con «controles de juego» en pantallas táctiles (un dedo gira; el toque no la lleva a ningún
+ * punto ni el pellizco la desplaza). Así nunca orbita alrededor de un punto lejano o cercano.
+ */
+const enterLookAround = (v: ViewerHandle) => {
+    if (EDIT_MODE) return;
+    v.state.gamingControls = navigator.maxTouchPoints > 0;
+    v.state.cameraMode = 'fly';
 };
 
 /** Llama a `done` cuando la cámara del visor llega a `pose`, o queda quieta cerca de ella. */
@@ -289,14 +321,26 @@ const renderMasthead = () => {
 
 $<HTMLButtonElement>('prev').addEventListener('click', () => step(-1));
 $<HTMLButtonElement>('next').addEventListener('click', () => step(1));
-$<HTMLButtonElement>('collapse').addEventListener('click', () => {
-    chapterEl.hidden = true;
-    reopenBtn.hidden = false;
-});
-reopenBtn.addEventListener('click', () => {
-    reopenBtn.hidden = true;
-    renderChapter();
-});
+
+// Al tocar la escena (o el texto) el texto desaparece: se queda la vista libre para mirar.
+// Si el toque llega en pleno vuelo, la cámara se detiene ahí y gira sobre su propio eje.
+window.addEventListener(
+    'pointerdown',
+    (e) => {
+        if (EDIT_MODE) return;
+        // SuperSplat solo sabe si es un dedo o un ratón tras el primer toque: se lo indicamos ya
+        if (viewer?.state.cameraMode === 'fly') viewer.state.gamingControls = e.pointerType === 'touch';
+        if ((e.target as HTMLElement).closest('#index, #chapter-nav, #chapter.scroll')) return;
+        const flying = cancelArrival !== null;
+        cancelArrival?.();
+        cancelArrival = null;
+        chapterEl.classList.remove('shown');
+        document.body.classList.remove('reading');
+        walkHint.hidden = true;
+        if (flying && viewer?.state.loaded) enterLookAround(viewer);
+    },
+    true
+);
 
 window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement).closest('input, textarea, select')) return;
