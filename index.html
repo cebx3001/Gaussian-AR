@@ -39,29 +39,17 @@
 
         <nav id="index" aria-label="Lugares"></nav>
 
-        <aside id="editor" hidden>
-            <button type="button" id="ed-toggle">Modo edición &#9662;</button>
-            <div id="ed-body">
-                <p class="ed-help">Navega con el visor (arrastra, pellizca; en Vuelo usa W A S D) y captura la pose de cada lugar. En «Modo caminata» baja a la altura de una persona antes de capturar.</p>
-                <label>Lugar <select id="ed-select"></select></label>
-                <div class="ed-row">
-                    <button type="button" id="ed-capture">Capturar pose aquí</button>
-                    <button type="button" id="ed-go">Ir a la pose</button>
-                </div>
-                <div class="ed-row">
-                    <button type="button" id="ed-mode">Cámara: Órbita</button>
-                </div>
-                <label>Etiqueta <input id="ed-kicker" type="text" /></label>
-                <label>Título <input id="ed-title" type="text" /></label>
-                <label>Texto <textarea id="ed-text" rows="6"></textarea></label>
-                <div class="ed-row">
-                    <button type="button" id="ed-copy">Copiar datos</button>
-                    <button type="button" id="ed-reset">Descartar cambios</button>
-                </div>
-                <p id="ed-status"></p>
-                <textarea id="ed-export" rows="6" readonly hidden></textarea>
-            </div>
-        </aside>
+        <div id="editor" hidden>
+            <select id="ed-select" aria-label="Lugar"></select>
+            <button type="button" id="ed-mode">Órbita</button>
+            <button type="button" id="ed-capture">Capturar</button>
+            <button type="button" id="ed-copy">Copiar</button>
+        </div>
+        <p id="ed-status" hidden></p>
+        <div id="ed-export-box" hidden>
+            <textarea id="ed-export" readonly></textarea>
+            <button type="button" id="ed-export-close">Cerrar</button>
+        </div>
 
         <div id="loader" role="status" aria-live="polite">
             <p id="loader-kicker">Cuenca · Patrimonio</p>

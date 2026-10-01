@@ -283,20 +283,23 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------------------
-// Modo edición: la pose se lee de la cámara del visor de SuperSplat
+// Modo edición: solo una barra mínima. Se navega con el visor de SuperSplat, se captura la pose
+// de su cámara y se copian los datos. Los textos se editan en story.json.
 // ---------------------------------------------------------------------------
 let editIndex = 0;
 const edSelect = $<HTMLSelectElement>('ed-select');
-const edKicker = $<HTMLInputElement>('ed-kicker');
-const edTitle = $<HTMLInputElement>('ed-title');
-const edText = $<HTMLTextAreaElement>('ed-text');
 const edStatus = $<HTMLElement>('ed-status');
+const edExportBox = $<HTMLElement>('ed-export-box');
 const edExport = $<HTMLTextAreaElement>('ed-export');
 const edMode = $<HTMLButtonElement>('ed-mode');
 let posesDirty = false;
+let statusTimer = 0;
 
 const setStatus = (msg: string) => {
     edStatus.textContent = msg;
+    edStatus.hidden = !msg;
+    window.clearTimeout(statusTimer);
+    if (msg) statusTimer = window.setTimeout(() => (edStatus.hidden = true), 2500);
 };
 
 const renderEditorSelect = () => {
@@ -304,7 +307,7 @@ const renderEditorSelect = () => {
     story.chapters.forEach((c, i) => {
         const o = document.createElement('option');
         o.value = String(i);
-        o.textContent = `${c.nav}${c.pose ? '' : ' (sin pose)'}`;
+        o.textContent = `${c.pose ? '✓' : '·'} ${c.nav}`;
         edSelect.append(o);
     });
     edSelect.value = String(editIndex);
@@ -313,10 +316,6 @@ const renderEditorSelect = () => {
 function syncEditor() {
     editIndex = active;
     edSelect.value = String(editIndex);
-    const c = story.chapters[editIndex];
-    edKicker.value = c?.kicker ?? '';
-    edTitle.value = c?.title ?? '';
-    edText.value = c?.text ?? '';
 }
 
 /** Pose actual de la cámara del visor: posición, punto de mira y campo de visión. */
@@ -329,8 +328,7 @@ const currentViewerPose = (): Pose | null => {
     const entity = cam.entity as Entity;
     const pos = entity.getPosition().clone();
     const fwd = entity.forward.clone().normalize();
-
-    // distancia al punto de mira: la del capítulo si ya tenía pose, si no hasta el centro de la plaza
+    // distancia al punto de mira: la del lugar si ya tenía pose, si no hasta el centro de la plaza
     const prev = story.chapters[editIndex]?.pose ?? story.chapters[0]?.pose;
     const center = prev ? new Vec3(...prev.target) : new Vec3(0, 0, 0);
     const dist = Math.max(1, center.sub(pos).dot(fwd));
@@ -343,8 +341,7 @@ const currentViewerPose = (): Pose | null => {
 };
 
 function updateModeButton() {
-    const m = viewer?.state.cameraMode;
-    edMode.textContent = m === 'fly' ? 'Cámara: Vuelo (W A S D)' : 'Cámara: Órbita';
+    edMode.textContent = viewer?.state.cameraMode === 'fly' ? 'Vuelo' : 'Órbita';
 }
 
 const setupEditor = () => {
@@ -354,98 +351,53 @@ const setupEditor = () => {
     renderEditorSelect();
     syncEditor();
 
-    $<HTMLButtonElement>('ed-toggle').addEventListener('click', () => {
-        $<HTMLElement>('editor').classList.toggle('collapsed');
-    });
-
-    edSelect.addEventListener('change', () => {
+    // elegir un lugar lleva la cámara a su pose (recargando el visor si hay poses nuevas)
+    edSelect.addEventListener('change', async () => {
         editIndex = Number(edSelect.value);
         active = editIndex;
-        syncEditor();
+        if (posesDirty) {
+            posesDirty = false;
+            await mountViewer();
+        } else {
+            goTo(editIndex);
+        }
     });
 
     edMode.addEventListener('click', () => {
         if (!viewer?.state.loaded) return;
         viewer.state.cameraMode = viewer.state.cameraMode === 'fly' ? 'orbit' : 'fly';
         updateModeButton();
+        setStatus(viewer.state.cameraMode === 'fly' ? 'Vuelo: toca un punto para ir hasta allí' : 'Órbita');
     });
-
-    const onField = () => {
-        const c = story.chapters[editIndex];
-        if (!c) return;
-        c.kicker = edKicker.value;
-        c.title = edTitle.value;
-        c.text = edText.value;
-        persist();
-        renderEditorSelect();
-    };
-    edKicker.addEventListener('input', onField);
-    edTitle.addEventListener('input', onField);
-    edText.addEventListener('input', onField);
 
     $<HTMLButtonElement>('ed-capture').addEventListener('click', () => {
         const pose = currentViewerPose();
         if (!pose) {
-            setStatus('El visor todavía no está listo.');
+            setStatus('El visor todavía no está listo');
             return;
         }
         story.chapters[editIndex].pose = pose;
         posesDirty = true;
         persist();
         renderEditorSelect();
-        setStatus(`Pose de «${story.chapters[editIndex].nav}» guardada.`);
-    });
-
-    $<HTMLButtonElement>('ed-go').addEventListener('click', async () => {
-        active = editIndex;
-        if (posesDirty) {
-            // las anotaciones del visor no se editan en vivo: se recarga con las poses nuevas
-            posesDirty = false;
-            setStatus('Recargando el visor con las poses nuevas…');
-            await mountViewer();
-            setStatus('');
-        } else {
-            goTo(editIndex);
-        }
+        setStatus(`Capturado: ${story.chapters[editIndex].nav}`);
     });
 
     $<HTMLButtonElement>('ed-copy').addEventListener('click', async () => {
-        const json = JSON.stringify(story, null, 2);
+        const poses = Object.fromEntries(story.chapters.map((c) => [c.id, c.pose]));
+        const json = JSON.stringify(poses, null, 1);
         try {
             await navigator.clipboard.writeText(json);
-            edExport.hidden = true;
-            setStatus('Datos copiados. Pégalos en el chat.');
+            setStatus('Poses copiadas: pégalas en el chat');
         } catch {
-            edExport.hidden = false;
             edExport.value = json;
+            edExportBox.hidden = false;
             edExport.focus();
             edExport.select();
-            setStatus('Copia el texto de abajo.');
         }
     });
 
-    $<HTMLButtonElement>('ed-reset').addEventListener('click', async () => {
-        try {
-            localStorage.removeItem(EDIT_KEY);
-        } catch {
-            // ignorado
-        }
-        story = defaultStory();
-        editIndex = 0;
-        active = 0;
-        renderMasthead();
-        renderIndex();
-        renderEditorSelect();
-        syncEditor();
-        await mountViewer();
-        setStatus('Cambios descartados: vuelve a los datos publicados.');
-    });
-
-    // mientras se escribe, el teclado no mueve la cámara
-    for (const el of [edKicker, edTitle, edText]) {
-        el.addEventListener('focus', () => viewer && (viewer.state.inputEnabled = false));
-        el.addEventListener('blur', () => viewer && (viewer.state.inputEnabled = true));
-    }
+    $<HTMLButtonElement>('ed-export-close').addEventListener('click', () => (edExportBox.hidden = true));
 };
 
 // ---------------------------------------------------------------------------
