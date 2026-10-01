@@ -16,7 +16,7 @@ import './viewer.css';
 import { createViewer } from '@playcanvas/supersplat-viewer/viewer';
 import type { ViewerHandle } from '@playcanvas/supersplat-viewer/viewer';
 import { defaultSettings } from '@playcanvas/supersplat-viewer/settings';
-import type { ExperienceSettings } from '@playcanvas/supersplat-viewer/settings';
+import type { AnimTrack, ExperienceSettings } from '@playcanvas/supersplat-viewer/settings';
 import { Vec3 } from 'playcanvas';
 import type { CameraComponent, Entity } from 'playcanvas';
 
@@ -26,6 +26,11 @@ import type { Pose, Story } from './story';
 const CONTENT_URL = './scene.sog';
 const EDIT_KEY = 'san-sebastian:story-edit';
 const EDIT_MODE = new URLSearchParams(location.search).has('editar');
+/** Animación de entrada al abrir (no en edición; `?sinintro` la salta). */
+const INTRO = !EDIT_MODE && !new URLSearchParams(location.search).has('sinintro');
+const INTRO_SECONDS = 8;
+/** Cuadros por segundo de la pista de SuperSplat: sus tiempos se expresan en cuadros. */
+const INTRO_FPS = 30;
 /** Altura (m) del suelo de la maqueta y zona (centro y radio, en planta) donde está el modelo. */
 const GROUND_Y = 23;
 const SCENE_CENTER: [number, number] = [15.8, 4.6];
@@ -111,6 +116,49 @@ const anchorOf = (pose: Pose): Pose['target'] => {
 /** Índice de anotación de SuperSplat para cada lugar (solo los que tienen pose). */
 let annotationOf: (number | undefined)[] = [];
 
+/**
+ * Pista de cámara de SuperSplat para la entrada: arranca más cerca, más baja y girada, y termina
+ * exactamente en la pose de la vista general, desacelerando. Gira alrededor del ancla.
+ */
+const introTrack = (pose: Pose): AnimTrack => {
+    const a = new Vec3(...anchorOf(pose));
+    const rel = new Vec3(...pose.position).sub(a);
+    const radius = rel.length();
+    const yaw1 = Math.atan2(rel.x, rel.z);
+    const pitch1 = Math.asin(Math.max(-1, Math.min(1, rel.y / radius)));
+    const yaw0 = yaw1 - (150 * Math.PI) / 180;
+    const pitch0 = (12 * Math.PI) / 180;
+    const steps = 32;
+    const times: number[] = [];
+    const position: number[] = [];
+    const target: number[] = [];
+    const fov: number[] = [];
+    for (let k = 0; k <= steps; k++) {
+        const t = k / steps;
+        const e = 1 - Math.pow(1 - t, 3); // desacelera al llegar
+        const yaw = yaw0 + (yaw1 - yaw0) * e;
+        const pitch = pitch0 + (pitch1 - pitch0) * e;
+        const r = radius * (0.5 + 0.5 * e);
+        const cp = Math.cos(pitch);
+        times.push(Math.round(t * INTRO_SECONDS * INTRO_FPS));
+        position.push(round(a.x + r * Math.sin(yaw) * cp), round(a.y + r * Math.sin(pitch)), round(a.z + r * Math.cos(yaw) * cp));
+        target.push(...anchorOf(pose));
+        fov.push(pose.fov);
+    }
+    return {
+        name: 'entrada',
+        duration: INTRO_SECONDS,
+        frameRate: INTRO_FPS,
+        loopMode: 'none',
+        interpolation: 'spline',
+        smoothness: 1,
+        keyframes: { times, values: { position, target, fov } }
+    };
+};
+
+/** True mientras suena la animación de entrada. */
+let introActive = false;
+
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
     const settings = defaultSettings();
@@ -132,6 +180,12 @@ const buildSettings = (s: Story): ExperienceSettings => {
         });
     });
     settings.startMode = 'default';
+    introActive = false;
+    if (INTRO && first) {
+        settings.animTracks = [introTrack(first)];
+        settings.startMode = 'animTrack';
+        introActive = true;
+    }
     return settings;
 };
 
@@ -173,7 +227,8 @@ const mountViewer = async () => {
         const onLoaded = () => {
             loader.dataset.hidden = 'true';
             if (EDIT_MODE) updateModeButton();
-            goTo(active);
+            if (introActive) playIntro(v);
+            else goTo(active);
         };
         if (v.state.loaded) onLoaded();
         else v.events.once('loaded:changed', onLoaded);
@@ -239,9 +294,32 @@ const revealChapter = () => {
     chapterEl.classList.add('enter');
 };
 
+/** Entrada: suena la animación y, al terminar en la vista general, se anuda el ancla y sale el texto. */
+const playIntro = (v: ViewerHandle) => {
+    const pose = story.chapters[0]?.pose;
+    active = 0;
+    renderChapter();
+    concealChapter();
+    markScrollable();
+    if (!pose) {
+        introActive = false;
+        revealChapter();
+        return;
+    }
+    cancelArrival = waitForArrival(v, pose, () => {
+        cancelArrival = null;
+        if (v !== viewer) return;
+        introActive = false;
+        const ai = annotationOf[0];
+        if (ai !== undefined) v.selectAnnotation(ai); // ya está ahí: solo fija la órbita en su ancla
+        revealChapter();
+    });
+};
+
 const goTo = (i: number) => {
     const c = story.chapters[i];
     if (!c) return;
+    introActive = false;
     active = i;
     cancelArrival?.();
     cancelArrival = null;
@@ -351,6 +429,7 @@ window.addEventListener(
         const flying = cancelArrival !== null;
         cancelArrival?.();
         cancelArrival = null;
+        introActive = false;
         chapterEl.classList.remove('shown');
         document.body.classList.remove('reading');
         if (flying && viewer?.state.loaded) enterFly(viewer);
