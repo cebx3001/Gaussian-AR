@@ -21,6 +21,18 @@ Textos y poses de cámara en `src/story.json`. El modo caminata se quitó (la ca
 3. **Capturar** guarda la pose (el ancla es el punto del suelo al que apunta la vista).
 4. **Copiar** copia las poses de todos los lugares: pégalas en el chat o en `src/story.json`.
 
+## Animación de entrada
+
+Al abrir el visor suena una animación de cámara que termina en la **Vista general**. Se hace con una línea de tiempo de 8 s:
+
+1. Abre `…/Gaussian-AR/?animar`.
+2. Toca la línea para colocar el cabezal (el visor muestra la cámara en ese instante) y mueve la cámara con los gestos del visor.
+3. **Añadir** crea un keyframe en ese instante (si ya había uno, lo actualiza). Los keyframes se arrastran para cambiar su tiempo; el seleccionado se quita con **Borrar**.
+4. ▶ reproduce la animación; **Ejemplo** carga una entrada de partida.
+5. **Copiar** y pega el resultado en el chat (o en `src/story.json`, clave `intro`).
+
+Sin keyframes en `story.json` se usa una entrada automática. Si la animación termina en un sitio distinto a la vista general, la cámara vuela hasta ella antes de mostrar el texto. `?sinintro` la salta.
+
 ## Publicación
 
 GitHub Actions compila con Vite y publica `dist/`. En Settings → Pages el origen (**Source**) está en **GitHub Actions**, así que ya no existe una publicación aparte de la rama sin compilar.

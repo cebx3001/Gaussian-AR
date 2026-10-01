@@ -10,6 +10,20 @@ export type Pose = {
     fov: number;
 };
 
+/** Un cuadro clave de la animación de entrada: instante (s) y vista de la cámara. */
+export type Keyframe = {
+    t: number;
+    position: Vec3Tuple;
+    target: Vec3Tuple;
+    fov: number;
+};
+
+/** Animación de entrada hecha con la línea de tiempo (`?animar`). Sin keyframes: entrada automática. */
+export type IntroAnimation = {
+    duration: number;
+    keyframes: Keyframe[];
+};
+
 export type Chapter = {
     id: string;
     /** Nombre del botón. */
@@ -23,6 +37,8 @@ export type Chapter = {
 
 export type Story = {
     place: { kicker: string; title: string };
+    /** Animación de entrada al abrir el visor. */
+    intro?: IntroAnimation;
     chapters: Chapter[];
 };
 

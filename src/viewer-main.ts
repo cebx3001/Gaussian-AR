@@ -16,21 +16,24 @@ import './viewer.css';
 import { createViewer } from '@playcanvas/supersplat-viewer/viewer';
 import type { ViewerHandle } from '@playcanvas/supersplat-viewer/viewer';
 import { defaultSettings } from '@playcanvas/supersplat-viewer/settings';
-import type { AnimTrack, ExperienceSettings } from '@playcanvas/supersplat-viewer/settings';
+import type { ExperienceSettings } from '@playcanvas/supersplat-viewer/settings';
 import { Vec3 } from 'playcanvas';
 import type { CameraComponent, Entity } from 'playcanvas';
 
+import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
 import { defaultStory, round } from './story';
-import type { Pose, Story } from './story';
+import { setupTimeline, timelineAfterMount, timelineKeyframes } from './timeline';
+import type { Keyframe, Pose, Story } from './story';
 
 const CONTENT_URL = './scene.sog';
 const EDIT_KEY = 'san-sebastian:story-edit';
 const EDIT_MODE = new URLSearchParams(location.search).has('editar');
-/** Animación de entrada al abrir (no en edición; `?sinintro` la salta). */
-const INTRO = !EDIT_MODE && !new URLSearchParams(location.search).has('sinintro');
-const INTRO_SECONDS = 8;
-/** Cuadros por segundo de la pista de SuperSplat: sus tiempos se expresan en cuadros. */
-const INTRO_FPS = 30;
+/** `?animar`: línea de tiempo para crear la animación de entrada. */
+const ANIMAR = new URLSearchParams(location.search).has('animar');
+/** En cualquiera de los dos modos de edición no hay límites de cámara ni textos encima. */
+const AUTHORING = EDIT_MODE || ANIMAR;
+/** Animación de entrada al abrir (no al editar; `?sinintro` la salta). */
+const INTRO = !AUTHORING && !new URLSearchParams(location.search).has('sinintro');
 /** Altura (m) del suelo de la maqueta y zona (centro y radio, en planta) donde está el modelo. */
 const GROUND_Y = 23;
 const SCENE_CENTER: [number, number] = [15.8, 4.6];
@@ -80,8 +83,8 @@ if (EDIT_MODE) {
 {
     const g = globalThis as unknown as Record<string, number>;
     g.__ORBIT_PITCH_MIN = -90;
-    g.__ORBIT_PITCH_MAX = EDIT_MODE ? 90 : ORBIT_MAX_PITCH;
-    g.__FLY_MIN_Y = EDIT_MODE ? -Infinity : FLY_MIN_Y;
+    g.__ORBIT_PITCH_MAX = AUTHORING ? 90 : ORBIT_MAX_PITCH;
+    g.__FLY_MIN_Y = AUTHORING ? -Infinity : FLY_MIN_Y;
 }
 
 const persist = () => {
@@ -116,48 +119,10 @@ const anchorOf = (pose: Pose): Pose['target'] => {
 /** Índice de anotación de SuperSplat para cada lugar (solo los que tienen pose). */
 let annotationOf: (number | undefined)[] = [];
 
-/**
- * Pista de cámara de SuperSplat para la entrada: arranca más cerca, más baja y girada, y termina
- * exactamente en la pose de la vista general, desacelerando. Gira alrededor del ancla.
- */
-const introTrack = (pose: Pose): AnimTrack => {
-    const a = new Vec3(...anchorOf(pose));
-    const rel = new Vec3(...pose.position).sub(a);
-    const radius = rel.length();
-    const yaw1 = Math.atan2(rel.x, rel.z);
-    const pitch1 = Math.asin(Math.max(-1, Math.min(1, rel.y / radius)));
-    const yaw0 = yaw1 - (150 * Math.PI) / 180;
-    const pitch0 = (12 * Math.PI) / 180;
-    const steps = 32;
-    const times: number[] = [];
-    const position: number[] = [];
-    const target: number[] = [];
-    const fov: number[] = [];
-    for (let k = 0; k <= steps; k++) {
-        const t = k / steps;
-        const e = 1 - Math.pow(1 - t, 3); // desacelera al llegar
-        const yaw = yaw0 + (yaw1 - yaw0) * e;
-        const pitch = pitch0 + (pitch1 - pitch0) * e;
-        const r = radius * (0.5 + 0.5 * e);
-        const cp = Math.cos(pitch);
-        times.push(Math.round(t * INTRO_SECONDS * INTRO_FPS));
-        position.push(round(a.x + r * Math.sin(yaw) * cp), round(a.y + r * Math.sin(pitch)), round(a.z + r * Math.cos(yaw) * cp));
-        target.push(...anchorOf(pose));
-        fov.push(pose.fov);
-    }
-    return {
-        name: 'entrada',
-        duration: INTRO_SECONDS,
-        frameRate: INTRO_FPS,
-        loopMode: 'none',
-        interpolation: 'spline',
-        smoothness: 1,
-        keyframes: { times, values: { position, target, fov } }
-    };
-};
-
 /** True mientras suena la animación de entrada. */
 let introActive = false;
+/** Dónde termina la cámara en la entrada: al llegar ahí sale el texto. */
+let introGoal: Pose['position'] | null = null;
 
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
@@ -181,10 +146,27 @@ const buildSettings = (s: Story): ExperienceSettings => {
     });
     settings.startMode = 'default';
     introActive = false;
-    if (INTRO && first) {
-        settings.animTracks = [introTrack(first)];
+    introGoal = null;
+    const lastOf = (ks: Keyframe[]) => [...ks].sort((a, b) => a.t - b.t)[ks.length - 1];
+    if (ANIMAR) {
+        // vista previa de la línea de tiempo: la pista con los keyframes actuales (quieta si hay menos de 2)
+        const ks = timelineKeyframes();
+        const still: Keyframe[] = first
+            ? [0, INTRO_SECONDS].map((t) => ({ t, position: first.position, target: anchorOf(first), fov: first.fov }))
+            : [];
+        const use = ks.length >= 2 ? ks : still;
+        if (use.length >= 2) {
+            settings.animTracks = [trackFromKeyframes(use)];
+            settings.startMode = 'animTrack';
+        }
+    } else if (INTRO && first) {
+        // entrada hecha con la línea de tiempo (story.json) o, si no hay, la automática
+        const custom = (s.intro?.keyframes?.length ?? 0) >= 2;
+        const ks = custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, anchorOf(first), 33);
+        settings.animTracks = [trackFromKeyframes(ks)];
         settings.startMode = 'animTrack';
         introActive = true;
+        introGoal = lastOf(ks).position;
     }
     return settings;
 };
@@ -227,7 +209,8 @@ const mountViewer = async () => {
         const onLoaded = () => {
             loader.dataset.hidden = 'true';
             if (EDIT_MODE) updateModeButton();
-            if (introActive) playIntro(v);
+            if (ANIMAR) timelineAfterMount(v);
+            else if (introActive) playIntro(v);
             else goTo(active);
         };
         if (v.state.loaded) onLoaded();
@@ -285,7 +268,7 @@ const concealChapter = () => {
 
 /** Muestra el texto con un fundido cuando la cámara ya llegó. */
 const revealChapter = () => {
-    if (EDIT_MODE) return;
+    if (AUTHORING) return;
     chapterEl.hidden = false;
     document.body.classList.add('reading');
     chapterEl.classList.add('shown');
@@ -296,23 +279,22 @@ const revealChapter = () => {
 
 /** Entrada: suena la animación y, al terminar en la vista general, se anuda el ancla y sale el texto. */
 const playIntro = (v: ViewerHandle) => {
-    const pose = story.chapters[0]?.pose;
+    const goal = introGoal ?? story.chapters[0]?.pose?.position;
     active = 0;
     renderChapter();
     concealChapter();
     markScrollable();
-    if (!pose) {
+    if (!goal) {
         introActive = false;
         revealChapter();
         return;
     }
-    cancelArrival = waitForArrival(v, pose, () => {
+    cancelArrival = waitForArrival(v, goal, () => {
         cancelArrival = null;
         if (v !== viewer) return;
-        introActive = false;
-        const ai = annotationOf[0];
-        if (ai !== undefined) v.selectAnnotation(ai); // ya está ahí: solo fija la órbita en su ancla
-        revealChapter();
+        // La entrada terminó: la vista general se vuelve el ancla. Si la animación acabó en otro
+        // sitio, la cámara vuela hasta ella y el texto sale al llegar; si ya está, sale enseguida.
+        goTo(0);
     });
 };
 
@@ -345,7 +327,7 @@ const goTo = (i: number) => {
         cancelArrival = null;
         revealChapter();
     };
-    if (c.pose && ai !== undefined) cancelArrival = waitForArrival(v, c.pose, arrived);
+    if (c.pose && ai !== undefined) cancelArrival = waitForArrival(v, c.pose.position, arrived);
     else arrived();
 };
 
@@ -356,13 +338,13 @@ const goTo = (i: number) => {
  * que quitan el desplazamiento con dos dedos y el zoom.
  */
 const enterFly = (v: ViewerHandle) => {
-    if (EDIT_MODE || v.state.cameraMode === 'fly') return;
+    if (AUTHORING || v.state.cameraMode === 'fly') return;
     v.state.cameraMode = 'fly';
 };
 
 /** Llama a `done` cuando la cámara del visor llega a `pose`, o queda quieta cerca de ella. */
-const waitForArrival = (v: ViewerHandle, pose: Pose, done: () => void) => {
-    const goal = new Vec3(...pose.position);
+const waitForArrival = (v: ViewerHandle, position: Pose['position'], done: () => void) => {
+    const goal = new Vec3(...position);
     const last = new Vec3(1e9, 1e9, 1e9);
     const start = performance.now();
     let still = 0;
@@ -421,7 +403,7 @@ $<HTMLButtonElement>('next').addEventListener('click', () => step(1));
 window.addEventListener(
     'pointerdown',
     (e) => {
-        if (EDIT_MODE) return;
+        if (AUTHORING) return;
         if (e.pointerType === 'touch') touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (touches.size === 2) gesture = touchSpan();
         const target = e.target as HTMLElement;
@@ -451,7 +433,7 @@ window.addEventListener(
     'pointermove',
     (e) => {
         const v = viewer;
-        if (EDIT_MODE || !v || v.state.cameraMode !== 'orbit') return;
+        if (AUTHORING || !v || v.state.cameraMode !== 'orbit') return;
         if (e.pointerType === 'touch') {
             const p = touches.get(e.pointerId);
             if (!p) return;
@@ -524,7 +506,7 @@ function syncEditor() {
 }
 
 /** Pose actual de la cámara del visor: posición, punto de mira y campo de visión. */
-const currentViewerPose = (): Pose | null => {
+const currentViewerPose = (distance?: number): Pose | null => {
     const app = viewer?.app;
     if (!app) return null;
     const cams = app.root.findComponents('camera') as CameraComponent[];
@@ -535,7 +517,10 @@ const currentViewerPose = (): Pose | null => {
     const fwd = entity.forward.clone().normalize();
     // punto de mira = donde la vista toca el suelo de la maqueta (el ancla de la órbita);
     // si mira al horizonte o fuera de la maqueta, 40 m al frente
-    const target = groundHit(pos, fwd) ?? pos.clone().add(fwd.clone().mulScalar(40));
+    const target =
+        distance !== undefined
+            ? pos.clone().add(fwd.clone().mulScalar(distance))
+            : (groundHit(pos, fwd) ?? pos.clone().add(fwd.clone().mulScalar(40)));
     return {
         position: [round(pos.x), round(pos.y), round(pos.z)],
         target: [round(target.x), round(target.y), round(target.z)],
@@ -607,4 +592,18 @@ const setupEditor = () => {
 renderMasthead();
 renderIndex();
 if (EDIT_MODE) setupEditor();
+if (ANIMAR) {
+    setupTimeline(
+        {
+            viewer: () => viewer,
+            capture: (distance) => currentViewerPose(distance),
+            remount: () => mountViewer(),
+            seed: () => {
+                const p = story.chapters[0]?.pose;
+                return p ? autoKeyframes(p, anchorOf(p), 6) : [];
+            }
+        },
+        story.intro?.keyframes
+    );
+}
 void mountViewer();
