@@ -26,10 +26,10 @@ import type { Pose, Story } from './story';
 const CONTENT_URL = './scene.sog';
 const EDIT_KEY = 'san-sebastian:story-edit';
 const EDIT_MODE = new URLSearchParams(location.search).has('editar');
-/** Distancia (m) a la pose del capítulo a la que se considera que el vuelo terminó. */
+/** Distancia (m) a la pose del lugar a la que se considera que el vuelo terminó. */
 const ARRIVAL_DISTANCE = 0.6;
-/** Si el vuelo no termina en este tiempo, se activa la caminata igual. */
-const ARRIVAL_TIMEOUT_MS = 12000;
+/** Si el vuelo no termina en este tiempo, se muestra el texto igual. */
+const ARRIVAL_TIMEOUT_MS = 60000;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -165,19 +165,28 @@ const renderChapter = () => {
     chTitle.textContent = c.title;
     renderChapterText(c.text);
     chapterEl.classList.toggle('walk', c.mode === 'walk');
-    if (!EDIT_MODE) {
-        chapterEl.hidden = false;
-        reopenBtn.hidden = true;
-    }
     chapterEl.scrollTop = 0;
-    // reinicia la animación de entrada del texto
-    chapterEl.classList.remove('enter');
-    void chapterEl.offsetWidth;
-    chapterEl.classList.add('enter');
-
     indexEl.querySelectorAll<HTMLElement>('.chapter-link').forEach((el) => {
         el.classList.toggle('on', Number(el.dataset.index) === active);
     });
+};
+
+/** Oculta el texto mientras la cámara vuela: primero se ve el recorrido. */
+const concealChapter = () => {
+    chapterEl.classList.remove('shown', 'enter');
+    chapterEl.hidden = false;
+    reopenBtn.hidden = true;
+};
+
+/** Muestra el texto con un fundido cuando la cámara ya llegó. */
+const revealChapter = () => {
+    if (EDIT_MODE) return;
+    chapterEl.hidden = false;
+    reopenBtn.hidden = true;
+    chapterEl.classList.add('shown');
+    chapterEl.classList.remove('enter');
+    void chapterEl.offsetWidth;
+    chapterEl.classList.add('enter');
 };
 
 const showWalkHint = (msg: string) => {
@@ -193,43 +202,58 @@ const goTo = (i: number) => {
     cancelArrival = null;
     walkHint.hidden = true;
     renderChapter();
+    concealChapter();
     if (EDIT_MODE) syncEditor();
 
     const v = viewer;
-    if (!v || !v.state.loaded) return;
+    if (!v || !v.state.loaded) {
+        revealChapter();
+        return;
+    }
 
     const ai = annotationOf[i];
     if (ai !== undefined) v.selectAnnotation(ai);
     else if (i === 0) v.frameScene();
 
-    if (c.mode === 'walk') {
-        // El modo caminata de SuperSplat busca suelo a pocos metros de la cámara, así que se
-        // activa cuando el vuelo hacia la pose del capítulo ya llegó.
-        const enterWalk = () => {
-            if (v !== viewer || active !== i) return;
-            if (v.state.walkAllowed) {
-                v.state.cameraMode = 'walk';
-                showWalkHint('Toca el suelo para caminar · arrastra para mirar');
-            } else {
-                showWalkHint(
-                    EDIT_MODE ? 'Modo caminata: falta el archivo de colisión de la escena.' : 'Arrastra para mirar alrededor'
-                );
-            }
-        };
-        if (c.pose && ai !== undefined) cancelArrival = waitForArrival(v, c.pose, enterWalk);
-        else enterWalk();
-    }
+    // El texto (y la caminata, en ese lugar) esperan a que la cámara termine el vuelo.
+    const arrived = () => {
+        if (v !== viewer || active !== i) return;
+        revealChapter();
+        if (c.mode !== 'walk') return;
+        // El modo caminata de SuperSplat busca suelo cerca de la cámara: solo funciona al llegar.
+        if (v.state.walkAllowed) {
+            v.state.cameraMode = 'walk';
+            showWalkHint('Toca el suelo para caminar · arrastra para mirar');
+        } else {
+            showWalkHint(
+                EDIT_MODE ? 'Modo caminata: falta el archivo de colisión de la escena.' : 'Arrastra para mirar alrededor'
+            );
+        }
+    };
+    if (c.pose && ai !== undefined) cancelArrival = waitForArrival(v, c.pose, arrived);
+    else arrived();
 };
 
-/** Llama a `done` cuando la cámara del visor llega a `pose` (o al agotar el tiempo). */
+/** Llama a `done` cuando la cámara del visor llega a `pose`, o queda quieta cerca de ella. */
 const waitForArrival = (v: ViewerHandle, pose: Pose, done: () => void) => {
     const goal = new Vec3(...pose.position);
+    const last = new Vec3(1e9, 1e9, 1e9);
     const start = performance.now();
+    let still = 0;
     let raf = 0;
     const tick = () => {
         const cam = (v.app.root.findComponents('camera') as CameraComponent[])[0];
-        const arrived = cam && cam.entity.getPosition().distance(goal) < ARRIVAL_DISTANCE;
-        if (arrived || performance.now() - start > ARRIVAL_TIMEOUT_MS) {
+        if (cam) {
+            const p = cam.entity.getPosition();
+            const d = p.distance(goal);
+            still = p.distance(last) < 0.01 ? still + 1 : 0;
+            last.copy(p);
+            if (d < ARRIVAL_DISTANCE || (still > 30 && d < 3)) {
+                done();
+                return;
+            }
+        }
+        if (performance.now() - start > ARRIVAL_TIMEOUT_MS) {
             done();
             return;
         }

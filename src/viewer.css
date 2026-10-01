@@ -89,7 +89,20 @@ body.edit #masthead {
     max-height: 56vh;
     overflow-y: auto;
     padding: 34px 24px 8px;
-    background: linear-gradient(to top, rgba(15, 14, 12, 0.97) 70%, rgba(15, 14, 12, 0.82) 88%, rgba(15, 14, 12, 0));
+    background: linear-gradient(to top, rgba(15, 14, 12, 0.5) 72%, rgba(15, 14, 12, 0.26) 90%, rgba(15, 14, 12, 0));
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+    /* oculto mientras la cámara vuela; aparece con un fundido al llegar */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.7s ease, visibility 0s linear 0.7s;
+}
+
+#chapter.shown {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.7s ease;
 }
 
 @media (min-width: 820px) {
@@ -100,7 +113,7 @@ body.edit #masthead {
         width: min(31rem, 42vw);
         max-height: none;
         padding: calc(max(18px, env(safe-area-inset-top)) + 96px) 44px 110px;
-        background: linear-gradient(to right, rgba(15, 14, 12, 0.94) 70%, rgba(15, 14, 12, 0));
+        background: linear-gradient(to right, rgba(15, 14, 12, 0.52) 70%, rgba(15, 14, 12, 0));
         display: flex;
         flex-direction: column;
     }
@@ -174,7 +187,7 @@ body.edit #masthead {
     font-size: 18px;
     font-weight: 400;
     line-height: 1.6;
-    color: rgba(255, 252, 245, 0.96);
+    color: #fffdf8;
     text-wrap: pretty;
 }
 
@@ -273,7 +286,7 @@ body.edit #masthead {
     justify-content: center;
     gap: 6px;
     padding: 0 12px max(12px, env(safe-area-inset-bottom));
-    background: rgba(15, 14, 12, 0.97);
+    background: linear-gradient(to top, rgba(15, 14, 12, 0.6), rgba(15, 14, 12, 0.5));
 }
 
 .chapter-link {
@@ -290,7 +303,7 @@ body.edit #masthead {
     text-align: center;
     text-wrap: balance;
     color: var(--muted);
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 10px rgba(0, 0, 0, 0.85);
     transition: color 0.3s, border-color 0.3s;
 }
 
