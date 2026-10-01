@@ -89,10 +89,20 @@ const persist = () => {
 // ---------------------------------------------------------------------------
 // Motor
 // ---------------------------------------------------------------------------
-// WebGPU si existe; si no, WebGL2 (la mayoría de los teléfonos).
+// WebGL2, igual que el visor oficial de SuperSplat: WebGPU en móviles todavía
+// puede colgarse con splats, así que no se usa.
+const fail = (msg: string, err?: unknown) => {
+    if (err) console.error(err);
+    loader.dataset.hidden = 'false';
+    loaderMessage.textContent = msg;
+};
+
 const device = await createGraphicsDevice(canvas, {
-    deviceTypes: ['webgpu', 'webgl2'],
+    deviceTypes: ['webgl2'],
     antialias: false
+}).catch((err: unknown) => {
+    fail('Este navegador no puede mostrar la escena 3D (WebGL2 no disponible).', err);
+    throw err;
 });
 device.maxPixelRatio = Math.min(window.devicePixelRatio, 2);
 
@@ -135,6 +145,8 @@ let pitch = OVERVIEW_PITCH;
 let distance = 10;
 let fov = OVERVIEW_FOV;
 let sceneRadius = 5;
+/** Radio horizontal de la maqueta (el disco), sin contar la altura. */
+let discRadius = 5;
 const sceneCenter = new Vec3();
 
 const getOrbit = (): Orbit => ({ tx: target.x, ty: target.y, tz: target.z, yaw, pitch, distance, fov });
@@ -199,6 +211,17 @@ const roundPose = (p: Pose): Pose => ({
     fov: round(p.fov, 1)
 });
 
+/** Distancia para que el disco entero quepa en pantalla, sea vertical (teléfono) u horizontal. */
+const overviewDistance = () => {
+    const aspect = (canvas.clientWidth || window.innerWidth) / (canvas.clientHeight || window.innerHeight);
+    const halfV = (OVERVIEW_FOV * DEG) / 2;
+    const halfH = Math.atan(Math.tan(halfV) * aspect);
+    // a 45° el borde cercano del disco ocupa más pantalla que el lejano
+    const byWidth = discRadius / Math.tan(halfH);
+    const byHeight = (discRadius * 1.1) / Math.tan(halfV);
+    return Math.max(byWidth, byHeight) * 1.12;
+};
+
 /** Maqueta completa: la pose guardada o, si no hay, un encuadre automático a ~45°. */
 const getOverview = (): Orbit => {
     const saved = story.overview ? orbitFromPose(story.overview) : null;
@@ -209,7 +232,7 @@ const getOverview = (): Orbit => {
         tz: sceneCenter.z,
         yaw: OVERVIEW_YAW,
         pitch: OVERVIEW_PITCH,
-        distance: (sceneRadius / Math.sin((OVERVIEW_FOV * DEG) / 2)) * 0.85,
+        distance: overviewDistance(),
         fov: OVERVIEW_FOV
     };
 };
@@ -610,10 +633,12 @@ asset.on('progress', (received: number, length: number) => {
     }
 });
 
-asset.on('error', (err: unknown) => {
-    console.error(err);
-    loaderMessage.textContent = 'No se pudo cargar la escena.';
-});
+asset.on('error', (err: unknown) => fail('No se pudo cargar la escena. Revisa la conexión y recarga.', err));
+
+// Si en 40 s no terminó, al menos decirlo en vez de quedarse mudo.
+const slowTimer = window.setTimeout(() => {
+    loaderMessage.textContent = 'La escena está tardando más de lo normal… (conexión lenta)';
+}, 40000);
 
 asset.on('load', () => {
     const splat = new Entity('plaza');
@@ -625,8 +650,10 @@ asset.on('load', () => {
     if (aabb) {
         splat.getWorldTransform().transformPoint(aabb.center, sceneCenter);
         sceneRadius = Math.max(aabb.halfExtents.length(), 0.5);
+        discRadius = Math.max(aabb.halfExtents.x, aabb.halfExtents.z, 0.5);
     }
 
+    window.clearTimeout(slowTimer);
     loader.dataset.hidden = 'true';
 
     if (story.intro && !SKIP_INTRO && !EDIT_MODE) {
