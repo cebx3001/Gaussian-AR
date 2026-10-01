@@ -12,9 +12,7 @@ export type Pose = {
 
 export type Chapter = {
     id: string;
-    /** Numeral romano del capítulo (I, II, III…). */
-    numeral: string;
-    /** Texto corto del botón. */
+    /** Nombre del botón. */
     nav: string;
     kicker: string;
     title: string;

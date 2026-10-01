@@ -40,8 +40,6 @@ const loaderMessage = $<HTMLElement>('loader-message');
 const mastKicker = $<HTMLElement>('masthead-kicker');
 const mastTitle = $<HTMLElement>('masthead-title');
 const chapterEl = $<HTMLElement>('chapter');
-const chNumeral = $<HTMLElement>('chapter-numeral');
-const chCount = $<HTMLElement>('chapter-count');
 const chKicker = $<HTMLElement>('chapter-kicker');
 const chTitle = $<HTMLElement>('chapter-title');
 const chText = $<HTMLElement>('chapter-text');
@@ -146,8 +144,6 @@ const mountViewer = async () => {
 // ---------------------------------------------------------------------------
 // Capítulos
 // ---------------------------------------------------------------------------
-const pad = (n: number) => String(n).padStart(2, '0');
-
 const renderChapterText = (text: string) => {
     chText.replaceChildren();
     text.split(/\n\s*\n/)
@@ -164,8 +160,6 @@ const renderChapterText = (text: string) => {
 const renderChapter = () => {
     const c = story.chapters[active];
     if (!c) return;
-    chNumeral.textContent = c.numeral;
-    chCount.textContent = `${pad(active + 1)} / ${pad(story.chapters.length)}`;
     chKicker.textContent = c.kicker;
     chKicker.hidden = !c.kicker;
     chTitle.textContent = c.title;
@@ -257,13 +251,7 @@ const renderIndex = () => {
         b.type = 'button';
         b.className = 'chapter-link';
         b.dataset.index = String(i);
-        const n = document.createElement('span');
-        n.className = 'n';
-        n.textContent = c.numeral;
-        const t = document.createElement('span');
-        t.className = 't';
-        t.textContent = c.nav;
-        b.append(n, t);
+        b.textContent = c.nav;
         b.addEventListener('click', () => goTo(i));
         indexEl.append(b);
     });
@@ -316,7 +304,7 @@ const renderEditorSelect = () => {
     story.chapters.forEach((c, i) => {
         const o = document.createElement('option');
         o.value = String(i);
-        o.textContent = `${c.numeral}. ${c.title}${c.pose ? '' : ' (sin pose)'}`;
+        o.textContent = `${c.nav}${c.pose ? '' : ' (sin pose)'}`;
         edSelect.append(o);
     });
     edSelect.value = String(editIndex);
@@ -405,7 +393,7 @@ const setupEditor = () => {
         posesDirty = true;
         persist();
         renderEditorSelect();
-        setStatus(`Pose del capítulo ${story.chapters[editIndex].numeral} guardada.`);
+        setStatus(`Pose de «${story.chapters[editIndex].nav}» guardada.`);
     });
 
     $<HTMLButtonElement>('ed-go').addEventListener('click', async () => {

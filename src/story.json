@@ -6,12 +6,11 @@
   "collision": "./scene.voxel.json",
   "chapters": [
     {
-      "id": "parque",
-      "numeral": "I",
-      "nav": "El parque",
-      "kicker": "La plaza",
-      "title": "Parque de San Sebastián",
-      "text": "",
+      "id": "plaza",
+      "nav": "Plaza de San Sebastián",
+      "kicker": "Plaza Miguel de León",
+      "title": "Plaza de San Sebastián",
+      "text": "La actual Plaza Miguel de León, conocida tradicionalmente como Parque de San Sebastián, ha sido durante siglos uno de los espacios públicos más importantes del barrio. En la época colonial fue escenario de corridas de toros y celebraciones populares. Más tarde adquirió funciones comerciales: en el siglo XIX llegó a ser utilizada como mercado de ganado y un plano de 1889 la registra como la “Plaza de la venta de Ganado de Sebastián”.\n\nDurante el siglo XX el espacio también acogió actividades deportivas. Con el tiempo dejó de funcionar como una plaza abierta de usos múltiples y fue transformándose en el parque que conocemos actualmente. Su historia permite entender cómo un mismo espacio urbano puede cambiar de función mientras conserva su importancia para la vida de la ciudad.",
       "mode": "orbit",
       "pose": {
         "position": [
@@ -28,34 +27,11 @@
       }
     },
     {
-      "id": "museo",
-      "numeral": "II",
-      "nav": "El museo",
-      "kicker": "Casa de la Temperancia · 1876",
-      "title": "Museo de Arte Moderno",
-      "text": "Este edificio se levantó en 1876, por orden del obispo Miguel León, como casa para rehabilitar a personas con problemas de alcoholismo. El diseño se atribuye al monje redentorista alemán Juan Bautista Stiehle.\n\nMás tarde fue cárcel de varones y después lo ocupó la organización Gota de Leche, que ayudaba a madres de pocos recursos. Tras una restauración municipal se inauguró como museo en 1981, y desde 1985 es la sede principal de la Bienal de Cuenca.",
-      "mode": "orbit",
-      "pose": {
-        "position": [
-          51.344,
-          86.0,
-          -93.056
-        ],
-        "target": [
-          15.8,
-          26.0,
-          4.6
-        ],
-        "fov": 60
-      }
-    },
-    {
       "id": "iglesia-cruz",
-      "numeral": "III",
       "nav": "Iglesia y Cruz",
-      "kicker": "El templo y la cruz",
+      "kicker": "Ermita desde 1578",
       "title": "Iglesia y Cruz de San Sebastián",
-      "text": "",
+      "text": "San Sebastián se encontraba en el extremo occidental de la ciudad colonial. En 1578 ya existía aquí una ermita dedicada a San Sebastián y San Fabián, levantada junto a una cruz y un humilladero que señalaban una de las salidas de la ciudad.\n\nLa cruz que todavía acompaña a la iglesia conserva esa memoria urbana. No era solamente un elemento religioso: marcaba el límite de la ciudad y orientaba a quienes salían de Cuenca hacia el occidente. Con el tiempo, San Sebastián pasó de ser un espacio periférico a convertirse en uno de los barrios históricos más reconocibles de Cuenca.",
       "mode": "orbit",
       "pose": {
         "position": [
@@ -72,11 +48,31 @@
       }
     },
     {
-      "id": "recorrido",
-      "numeral": "IV",
-      "nav": "Recorrer",
-      "kicker": "Modo caminata",
-      "title": "Recorre la plaza",
+      "id": "museo",
+      "nav": "Museo de Arte Moderno",
+      "kicker": "Casa de la Temperancia · 1876",
+      "title": "Museo Municipal de Arte Moderno",
+      "text": "El edificio que hoy alberga el Museo Municipal de Arte Moderno tiene una historia muy diferente a su función actual. Fue construido en 1876 como la Casa de la Temperancia, una institución destinada a atender a personas con problemas de alcoholismo.\n\nDurante el siglo XX el edificio tuvo distintos usos sociales, entre ellos cárcel de varones, asilo y otras funciones asistenciales. Después de un proceso de recuperación y restauración, abrió sus puertas como Museo Municipal de Arte Moderno en 1981.\n\nHoy el edificio conecta dos momentos de la historia de Cuenca: la arquitectura y vida social del siglo XIX con la producción artística moderna y contemporánea de la ciudad. El antiguo espacio asistencial se convirtió así en uno de los principales lugares culturales de San Sebastián.",
+      "mode": "orbit",
+      "pose": {
+        "position": [
+          51.344,
+          86.0,
+          -93.056
+        ],
+        "target": [
+          15.8,
+          26.0,
+          4.6
+        ],
+        "fov": 60
+      }
+    },
+    {
+      "id": "caminata",
+      "nav": "Modo caminata",
+      "kicker": "Recorrido libre",
+      "title": "Modo caminata",
       "text": "Toca cualquier punto del suelo para caminar hasta allí. Arrastra para mirar alrededor.",
       "mode": "walk",
       "pose": {

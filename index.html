@@ -22,18 +22,14 @@
         </header>
 
         <article id="chapter" hidden>
-            <div id="chapter-head">
-                <span id="chapter-numeral"></span>
-                <span id="chapter-rule"></span>
-                <span id="chapter-count"></span>
-            </div>
+            <div id="chapter-head"><span id="chapter-rule"></span></div>
             <p id="chapter-kicker"></p>
             <h2 id="chapter-title"></h2>
             <div id="chapter-text"></div>
             <div id="chapter-nav">
-                <button type="button" id="prev" aria-label="Capítulo anterior">&larr;</button>
+                <button type="button" id="prev" aria-label="Anterior">&larr;</button>
                 <button type="button" id="collapse">Ocultar texto</button>
-                <button type="button" id="next" aria-label="Capítulo siguiente">&rarr;</button>
+                <button type="button" id="next" aria-label="Siguiente">&rarr;</button>
             </div>
         </article>
 
@@ -41,13 +37,13 @@
 
         <p id="walk-hint" hidden></p>
 
-        <nav id="index" aria-label="Capítulos"></nav>
+        <nav id="index" aria-label="Lugares"></nav>
 
         <aside id="editor" hidden>
             <button type="button" id="ed-toggle">Modo edición &#9662;</button>
             <div id="ed-body">
-                <p class="ed-help">Navega con el visor (arrastra, pellizca; en Vuelo usa W A S D) y captura la pose de cada capítulo.</p>
-                <label>Capítulo <select id="ed-select"></select></label>
+                <p class="ed-help">Navega con el visor (arrastra, pellizca; en Vuelo usa W A S D) y captura la pose de cada lugar. En «Modo caminata» baja a la altura de una persona antes de capturar.</p>
+                <label>Lugar <select id="ed-select"></select></label>
                 <div class="ed-row">
                     <button type="button" id="ed-capture">Capturar pose aquí</button>
                     <button type="button" id="ed-go">Ir a la pose</button>
