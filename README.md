@@ -1,31 +1,31 @@
-# Gaussian-AR
+# Gaussian-AR · Plaza de San Sebastián (Cuenca)
 
-Experiencia mínima de **WebXR `immersive-ar`**: coloca un Gaussian Splat (formato **SOG**) sobre una superficie real y lo hace aparecer con el efecto clásico **Radial Reveal** de PlayCanvas / SuperSplat.
+La plaza de San Sebastián como una maqueta circular en Gaussian Splatting (formato **SOG**), con dos experiencias separadas:
 
-No incluye viewer, anotaciones, cámaras, tours, navegación, hotspots ni paneles. Solo el flujo:
+| Página | Qué es |
+|---|---|
+| `index.html` — **Visor 3D** | La maqueta completa vista desde arriba a ~45°, con una animación de entrada. Cinco botones llevan la cámara a cada punto y abren su texto (narrativa espacial). Funciona en cualquier navegador con WebGPU o WebGL2. |
+| `ar.html` — **AR** | Coloca la maqueta sobre una superficie real (WebXR `immersive-ar`) y la hace aparecer con el efecto Radial Reveal. |
 
-> entrar en AR → detectar superficie → retículo → tocar la pantalla una vez → el SOG queda anclado en ese punto físico → se materializa radialmente desde su centro hacia afuera → queda completamente visible y fijo mientras caminas a su alrededor.
+El visor muestra el botón «Ver en AR» solo si el dispositivo lo soporta.
 
 ## Contenido
 
-- `public/scene.sog` — el SOG, tomado tal cual de
-  `supersplat-viewer/deploy/scenes/ef51f7bb/scene.sog` (359 311 splats). Es el único contenido.
-- `src/ar-experience.ts` — toda la lógica AR. El efecto es el **upstream**
-  `GSplatRevealRadial` de `playcanvas/scripts/esm/gsplat/reveal-radial.mjs` (no se reimplementa).
-- `src/main.ts` — botón de entrada + textos de estado.
+- `public/scene.sog` — la escena (359 311 splats), publicada en <https://superspl.at/scene/ef51f7bb> (CC BY 4.0, autor: CB / drbrownlabs).
+- `src/story.json` — **los datos de la narrativa**: títulos, textos y poses de cámara de los 5 puntos.
+- `src/viewer-main.ts`, `src/viewer.css` — el visor 3D.
+- `src/ar-experience.ts`, `src/main.ts`, `src/style.css` — la experiencia AR.
 
-## Parámetros para la prueba física
+## Cómo se editan los puntos (sin computadora)
 
-Centralizados en `CONFIG` dentro de [`src/ar-experience.ts`](src/ar-experience.ts):
+1. Abre el visor con `?editar` al final de la dirección: `…/Gaussian-AR/?editar`.
+2. Navega hasta el encuadre que quieres, elige el punto en el selector y toca **Capturar pose aquí**.
+3. Escribe etiqueta, título y texto del punto.
+4. Toca **Copiar datos** y pega el resultado en `src/story.json` (o pásalo en el chat).
 
-| Parámetro | Por defecto | Qué hace |
-|---|---|---|
-| `scale` | `0.12` | Escala mundial de la escena colocada |
-| `euler` | `[180, 0, 0]` | Rotación local que endereza el SOG (Y-down → flip en X) |
-| `yOffset` | `0` | Ajuste vertical en el anclaje |
-| `revealCenter` | `[0.0155, -3.1466, 0.0854]` | Origen del reveal, **en espacio local del SOG** (centro de su bounding box) |
-| `revealEndRadius` | `7` | Radio que el frente radial debe recorrer para terminar |
-| `revealDuration` | `6` | Duración total, claramente perceptible, del reveal (segundos) |
+Los cambios del modo edición se guardan solo en ese navegador hasta que se pasen a `story.json`. Sin `?editar`, la gente ve únicamente los botones y los textos.
+
+En la URL también funciona `?sinintro` para saltar la animación de entrada.
 
 ## Ejecutar / reconstruir
 
@@ -35,14 +35,13 @@ npm run dev       # servidor local (Vite)
 npm run build     # -> dist/
 ```
 
-WebXR AR requiere **HTTPS** y un dispositivo compatible (p. ej. Chrome en Android con ARCore).
-Para probar en el teléfono: publica `dist/` en cualquier host HTTPS, o usa el workflow de GitHub
-Pages incluido en `.github/workflows/deploy.yml` (Settings → Pages → Source: GitHub Actions).
+El despliegue en GitHub Pages es automático al hacer push a `main` (`.github/workflows/deploy.yml`).
+WebXR AR requiere HTTPS y un dispositivo compatible (p. ej. Chrome en Android con ARCore).
 
-`?preview` en la URL (`index.html?preview`) coloca el SOG delante de la cámara sin AR, para
-comprobar la carga del asset y el efecto en un navegador de escritorio.
+## Parámetros del AR
+
+Centralizados en `CONFIG` dentro de [`src/ar-experience.ts`](src/ar-experience.ts): `scale`, `euler`, `yOffset`, `revealCenter`, `revealEndRadius`, `revealDuration`.
 
 ## Stack
 
-- [PlayCanvas](https://playcanvas.com/) `2.21.4` (motor + `GSplatRevealRadial` + WebXR hit-test/anchors)
-- [Vite](https://vitejs.dev/) `7` + TypeScript
+[PlayCanvas](https://playcanvas.com/) `2.21.4` · [Vite](https://vitejs.dev/) `7` · TypeScript
