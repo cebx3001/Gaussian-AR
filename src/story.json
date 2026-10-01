@@ -1,0 +1,21 @@
+{
+  "place": {
+    "kicker": "Cuenca · Ecuador",
+    "title": "Plaza de San Sebastián"
+  },
+  "intro": true,
+  "overview": null,
+  "points": [
+    {
+      "id": "museo-arte-moderno",
+      "kicker": "Casa de la Temperancia · 1876",
+      "title": "Museo de Arte Moderno",
+      "text": "Este edificio se levantó en 1876, por orden del obispo Miguel León, como casa para rehabilitar a personas con problemas de alcoholismo. El diseño se atribuye al monje redentorista alemán Juan Bautista Stiehle.\n\nMás tarde fue cárcel de varones y después lo ocupó la organización Gota de Leche, que ayudaba a madres de pocos recursos. Tras una restauración municipal se inauguró como museo en 1981, y desde 1985 es la sede principal de la Bienal de Cuenca.\n\nHoy reúne arte ecuatoriano y latinoamericano frente a la plaza.",
+      "pose": null
+    },
+    { "id": "punto-2", "kicker": "", "title": "Punto 2", "text": "", "pose": null },
+    { "id": "punto-3", "kicker": "", "title": "Punto 3", "text": "", "pose": null },
+    { "id": "punto-4", "kicker": "", "title": "Punto 4", "text": "", "pose": null },
+    { "id": "punto-5", "kicker": "", "title": "Punto 5", "text": "", "pose": null }
+  ]
+}
