@@ -30,7 +30,7 @@ El modo caminata de SuperSplat necesita los datos de colisión de la escena. Cua
 
 ## Publicación
 
-GitHub Actions compila con Vite y publica `dist/`. Como Pages de este repo sigue en modo «legacy» (publica también la rama sin compilar), el flujo espera a esa publicación, publica la versión compilada al final y verifica en línea que no se sirvan archivos `.ts`. Para quitar ese rodeo: Settings → Pages → Source: **GitHub Actions**.
+GitHub Actions compila con Vite y publica `dist/`. En Settings → Pages el origen (**Source**) está en **GitHub Actions**, así que ya no existe una publicación aparte de la rama sin compilar.
 
 ## AR
 
