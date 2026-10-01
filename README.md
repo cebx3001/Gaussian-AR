@@ -1,32 +1,25 @@
 # San Sebastián · visor patrimonial (Cuenca)
 
-La plaza de San Sebastián como una maqueta circular en Gaussian Splatting, contada como una revista editorial en 3D: cuatro capítulos que llevan la cámara a cada lugar y muestran su historia.
+La plaza de San Sebastián como una maqueta circular en Gaussian Splatting, contada como una revista editorial en 3D: cuatro lugares que llevan la cámara a cada rincón y muestran su historia.
 
-- **Navegación 3D:** el visor oficial de SuperSplat (`@playcanvas/supersplat-viewer`), incrustado sin su interfaz. Cada capítulo es una anotación de SuperSplat; el capítulo IV activa su modo caminata.
-- **Capa editorial:** capítulos, textos y botones encima del visor (`src/viewer-main.ts`, `src/viewer.css`). Tipografías: Cormorant Garamond (títulos) y Libre Franklin (texto).
+- **Navegación 3D:** el visor oficial de SuperSplat (`@playcanvas/supersplat-viewer`), incrustado sin su interfaz. Cada lugar es una anotación de SuperSplat.
+  - Al llegar a un lugar, ese punto es el **ancla**: la cámara orbita a su alrededor, sin bajar de la horizontal (no se ve la maqueta desde abajo).
+  - Si el usuario **desplaza** la escena (dos dedos, botón derecho, Mayús o teclas W A S D), pasa al **modo vuelo** de SuperSplat: la cámara gira sobre su propio eje y no baja del suelo.
+- **Capa editorial:** textos y botones encima del visor (`src/viewer-main.ts`, `src/viewer.css`). Tipografías, todas sans-serif: Outfit (títulos) y Manrope (texto). Todas las descripciones usan el mismo tamaño de letra.
+- **Parche de SuperSplat:** `vite.config.ts` permite fijar el límite de giro vertical y el suelo del modo vuelo, que el paquete no expone. Si el paquete cambia, la compilación falla en lugar de publicar sin el límite.
 
-## Capítulos
+## Lugares
 
-| | Capítulo | Modo |
-|---|---|---|
-| I | Parque de San Sebastián (la plaza entera) | órbita |
-| II | Museo de Arte Moderno | órbita |
-| III | Iglesia y Cruz de San Sebastián | órbita |
-| IV | Recorre la plaza | caminata |
+Plaza de San Sebastián · Iglesia y Cruz de San Sebastián · Museo Municipal de Arte Moderno · La fuente de San Sebastián.
 
-Textos y poses de cámara en `src/story.json`.
+Textos y poses de cámara en `src/story.json`. El modo caminata se quitó (la calidad del suelo de la escena no es buena); sus archivos de colisión ya no están en el repositorio.
 
-## Editar poses y textos (sin computadora)
+## Editar poses (sin computadora)
 
-1. Abre `…/Gaussian-AR/?editar`.
-2. Elige el capítulo y navega con el visor (arrastra y pellizca; con «Cámara: Vuelo» se usa W A S D).
-3. Toca **Capturar pose aquí** y escribe etiqueta, título y texto.
-4. **Ir a la pose** recarga el visor con las poses nuevas para probarlas.
-5. **Copiar datos** y pega el resultado en `src/story.json` (o pásalo en el chat).
-
-## Modo caminata
-
-El modo caminata de SuperSplat necesita los datos de colisión de la escena. Cuando existan, se añaden en `public/` y su ruta en `"collision"` dentro de `src/story.json`.
+1. Abre `…/Gaussian-AR/?editar`: sin límites de giro, solo una barra pequeña abajo.
+2. Elige el lugar en el selector y navega con el visor.
+3. **Capturar** guarda la pose (el ancla es el punto del suelo al que apunta la vista).
+4. **Copiar** copia las poses de todos los lugares: pégalas en el chat o en `src/story.json`.
 
 ## Publicación
 

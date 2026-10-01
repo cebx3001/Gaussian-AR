@@ -4,8 +4,8 @@
 // Toda la navegación 3D es el visor oficial de SuperSplat (@playcanvas/supersplat-viewer),
 // incrustado sin su interfaz. Encima va la capa editorial: capítulos, textos y botones.
 //
-//   capítulo → `selectAnnotation()` (SuperSplat vuela a la pose)
-//   capítulo «walk» → además activa el modo caminata de SuperSplat
+//   lugar → `selectAnnotation()`: SuperSplat vuela a la pose y orbita alrededor del lugar (ancla)
+//   si el usuario desplaza la cámara → modo vuelo de SuperSplat: gira sobre su propio eje
 //
 // `?editar`  muestra el editor: se navega con el visor, se captura la pose de su cámara,
 //            se escriben los textos y se copian los datos para `src/story.json`.
@@ -26,6 +26,14 @@ import type { Pose, Story } from './story';
 const CONTENT_URL = './scene.sog';
 const EDIT_KEY = 'san-sebastian:story-edit';
 const EDIT_MODE = new URLSearchParams(location.search).has('editar');
+/** Altura (m) del suelo de la maqueta y zona (centro y radio, en planta) donde está el modelo. */
+const GROUND_Y = 23;
+const SCENE_CENTER: [number, number] = [15.8, 4.6];
+const SCENE_RADIUS = 75;
+/** La órbita no baja de la horizontal del ancla (0°): no se ve la maqueta desde abajo. */
+const ORBIT_MAX_PITCH = 0;
+/** Suelo del modo vuelo (m): la cámara no puede quedar bajo la maqueta. */
+const FLY_MIN_Y = GROUND_Y + 1.5;
 /** Distancia (m) a la pose del lugar a la que se considera que el vuelo terminó. */
 const ARRIVAL_DISTANCE = 0.6;
 /** Si el vuelo no termina en este tiempo, se muestra el texto igual. */
@@ -43,7 +51,6 @@ const chapterEl = $<HTMLElement>('chapter');
 const chKicker = $<HTMLElement>('chapter-kicker');
 const chTitle = $<HTMLElement>('chapter-title');
 const chText = $<HTMLElement>('chapter-text');
-const walkHint = $<HTMLElement>('walk-hint');
 const indexEl = $<HTMLElement>('index');
 
 // ---------------------------------------------------------------------------
@@ -51,12 +58,25 @@ const indexEl = $<HTMLElement>('index');
 // ---------------------------------------------------------------------------
 let story: Story = defaultStory();
 if (EDIT_MODE) {
+    // Las poses guardadas en este navegador se reaplican por id sobre los lugares actuales,
+    // así sobreviven si se agregan o quitan lugares (los textos siempre vienen de story.json).
     try {
-        const saved = localStorage.getItem(EDIT_KEY);
-        if (saved) story = JSON.parse(saved) as Story;
+        const saved = JSON.parse(localStorage.getItem(EDIT_KEY) ?? 'null') as Story | null;
+        for (const c of story.chapters) {
+            const old = saved?.chapters?.find((s) => s.id === c.id);
+            if (old?.pose) c.pose = old.pose;
+        }
     } catch {
         // sin almacenamiento: se usa story.json
     }
+}
+
+// Límites que lee el parche de SuperSplat (ver vite.config.ts). En edición no hay límites.
+{
+    const g = globalThis as unknown as Record<string, number>;
+    g.__ORBIT_PITCH_MIN = -90;
+    g.__ORBIT_PITCH_MAX = EDIT_MODE ? 90 : ORBIT_MAX_PITCH;
+    g.__FLY_MIN_Y = EDIT_MODE ? -Infinity : FLY_MIN_Y;
 }
 
 const persist = () => {
@@ -68,25 +88,47 @@ const persist = () => {
     }
 };
 
-/** Índice de anotación de SuperSplat para cada capítulo (solo los que tienen pose). */
+/**
+ * Punto del suelo al que apunta la cámara, si el rayo baja y cae dentro de la maqueta. Es el ancla
+ * natural de un lugar: la órbita gira alrededor de lo que se ve en el centro de la pantalla.
+ */
+const groundHit = (origin: Vec3, dir: Vec3): Vec3 | null => {
+    const d = dir.clone().normalize();
+    if (d.y > -0.01) return null;
+    const t = (GROUND_Y - origin.y) / d.y;
+    if (t <= 0 || t > 160) return null;
+    const hit = origin.clone().add(d.mulScalar(t));
+    return Math.hypot(hit.x - SCENE_CENTER[0], hit.z - SCENE_CENTER[1]) <= SCENE_RADIUS ? hit : null;
+};
+
+/** Ancla de un lugar: donde su vista apunta al suelo; si no, el punto de mira guardado. */
+const anchorOf = (pose: Pose): Pose['target'] => {
+    const pos = new Vec3(...pose.position);
+    const hit = groundHit(pos, new Vec3(...pose.target).sub(pos));
+    return hit ? [round(hit.x), round(hit.y), round(hit.z)] : pose.target;
+};
+
+/** Índice de anotación de SuperSplat para cada lugar (solo los que tienen pose). */
 let annotationOf: (number | undefined)[] = [];
 
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
     const settings = defaultSettings();
     settings.background = { color: [0.059, 0.055, 0.047] };
+    const withAnchor = (p: Pose): Pose => ({ ...p, target: anchorOf(p) });
     const first = s.chapters[0]?.pose;
-    if (first) settings.cameras = [{ initial: first }];
+    if (first) settings.cameras = [{ initial: withAnchor(first) }];
     annotationOf = [];
     settings.annotations = [];
     s.chapters.forEach((c, i) => {
         if (!c.pose) return;
+        const cam = withAnchor(c.pose);
         annotationOf[i] = settings.annotations.length;
         settings.annotations.push({
-            position: c.pose.target,
+            position: cam.target,
             title: c.nav.slice(0, 40),
             text: '',
-            camera: { initial: c.pose }
+            camera: { initial: cam }
         });
     });
     settings.startMode = 'default';
@@ -119,7 +161,6 @@ const mountViewer = async () => {
             settings: buildSettings(story),
             contentUrl: CONTENT_URL,
             contentFilename: 'scene.sog',
-            collisionUrl: story.collision || undefined,
             renderer: 'webgl',
             ui: false,
             lang: 'es'
@@ -163,7 +204,6 @@ const renderChapter = () => {
     chKicker.hidden = !c.kicker;
     chTitle.textContent = c.title;
     renderChapterText(c.text);
-    chapterEl.classList.toggle('walk', c.mode === 'walk');
     chapterEl.scrollTop = 0;
     indexEl.querySelectorAll<HTMLElement>('.chapter-link').forEach((el) => {
         el.classList.toggle('on', Number(el.dataset.index) === active);
@@ -171,20 +211,13 @@ const renderChapter = () => {
 };
 
 /**
- * Ajusta el tamaño de letra para que el texto quepa completo: parte de 18 px y no baja de 14 px
- * (13.5 px solo en horizontal, con poca altura). Si aun así no cabe, el texto se puede desplazar.
+ * Todas las descripciones usan el mismo tamaño de letra. Si un texto no cabe en el panel, el panel
+ * se desplaza (y entonces recibe los toques en lugar de la escena).
  */
-const shortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 600px)');
-const fitChapter = () => {
-    const min = shortLandscape.matches ? 13.5 : 14;
-    chapterEl.classList.remove('scroll');
-    for (let fs = 18; fs >= min; fs -= 0.5) {
-        chapterEl.style.setProperty('--fs', `${fs}px`);
-        if (chapterEl.scrollHeight <= chapterEl.clientHeight + 1) return;
-    }
-    chapterEl.classList.add('scroll');
+const markScrollable = () => {
+    chapterEl.classList.toggle('scroll', chapterEl.scrollHeight > chapterEl.clientHeight + 1);
 };
-window.addEventListener('resize', fitChapter);
+window.addEventListener('resize', markScrollable);
 
 /** Oculta el texto mientras la cámara vuela: primero se ve el recorrido. */
 const concealChapter = () => {
@@ -204,21 +237,15 @@ const revealChapter = () => {
     chapterEl.classList.add('enter');
 };
 
-const showWalkHint = (msg: string) => {
-    walkHint.textContent = msg;
-    walkHint.hidden = false;
-};
-
 const goTo = (i: number) => {
     const c = story.chapters[i];
     if (!c) return;
     active = i;
     cancelArrival?.();
     cancelArrival = null;
-    walkHint.hidden = true;
     renderChapter();
     concealChapter();
-    fitChapter();
+    markScrollable();
     if (EDIT_MODE) syncEditor();
 
     const v = viewer;
@@ -227,41 +254,28 @@ const goTo = (i: number) => {
         return;
     }
 
+    // SuperSplat vuela a la pose del lugar y deja la cámara en órbita alrededor de su ancla.
     const ai = annotationOf[i];
     if (ai !== undefined) v.selectAnnotation(ai);
     else if (i === 0) v.frameScene();
 
-    // El texto (y la caminata, en ese lugar) esperan a que la cámara termine el vuelo.
+    // El texto espera a que la cámara termine el vuelo.
     const arrived = () => {
         if (v !== viewer || active !== i) return;
         cancelArrival = null;
         revealChapter();
-        if (c.mode !== 'walk') {
-            enterLookAround(v);
-            return;
-        }
-        // El modo caminata de SuperSplat busca suelo cerca de la cámara: solo funciona al llegar.
-        if (v.state.walkAllowed) {
-            v.state.gamingControls = false; // en caminata, tocar el suelo camina hasta allí
-            v.state.cameraMode = 'walk';
-            showWalkHint('Toca el suelo para caminar · arrastra para mirar');
-        } else {
-            showWalkHint(
-                EDIT_MODE ? 'Modo caminata: falta el archivo de colisión de la escena.' : 'Arrastra para mirar alrededor'
-            );
-        }
     };
     if (c.pose && ai !== undefined) cancelArrival = waitForArrival(v, c.pose, arrived);
     else arrived();
 };
 
 /**
- * Al llegar a un lugar, la cámara gira siempre sobre su propio eje: modo de vuelo de SuperSplat
- * con «controles de juego» en pantallas táctiles (un dedo gira; el toque no la lleva a ningún
- * punto ni el pellizco la desplaza). Así nunca orbita alrededor de un punto lejano o cercano.
+ * Modo vuelo de SuperSplat: la cámara gira siempre sobre su propio eje, nunca alrededor de un ancla.
+ * En pantallas táctiles es «mirar alrededor» con un dedo; con ratón se puede además caminar con
+ * W A S D.
  */
-const enterLookAround = (v: ViewerHandle) => {
-    if (EDIT_MODE) return;
+const enterFly = (v: ViewerHandle) => {
+    if (EDIT_MODE || v.state.cameraMode === 'fly') return;
     v.state.gamingControls = navigator.maxTouchPoints > 0;
     v.state.cameraMode = 'fly';
 };
@@ -322,31 +336,75 @@ const renderMasthead = () => {
 $<HTMLButtonElement>('prev').addEventListener('click', () => step(-1));
 $<HTMLButtonElement>('next').addEventListener('click', () => step(1));
 
-// Al tocar la escena (o el texto) el texto desaparece: se queda la vista libre para mirar.
-// Si el toque llega en pleno vuelo, la cámara se detiene ahí y gira sobre su propio eje.
+// Al tocar la escena el texto desaparece y queda la vista libre. Si el toque llega en pleno vuelo,
+// la cámara se detiene ahí y gira sobre su propio eje (aún no hay ancla a la que orbitar).
 window.addEventListener(
     'pointerdown',
     (e) => {
         if (EDIT_MODE) return;
         // SuperSplat solo sabe si es un dedo o un ratón tras el primer toque: se lo indicamos ya
         if (viewer?.state.cameraMode === 'fly') viewer.state.gamingControls = e.pointerType === 'touch';
-        if ((e.target as HTMLElement).closest('#index, #chapter-nav, #chapter.scroll')) return;
+        if (e.pointerType === 'touch') touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size === 2) gesture = touchSpan();
+        const target = e.target as HTMLElement;
+        if (target.closest('#index, #chapter-nav, #chapter.scroll')) return;
         const flying = cancelArrival !== null;
         cancelArrival?.();
         cancelArrival = null;
         chapterEl.classList.remove('shown');
         document.body.classList.remove('reading');
-        walkHint.hidden = true;
-        if (flying && viewer?.state.loaded) enterLookAround(viewer);
+        if (flying && viewer?.state.loaded) enterFly(viewer);
     },
     true
 );
 
+// «Mover» la escena (desplazarla, no orbitarla) pasa a modo vuelo: ya no hay ancla y la cámara gira
+// sobre su propio eje. Desplazar = dos dedos que se mueven juntos, botón derecho/central o Mayús.
+const touches = new Map<number, { x: number; y: number }>();
+let gesture: { cx: number; cy: number; span: number } | null = null;
+
+function touchSpan() {
+    const [a, b] = [...touches.values()];
+    return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, span: Math.hypot(a.x - b.x, a.y - b.y) };
+}
+
+window.addEventListener(
+    'pointermove',
+    (e) => {
+        const v = viewer;
+        if (EDIT_MODE || !v || v.state.cameraMode !== 'orbit') return;
+        if (e.pointerType === 'touch') {
+            const p = touches.get(e.pointerId);
+            if (!p) return;
+            p.x = e.clientX;
+            p.y = e.clientY;
+            if (touches.size !== 2 || !gesture) return;
+            const now = touchSpan();
+            const moved = Math.hypot(now.cx - gesture.cx, now.cy - gesture.cy);
+            const pinched = Math.abs(now.span - gesture.span);
+            if (moved > 10 && moved > pinched) enterFly(v); // los dedos se desplazan: es mover, no acercar
+        } else if (e.buttons & 6 || (e.buttons & 1 && (e.shiftKey || e.ctrlKey || e.metaKey))) {
+            enterFly(v);
+        }
+    },
+    true
+);
+
+const endTouch = (e: PointerEvent) => {
+    touches.delete(e.pointerId);
+    gesture = null;
+};
+window.addEventListener('pointerup', endTouch, true);
+window.addEventListener('pointercancel', endTouch, true);
+
 window.addEventListener('keydown', (e) => {
     if ((e.target as HTMLElement).closest('input, textarea, select')) return;
-    // en caminata/vuelo las flechas mueven la cámara de SuperSplat
-    if (viewer && (viewer.state.cameraMode === 'walk' || viewer.state.cameraMode === 'fly')) return;
-    if (e.key === 'ArrowRight') step(1);
+    const v = viewer;
+    // en vuelo las flechas mueven la cámara de SuperSplat
+    if (v?.state.cameraMode === 'fly') return;
+    // teclas de movimiento: mover la cámara = modo vuelo
+    if (v?.state.loaded && /^(KeyW|KeyA|KeyS|KeyD|KeyQ|KeyE)$/.test(e.code)) enterFly(v);
+    else if (e.key === 'ArrowRight') step(1);
     else if (e.key === 'ArrowLeft') step(-1);
 });
 
@@ -396,11 +454,9 @@ const currentViewerPose = (): Pose | null => {
     const entity = cam.entity as Entity;
     const pos = entity.getPosition().clone();
     const fwd = entity.forward.clone().normalize();
-    // distancia al punto de mira: la del lugar si ya tenía pose, si no hasta el centro de la plaza
-    const prev = story.chapters[editIndex]?.pose ?? story.chapters[0]?.pose;
-    const center = prev ? new Vec3(...prev.target) : new Vec3(0, 0, 0);
-    const dist = Math.max(1, center.sub(pos).dot(fwd));
-    const target = pos.clone().add(fwd.mulScalar(dist));
+    // punto de mira = donde la vista toca el suelo de la maqueta (el ancla de la órbita);
+    // si mira al horizonte o fuera de la maqueta, 40 m al frente
+    const target = groundHit(pos, fwd) ?? pos.clone().add(fwd.clone().mulScalar(40));
     return {
         position: [round(pos.x), round(pos.y), round(pos.z)],
         target: [round(target.x), round(target.y), round(target.z)],

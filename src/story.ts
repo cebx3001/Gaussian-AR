@@ -17,16 +17,12 @@ export type Chapter = {
     kicker: string;
     title: string;
     text: string;
-    /** `orbit`: vista fija con texto. `walk`: activa el modo caminata de SuperSplat al llegar. */
-    mode: 'orbit' | 'walk';
     /** `null` = todavía sin capturar. */
     pose: Pose | null;
 };
 
 export type Story = {
     place: { kicker: string; title: string };
-    /** Opcional: archivo de colisión (.glb o vóxeles) que el modo caminata necesita. */
-    collision?: string;
     chapters: Chapter[];
 };
 

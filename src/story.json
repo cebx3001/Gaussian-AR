@@ -3,7 +3,6 @@
     "kicker": "Cuenca · Patrimonio",
     "title": "San Sebastián"
   },
-  "collision": "./scene.voxel.json",
   "chapters": [
     {
       "id": "plaza",
@@ -11,7 +10,6 @@
       "kicker": "Plaza Miguel de León",
       "title": "Plaza de San Sebastián",
       "text": "La actual Plaza Miguel de León, conocida tradicionalmente como Parque de San Sebastián, ha sido durante siglos uno de los espacios públicos más importantes del barrio. En la época colonial fue escenario de corridas de toros y celebraciones populares. Más tarde adquirió funciones comerciales: en el siglo XIX llegó a ser utilizada como mercado de ganado y un plano de 1889 la registra como la “Plaza de la venta de Ganado de Sebastián”.\n\nDurante el siglo XX el espacio también acogió actividades deportivas. Con el tiempo dejó de funcionar como una plaza abierta de usos múltiples y fue transformándose en el parque que conocemos actualmente. Su historia permite entender cómo un mismo espacio urbano puede cambiar de función mientras conserva su importancia para la vida de la ciudad.",
-      "mode": "orbit",
       "pose": {
         "position": [
           -3.084,
@@ -32,7 +30,6 @@
       "kicker": "Ermita desde 1578",
       "title": "Iglesia y Cruz de San Sebastián",
       "text": "San Sebastián se encontraba en el extremo occidental de la ciudad colonial. En 1578 ya existía aquí una ermita dedicada a San Sebastián y San Fabián, levantada junto a una cruz y un humilladero que señalaban una de las salidas de la ciudad.\n\nLa cruz que todavía acompaña a la iglesia conserva esa memoria urbana. No era solamente un elemento religioso: marcaba el límite de la ciudad y orientaba a quienes salían de Cuenca hacia el occidente. Con el tiempo, San Sebastián pasó de ser un espacio periférico a convertirse en uno de los barrios históricos más reconocibles de Cuenca.",
-      "mode": "orbit",
       "pose": {
         "position": [
           -70.057,
@@ -53,7 +50,6 @@
       "kicker": "Casa de la Temperancia · 1876",
       "title": "Museo Municipal de Arte Moderno",
       "text": "El edificio que hoy alberga el Museo Municipal de Arte Moderno tiene una historia muy diferente a su función actual. Fue construido en 1876 como la Casa de la Temperancia, una institución destinada a atender a personas con problemas de alcoholismo.\n\nDurante el siglo XX el edificio tuvo distintos usos sociales, entre ellos cárcel de varones, asilo y otras funciones asistenciales. Después de un proceso de recuperación y restauración, abrió sus puertas como Museo Municipal de Arte Moderno en 1981.\n\nHoy el edificio conecta dos momentos de la historia de Cuenca: la arquitectura y vida social del siglo XIX con la producción artística moderna y contemporánea de la ciudad. El antiguo espacio asistencial se convirtió así en uno de los principales lugares culturales de San Sebastián.",
-      "mode": "orbit",
       "pose": {
         "position": [
           4.649,
@@ -69,25 +65,12 @@
       }
     },
     {
-      "id": "caminata",
-      "nav": "Modo caminata",
-      "kicker": "Recorrido libre",
-      "title": "Modo caminata",
-      "text": "Toca cualquier punto del suelo para caminar hasta allí. Arrastra para mirar alrededor.",
-      "mode": "walk",
-      "pose": {
-        "position": [
-          -33.938,
-          24.95,
-          16.024
-        ],
-        "target": [
-          -17.762,
-          22.429,
-          31.732
-        ],
-        "fov": 90
-      }
+      "id": "fuente",
+      "nav": "La fuente",
+      "kicker": "Planta cruciforme",
+      "title": "La fuente de San Sebastián",
+      "text": "Junto a la iglesia se encuentra una fuente de planta cruciforme, con un surtidor en el centro. Es uno de los elementos que forman parte de la composición del Parque de San Sebastián y acompaña el trazado geométrico que adquirió la plaza durante su transformación a comienzos del siglo XX.\n\nLa fuente permanece como parte del paisaje urbano de este espacio histórico de Cuenca.",
+      "pose": null
     }
   ]
 }

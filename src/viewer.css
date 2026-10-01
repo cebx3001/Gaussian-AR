@@ -7,8 +7,10 @@
     --gold: #c9a96e;
     --paper: rgba(17, 15, 12, 0.78);
     --line: rgba(201, 169, 110, 0.32);
-    --display: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-    --text: 'Libre Franklin', -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --display: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --text: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    /* un solo tamaño para el texto de todas las descripciones */
+    --fs-text: 17px;
 }
 
 * {
@@ -93,11 +95,10 @@ body.edit #masthead {
     left: 0;
     right: 0;
     bottom: var(--index-h);
-    /* nunca sube hasta la cabecera; el tamaño de letra se ajusta solo para que el texto quepa */
+    /* nunca sube hasta la cabecera; si el texto es largo, el panel se desplaza */
     max-height: calc(100vh - var(--index-h) - 14px);
     max-height: calc(100dvh - var(--index-h) - 14px);
     overflow: hidden;
-    --fs: 18px;
     padding: 30px 22px 6px;
     background: linear-gradient(to top, rgba(15, 14, 12, 0.5) 72%, rgba(15, 14, 12, 0.26) 90%, rgba(15, 14, 12, 0));
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
@@ -196,38 +197,20 @@ body.edit #masthead {
 #chapter-title {
     margin: 0 0 14px;
     font-family: var(--display);
-    font-weight: 500;
-    font-size: clamp(1.9rem, 8vw, 3rem);
-    line-height: 0.98;
-    letter-spacing: -0.005em;
+    font-weight: 600;
+    font-size: 2rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
     text-wrap: balance;
 }
 
 #chapter-text p {
     margin: 0 0 0.8em;
-    font-size: var(--fs);
+    font-size: var(--fs-text);
     font-weight: 400;
-    line-height: 1.55;
+    line-height: 1.6;
     color: #fffdf8;
     text-wrap: pretty;
-}
-
-/* capitular en el primer párrafo */
-#chapter-text p:first-child::first-letter {
-    float: left;
-    margin: 0.06em 0.1em 0 0;
-    font-family: var(--display);
-    font-weight: 500;
-    font-size: 3.4em;
-    line-height: 0.8;
-    color: var(--gold);
-}
-
-#chapter.walk #chapter-text p:first-child::first-letter {
-    float: none;
-    margin: 0;
-    font: inherit;
-    color: inherit;
 }
 
 #chapter-nav {
@@ -250,20 +233,6 @@ body.edit #masthead {
     text-shadow: inherit;
 }
 
-#walk-hint {
-    position: fixed;
-    top: calc(max(18px, env(safe-area-inset-top)) + 72px);
-    left: 24px;
-    right: 24px;
-    margin: 0;
-    font-family: var(--display);
-    font-style: italic;
-    font-size: 1.05rem;
-    text-align: center;
-    color: #fffdf8;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.95), 0 1px 12px rgba(0, 0, 0, 0.9);
-    pointer-events: none;
-}
 
 /* ---------- Índice de capítulos ---------- */
 #index {
@@ -353,15 +322,11 @@ body.edit #masthead {
         margin-bottom: 4px;
     }
     #chapter-title {
-        font-size: 1.9rem;
         margin-bottom: 8px;
     }
     #chapter-text p {
         line-height: 1.45;
         margin-bottom: 0.65em;
-    }
-    #chapter-text p:first-child::first-letter {
-        font-size: 2.6em;
     }
     #chapter-nav {
         margin-top: 2px;
@@ -382,9 +347,6 @@ body.edit #masthead {
         padding: 8px 4px 6px;
         font-size: 1.05rem;
         white-space: nowrap;
-    }
-    #walk-hint {
-        top: 12px;
     }
 }
 
@@ -437,7 +399,6 @@ body.edit #masthead {
 #loader-message {
     margin: 6px 0 0;
     font-family: var(--display);
-    font-style: italic;
     font-size: 1.2rem;
     color: rgba(255, 252, 245, 0.75);
 }
