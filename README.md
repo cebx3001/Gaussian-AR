@@ -5,7 +5,7 @@ La plaza de San Sebastián como una maqueta circular en Gaussian Splatting, cont
 - **Navegación 3D:** el visor oficial de SuperSplat (`@playcanvas/supersplat-viewer`), incrustado sin su interfaz. Cada lugar es una anotación de SuperSplat.
   - Al llegar a un lugar, ese punto es el **ancla**: la cámara orbita a su alrededor, sin bajar de la horizontal (no se ve la maqueta desde abajo).
   - Si el usuario **desplaza** la escena (dos dedos, botón derecho, Mayús o teclas W A S D), pasa al **modo vuelo** de SuperSplat: la cámara gira sobre su propio eje y no baja del suelo.
-- **Capa editorial:** textos y botones encima del visor (`src/viewer-main.ts`, `src/viewer.css`). Tipografías, todas sans-serif: Outfit (títulos) y Manrope (texto). Todas las descripciones usan el mismo tamaño de letra.
+- **Capa editorial:** textos y botones encima del visor (`src/viewer-main.ts`, `src/viewer.css`). Tipografías: Cormorant Garamond (títulos) y Libre Franklin (texto). Todas las descripciones usan el mismo tamaño de letra.
 - **Parche de SuperSplat:** `vite.config.ts` permite fijar el límite de giro vertical y el suelo del modo vuelo, que el paquete no expone. Si el paquete cambia, la compilación falla en lugar de publicar sin el límite.
 
 ## Lugares

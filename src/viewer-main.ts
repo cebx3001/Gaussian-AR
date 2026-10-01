@@ -167,6 +167,8 @@ const mountViewer = async () => {
         });
         viewer = v;
         v.state.showAnnotations = false;
+        // SuperSplat guarda esta opción en el navegador: una visita anterior pudo dejarla activada
+        v.state.gamingControls = false;
         v.events.on('progress:changed', (p: number) => setProgress(p));
         const onLoaded = () => {
             loader.dataset.hidden = 'true';
@@ -271,12 +273,12 @@ const goTo = (i: number) => {
 
 /**
  * Modo vuelo de SuperSplat: la cámara gira siempre sobre su propio eje, nunca alrededor de un ancla.
- * En pantallas táctiles es «mirar alrededor» con un dedo; con ratón se puede además caminar con
- * W A S D.
+ * Los gestos son los nativos de SuperSplat: un dedo gira, dos dedos desplazan, pellizco acerca o
+ * aleja; con ratón, arrastrar gira y W A S D mueve. No se usan los «controles de juego» (joystick),
+ * que quitan el desplazamiento con dos dedos y el zoom.
  */
 const enterFly = (v: ViewerHandle) => {
     if (EDIT_MODE || v.state.cameraMode === 'fly') return;
-    v.state.gamingControls = navigator.maxTouchPoints > 0;
     v.state.cameraMode = 'fly';
 };
 
@@ -342,8 +344,6 @@ window.addEventListener(
     'pointerdown',
     (e) => {
         if (EDIT_MODE) return;
-        // SuperSplat solo sabe si es un dedo o un ratón tras el primer toque: se lo indicamos ya
-        if (viewer?.state.cameraMode === 'fly') viewer.state.gamingControls = e.pointerType === 'touch';
         if (e.pointerType === 'touch') touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (touches.size === 2) gesture = touchSpan();
         const target = e.target as HTMLElement;
