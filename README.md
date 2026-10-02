@@ -52,6 +52,15 @@ Al abrir el visor, la escena no aparece de golpe: nace de la oscuridad con el **
 
 Están definidos como variables al inicio de `src/viewer.css` (`--bg`, `--ink`, `--accent`); el fondo de la escena 3D se fija en `buildSettings`, en `src/viewer-main.ts`.
 
+## Idiomas (español / inglés)
+
+Arriba a la derecha hay un selector **EN | ES**. El idioma se elige por el navegador la primera vez, se recuerda en el dispositivo y también se puede fijar con `?lang=en` o `?lang=es`. Todo cambia al instante: cabecera, nombres del índice, textos de cada lugar, pantalla de carga y mensajes.
+
+- Textos de cada lugar: en `src/story.json` el español es el texto base y el inglés está en `en` dentro de cada lugar (`place.en` para la cabecera).
+- Mensajes de la interfaz y las instrucciones de uso: `src/i18n.ts`.
+- La **Vista general** lleva además las instrucciones de uso (girar, zoom, mover), distintas para pantalla táctil y para ratón (`"howto": true` en su entrada de `story.json`).
+- Las herramientas de edición (`?editar`, `?animar`) siguen en español.
+
 ## Publicación
 
 GitHub Actions compila con Vite y publica `dist/`. En Settings → Pages el origen (**Source**) está en **GitHub Actions**, así que ya no existe una publicación aparte de la rama sin compilar.

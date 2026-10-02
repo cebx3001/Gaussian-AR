@@ -1,7 +1,11 @@
 {
   "place": {
     "kicker": "Cuenca · Patrimonio",
-    "title": "San Sebastián"
+    "title": "San Sebastián",
+    "en": {
+      "kicker": "Cuenca · Heritage",
+      "title": "San Sebastián"
+    }
   },
   "intro": {
     "duration": 8,
@@ -70,8 +74,15 @@
       "nav": "Vista general",
       "kicker": "Maqueta completa",
       "title": "Vista general",
-      "text": "",
-      "pose": null
+      "text": "Este es un modelo 3D navegable de la plaza de San Sebastián, en Cuenca. Muévete por él y {tap} los nombres de abajo para conocer la historia de cada lugar.",
+      "pose": null,
+      "en": {
+        "nav": "Overview",
+        "kicker": "Complete model",
+        "title": "Overview",
+        "text": "This is a navigable 3D model of San Sebastián Square in Cuenca. Move around it and {tap} the names below to learn the history of each place."
+      },
+      "howto": true
     },
     {
       "id": "plaza",
@@ -91,6 +102,12 @@
           -3.774
         ],
         "fov": 60
+      },
+      "en": {
+        "nav": "San Sebastián Square",
+        "kicker": "Plaza Miguel de León",
+        "title": "San Sebastián Square",
+        "text": "The current Plaza Miguel de León, traditionally known as San Sebastián Park, has been one of the most important public spaces of the neighborhood for centuries. In colonial times it was the setting for bullfights and popular celebrations. Later it took on commercial functions: in the 19th century it was used as a cattle market, and an 1889 map records it as the “Plaza de la venta de Ganado de Sebastián” (Sebastián's cattle-sale square).\n\nDuring the 20th century the space also hosted sporting activities. Over time it stopped working as an open, multipurpose square and gradually became the park we know today. Its history shows how a single urban space can change its function while keeping its importance for the life of the city."
       }
     },
     {
@@ -111,6 +128,12 @@
           47.324
         ],
         "fov": 60
+      },
+      "en": {
+        "nav": "Church & Cross",
+        "kicker": "Hermitage since 1578",
+        "title": "Church and Cross of San Sebastián",
+        "text": "San Sebastián stood on the western edge of the colonial city. By 1578 a hermitage dedicated to San Sebastián and San Fabián already existed here, built beside a cross and a humilladero (wayside shrine) that marked one of the city's exits.\n\nThe cross that still accompanies the church keeps that urban memory. It was not only a religious element: it marked the limit of the city and guided those leaving Cuenca toward the west. Over time, San Sebastián went from being a peripheral place to becoming one of Cuenca's most recognizable historic neighborhoods."
       }
     },
     {
@@ -131,6 +154,12 @@
           -31.443
         ],
         "fov": 60
+      },
+      "en": {
+        "nav": "Modern Art Museum",
+        "kicker": "House of Temperance · 1876",
+        "title": "Municipal Museum of Modern Art",
+        "text": "The building that today houses the Municipal Museum of Modern Art has a very different history from its present function. It was built in 1876 as the Casa de la Temperancia (House of Temperance), an institution meant to care for people with alcoholism.\n\nDuring the 20th century the building had various social uses, including a men's prison, an asylum and other welfare functions. After a process of recovery and restoration, it opened its doors as the Municipal Museum of Modern Art in 1981.\n\nToday the building connects two moments in Cuenca's history: the architecture and social life of the 19th century with the modern and contemporary artistic production of the city. The former welfare space thus became one of the main cultural places in San Sebastián."
       }
     },
     {
@@ -151,6 +180,12 @@
           11.296
         ],
         "fov": 60
+      },
+      "en": {
+        "nav": "The Fountain",
+        "kicker": "Cruciform plan",
+        "title": "The San Sebastián Fountain",
+        "text": "Next to the church stands a cross-shaped fountain with a jet in its center. It is one of the elements that make up the composition of San Sebastián Park and echoes the geometric layout the square acquired during its transformation in the early 20th century.\n\nThe fountain remains part of the urban landscape of this historic space in Cuenca."
       }
     }
   ]

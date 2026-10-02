@@ -22,9 +22,11 @@ import type { CameraComponent, Entity } from 'playcanvas';
 
 import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
 import { startReveal } from './reveal';
+import { LANG_KEY, UI, detectLang } from './i18n';
+import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
 import { setupTimeline, timelineAfterMount, timelineKeyframes } from './timeline';
-import type { Keyframe, Pose, Story } from './story';
+import type { Chapter, ChapterText, Keyframe, Pose, Story } from './story';
 
 const CONTENT_URL = './scene.sog';
 const EDIT_KEY = 'san-sebastian:story-edit';
@@ -69,6 +71,8 @@ const stage = $<HTMLElement>('stage');
 const loader = $<HTMLElement>('loader');
 const loaderFill = $<HTMLElement>('loader-fill');
 const loaderMessage = $<HTMLElement>('loader-message');
+const loaderKicker = $<HTMLElement>('loader-kicker');
+const langEl = $<HTMLElement>('lang');
 const mastKicker = $<HTMLElement>('masthead-kicker');
 const mastTitle = $<HTMLElement>('masthead-title');
 const chapterEl = $<HTMLElement>('chapter');
@@ -140,6 +144,26 @@ const anchorOf = (pose: Pose): Pose['target'] => {
     const pos = new Vec3(...pose.position);
     const hit = groundHit(pos, new Vec3(...pose.target).sub(pos));
     return hit ? [round(hit.x), round(hit.y), round(hit.z)] : pose.target;
+};
+
+// ---------------------------------------------------------------------------
+// Idioma (español / inglés)
+// ---------------------------------------------------------------------------
+let lang: Lang = detectLang();
+const ui = () => UI[lang];
+/** Pantalla táctil como entrada principal: cambian las instrucciones («toca» / «haz clic»). */
+const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+
+/** Textos de un lugar en el idioma activo (el español es el base). */
+const textOf = (c: Chapter): ChapterText =>
+    lang === 'en' && c.en ? c.en : { nav: c.nav, kicker: c.kicker, title: c.title, text: c.text };
+
+/** Texto completo de un lugar; el de la Vista general lleva además las instrucciones de uso. */
+const bodyOf = (c: Chapter): string => {
+    const t = textOf(c).text;
+    if (!c.howto) return t;
+    const u = ui();
+    return [t.replace('{tap}', coarsePointer ? u.tapTouch : u.tapMouse), ...(coarsePointer ? u.howTouch : u.howMouse)].join('\n\n');
 };
 
 /** Índice de anotación de SuperSplat para cada lugar (solo los que tienen pose). */
@@ -221,7 +245,7 @@ const mountViewer = async () => {
     viewer = null;
     stage.replaceChildren();
     loader.dataset.hidden = 'false';
-    loaderMessage.textContent = 'Cargando la plaza';
+    loaderMessage.textContent = ui().loading;
     setProgress(0);
 
     try {
@@ -257,7 +281,7 @@ const mountViewer = async () => {
         else v.events.once('loaded:changed', onLoaded);
     } catch (err) {
         console.error(err);
-        loaderMessage.textContent = 'Este navegador no pudo abrir la escena 3D.';
+        loaderMessage.textContent = ui().loadError;
     }
 };
 
@@ -271,7 +295,16 @@ const renderChapterText = (text: string) => {
         .filter(Boolean)
         .forEach((t) => {
             const p = document.createElement('p');
-            p.textContent = t;
+            // `**gesto**` se muestra en negrita
+            t.split(/(\*\*[^*]+\*\*)/).forEach((part) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    const s = document.createElement('strong');
+                    s.textContent = part.slice(2, -2);
+                    p.append(s);
+                } else if (part) {
+                    p.append(part);
+                }
+            });
             chText.append(p);
         });
     chText.hidden = !chText.childElementCount;
@@ -280,11 +313,16 @@ const renderChapterText = (text: string) => {
 const renderChapter = () => {
     const c = story.chapters[active];
     if (!c) return;
-    chKicker.textContent = c.kicker;
-    chKicker.hidden = !c.kicker;
-    chTitle.textContent = c.title;
-    renderChapterText(c.text);
+    const t = textOf(c);
+    chKicker.textContent = t.kicker;
+    chKicker.hidden = !t.kicker;
+    chTitle.textContent = t.title;
+    renderChapterText(bodyOf(c));
     chapterEl.scrollTop = 0;
+    updateIndexActive();
+};
+
+const updateIndexActive = () => {
     indexEl.querySelectorAll<HTMLElement>('.chapter-link').forEach((el) => {
         el.classList.toggle('on', Number(el.dataset.index) === active);
     });
@@ -444,17 +482,48 @@ const renderIndex = () => {
         b.type = 'button';
         b.className = 'chapter-link';
         b.dataset.index = String(i);
-        b.textContent = c.nav;
+        b.textContent = textOf(c).nav;
         b.addEventListener('click', () => goTo(i));
         indexEl.append(b);
     });
 };
 
 const renderMasthead = () => {
-    mastKicker.textContent = story.place.kicker;
-    mastTitle.textContent = story.place.title;
-    document.title = `${story.place.title} · Cuenca`;
+    const p = lang === 'en' && story.place.en ? story.place.en : story.place;
+    mastKicker.textContent = p.kicker;
+    mastTitle.textContent = p.title;
+    loaderKicker.textContent = p.kicker;
+    document.title = `${p.title} · Cuenca`;
 };
+
+/** Aplica el idioma activo a todo lo que se ve: cabecera, índice, texto del lugar y etiquetas. */
+const applyLang = () => {
+    document.documentElement.lang = lang;
+    renderMasthead();
+    renderIndex();
+    updateIndexActive();
+    renderChapter();
+    markScrollable();
+    if (loader.dataset.hidden !== 'true') loaderMessage.textContent = ui().loading;
+    $<HTMLElement>('prev').setAttribute('aria-label', ui().prev);
+    $<HTMLElement>('next').setAttribute('aria-label', ui().next);
+    indexEl.setAttribute('aria-label', ui().places);
+    langEl.querySelectorAll<HTMLElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+};
+
+langEl.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+    b.addEventListener('click', () => {
+        const next = b.dataset.lang as Lang;
+        if (next === lang) return;
+        lang = next;
+        try {
+            localStorage.setItem(LANG_KEY, lang);
+        } catch {
+            // sin almacenamiento
+        }
+        applyLang();
+    })
+);
 
 $<HTMLButtonElement>('prev').addEventListener('click', () => step(-1));
 $<HTMLButtonElement>('next').addEventListener('click', () => step(1));
@@ -650,8 +719,7 @@ const setupEditor = () => {
 };
 
 // ---------------------------------------------------------------------------
-renderMasthead();
-renderIndex();
+applyLang();
 if (EDIT_MODE) setupEditor();
 if (ANIMAR) {
     setupTimeline(

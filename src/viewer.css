@@ -726,3 +726,47 @@ body.animar #chapter {
 body.animar #ed-export-box {
     bottom: calc(max(8px, env(safe-area-inset-bottom)) + 150px);
 }
+
+/* ---------- Selector de idioma (EN | ES) ---------- */
+#lang {
+    position: fixed;
+    z-index: 6;
+    top: max(12px, env(safe-area-inset-top));
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-family: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 10px rgba(0, 0, 0, 0.85);
+}
+
+#lang button {
+    padding: 10px 8px 7px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font: inherit;
+    letter-spacing: inherit;
+    color: var(--muted);
+    text-shadow: inherit;
+}
+
+#lang button.on {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+}
+
+body.edit #lang,
+body.animar #lang {
+    display: none;
+}
+
+/* gestos de la Vista general: en negrita y en el color del texto */
+#chapter-text strong {
+    font-weight: 700;
+    color: var(--ink);
+}

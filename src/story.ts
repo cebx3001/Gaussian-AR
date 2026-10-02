@@ -24,6 +24,14 @@ export type IntroAnimation = {
     keyframes: Keyframe[];
 };
 
+/** Textos de un lugar en un idioma. */
+export type ChapterText = {
+    nav: string;
+    kicker: string;
+    title: string;
+    text: string;
+};
+
 export type Chapter = {
     id: string;
     /** Nombre del botón. */
@@ -33,10 +41,14 @@ export type Chapter = {
     text: string;
     /** `null` = todavía sin capturar. */
     pose: Pose | null;
+    /** Mismos textos en inglés (los de arriba son el español). */
+    en?: ChapterText;
+    /** Añade al texto las instrucciones de uso (girar, zoom, mover). `{tap}` = «toca» / «tap». */
+    howto?: boolean;
 };
 
 export type Story = {
-    place: { kicker: string; title: string };
+    place: { kicker: string; title: string; en?: { kicker: string; title: string } };
     /** Animación de entrada al abrir el visor. */
     intro?: IntroAnimation;
     chapters: Chapter[];

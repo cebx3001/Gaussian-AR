@@ -16,6 +16,12 @@
     <body>
         <div id="stage"></div>
 
+        <div id="lang" role="group" aria-label="Language / Idioma">
+            <button type="button" data-lang="en">EN</button>
+            <span aria-hidden="true">|</span>
+            <button type="button" data-lang="es">ES</button>
+        </div>
+
         <header id="masthead">
             <p id="masthead-kicker"></p>
             <h1 id="masthead-title"></h1>
@@ -50,12 +56,24 @@
         </div>
 
         <div id="loader" role="status" aria-live="polite">
-            <p id="loader-kicker">Cuenca · Patrimonio</p>
+            <p id="loader-kicker"></p>
             <p id="loader-title">San Sebastián</p>
             <div id="loader-bar"><div id="loader-fill"></div></div>
-            <p id="loader-message">Cargando la plaza</p>
+            <p id="loader-message"></p>
         </div>
 
+        <script>
+            // idioma de la pantalla de carga, antes de que cargue el resto del código
+            (function () {
+                var l = new URLSearchParams(location.search).get('lang');
+                try { if (l !== 'es' && l !== 'en') l = localStorage.getItem('san-sebastian:lang'); } catch (e) {}
+                if (l !== 'es' && l !== 'en') l = (navigator.language || 'es').toLowerCase().indexOf('es') === 0 ? 'es' : 'en';
+                var t = l === 'es' ? ['Cuenca · Patrimonio', 'Cargando la plaza'] : ['Cuenca · Heritage', 'Loading the square'];
+                document.documentElement.lang = l;
+                document.getElementById('loader-kicker').textContent = t[0];
+                document.getElementById('loader-message').textContent = t[1];
+            })();
+        </script>
         <script type="module" src="/src/viewer-main.ts"></script>
     </body>
 </html>
