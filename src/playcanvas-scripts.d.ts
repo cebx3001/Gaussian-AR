@@ -29,5 +29,7 @@ declare module 'playcanvas/scripts/esm/gsplat/reveal-radial.mjs' {
         isEffectComplete(): boolean;
         /** Seconds from enable until the effect completes. */
         getCompletionTime(): number;
+        /** The effect's vertex-shader code (the `modifySplat*` functions), GLSL flavour. */
+        getShaderGLSL(): string;
     }
 }

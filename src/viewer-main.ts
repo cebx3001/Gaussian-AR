@@ -21,6 +21,7 @@ import { Vec3 } from 'playcanvas';
 import type { CameraComponent, Entity } from 'playcanvas';
 
 import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
+import { startReveal } from './reveal';
 import { defaultStory, round } from './story';
 import { setupTimeline, timelineAfterMount, timelineKeyframes } from './timeline';
 import type { Keyframe, Pose, Story } from './story';
@@ -40,6 +41,12 @@ const SCENE_CENTER: [number, number] = [15.8, 4.6];
 const SCENE_RADIUS = 75;
 /** La órbita no baja de la horizontal del ancla (0°): no se ve la maqueta desde abajo. */
 const ORBIT_MAX_PITCH = 0;
+/**
+ * Radial Reveal de la entrada (ver reveal.ts): a 14 m/s la onda de puntos cubre la maqueta (~70 m de
+ * radio) en 5 s y la de colores, 1,5 s detrás, en 6,5 s: dentro de los 8 s de la animación.
+ * `radius` cubre toda la escena; `dotScale` agranda los puntos del efecto original para esta escala.
+ */
+const REVEAL = { radius: 120, speed: 14, delay: 1.5, lift: 3, band: 6, dotScale: 60 };
 /** Suelo del modo vuelo (m): la cámara no puede quedar bajo la maqueta. */
 const FLY_MIN_Y = GROUND_Y + 1.5;
 /** Distancia (m) a la pose del lugar a la que se considera que el vuelo terminó. */
@@ -207,11 +214,19 @@ const mountViewer = async () => {
         v.state.gamingControls = false;
         v.events.on('progress:changed', (p: number) => setProgress(p));
         const onLoaded = () => {
-            loader.dataset.hidden = 'true';
             if (EDIT_MODE) updateModeButton();
-            if (ANIMAR) timelineAfterMount(v);
-            else if (introActive) playIntro(v);
-            else goTo(active);
+            if (ANIMAR) {
+                timelineAfterMount(v);
+            } else if (introActive) {
+                // el efecto se pone antes de mostrar la escena: nace de la oscuridad desde el primer cuadro
+                const first = story.chapters[0]?.pose;
+                const center = first ? anchorOf(first) : ([SCENE_CENTER[0], GROUND_Y, SCENE_CENTER[1]] as Pose['target']);
+                startReveal(v, { center, ...REVEAL });
+                playIntro(v);
+            } else {
+                goTo(active);
+            }
+            requestAnimationFrame(() => requestAnimationFrame(() => (loader.dataset.hidden = 'true')));
         };
         if (v.state.loaded) onLoaded();
         else v.events.once('loaded:changed', onLoaded);

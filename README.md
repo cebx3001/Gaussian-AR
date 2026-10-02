@@ -33,6 +33,14 @@ Al abrir el visor suena una animación de cámara que termina en la **Vista gene
 
 Sin keyframes en `story.json` se usa una entrada automática. Si la animación termina en un sitio distinto a la vista general, la cámara vuela hasta ella antes de mostrar el texto. `?sinintro` la salta.
 
+## Efecto Radial Reveal
+
+Al abrir el visor, la escena no aparece de golpe: nace de la oscuridad con el **Radial Reveal** de PlayCanvas (viene dentro del paquete `playcanvas`, `scripts/esm/gsplat/reveal-radial.mjs`). Desde el centro de la plaza salen dos ondas: la primera hace aparecer los splats como **puntos** de color, y la segunda los **levanta, los resalta y los crece** hasta su forma y color reales. Al terminar, el efecto se retira solo.
+
+- Se usa el shader y la lógica del efecto oficial. El visor de SuperSplat dibuja en modo «unified», así que se conecta con `setWorkBufferModifier` y actualiza el work buffer en cada cuadro mientras dura (`src/reveal.ts`).
+- El efecto original está pensado para objetos pequeños (sus puntos miden 5 mm); `dotScale` los agranda para esta escena de ~130 m.
+- Los parámetros (velocidad, desfase entre ondas, elevación, tamaño de los puntos) están en `REVEAL`, en `src/viewer-main.ts`. Suena junto con la animación de entrada; `?sinintro` la salta junto con el efecto.
+
 ## Publicación
 
 GitHub Actions compila con Vite y publica `dist/`. En Settings → Pages el origen (**Source**) está en **GitHub Actions**, así que ya no existe una publicación aparte de la rama sin compilar.
