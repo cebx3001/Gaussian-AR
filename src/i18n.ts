@@ -70,3 +70,70 @@ export const UI: Record<Lang, UiText> = {
         ]
     }
 };
+
+/** Textos de la realidad aumentada (página `ar.html`) y del botón del visor. */
+export type ArText = {
+    button: string;
+    buttonLabel: string;
+    back: string;
+    startKicker: string;
+    startTitle: string;
+    startText: string;
+    start: string;
+    loadingModel: string;
+    starting: string;
+    scanning: string;
+    ready: string;
+    placed: string;
+    again: string;
+    notMobileTitle: string;
+    notMobileText: string;
+    errCamera: string;
+    errDevice: string;
+    errGeneric: string;
+};
+
+export const AR_UI: Record<Lang, ArText> = {
+    es: {
+        button: 'Ver en AR',
+        buttonLabel: 'Míralo en realidad aumentada',
+        back: '← Volver al visor',
+        startKicker: 'Realidad aumentada',
+        startTitle: 'La plaza sobre tu mesa',
+        startText:
+            'Coloca la maqueta de la plaza de San Sebastián sobre una superficie plana, a un tamaño de aproximadamente 1 metro. Al comenzar, el navegador te pedirá permiso para usar la cámara y el movimiento del teléfono.',
+        start: 'Comenzar',
+        loadingModel: 'Cargando el modelo…',
+        starting: 'Iniciando la cámara…',
+        scanning: 'Apunta el teléfono al piso o a una superficie plana y muévelo despacio.',
+        ready: 'Toca el círculo para colocar la maqueta.',
+        placed: 'Camina alrededor para verla desde todos los lados.',
+        again: 'Colocar de nuevo',
+        notMobileTitle: 'Solo en el teléfono',
+        notMobileText: 'La realidad aumentada está pensada para teléfonos. Abre esta página desde tu celular.',
+        errCamera: 'No se pudo usar la cámara ni el movimiento del teléfono. Revisa que el navegador tenga esos permisos y vuelve a intentarlo.',
+        errDevice: 'Este dispositivo o navegador no admite realidad aumentada en la web.',
+        errGeneric: 'No se pudo iniciar la realidad aumentada. Recarga la página e inténtalo de nuevo.'
+    },
+    en: {
+        button: 'View in AR',
+        buttonLabel: 'See it in augmented reality',
+        back: '← Back to the viewer',
+        startKicker: 'Augmented reality',
+        startTitle: 'The square on your table',
+        startText:
+            'Place the model of San Sebastián Square on a flat surface, at about 1 meter across. When you start, the browser will ask for permission to use the camera and the phone’s motion sensors.',
+        start: 'Start',
+        loadingModel: 'Loading the model…',
+        starting: 'Starting the camera…',
+        scanning: 'Point your phone at the floor or a flat surface and move it slowly.',
+        ready: 'Tap the circle to place the model.',
+        placed: 'Walk around it to see it from every side.',
+        again: 'Place again',
+        notMobileTitle: 'Phones only',
+        notMobileText: 'Augmented reality is designed for phones. Open this page on your mobile.',
+        errCamera: 'The camera or the phone’s motion sensors could not be used. Make sure the browser has those permissions and try again.',
+        errDevice: 'This device or browser does not support augmented reality on the web.',
+        errGeneric: 'Augmented reality could not start. Reload the page and try again.'
+    }
+};

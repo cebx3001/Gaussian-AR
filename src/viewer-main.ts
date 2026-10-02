@@ -18,11 +18,11 @@ import type { ViewerHandle } from '@playcanvas/supersplat-viewer/viewer';
 import { defaultSettings } from '@playcanvas/supersplat-viewer/settings';
 import type { ExperienceSettings } from '@playcanvas/supersplat-viewer/settings';
 import { Vec3 } from 'playcanvas';
-import type { CameraComponent, Entity } from 'playcanvas';
+import type { CameraComponent, Entity, GSplatComponent } from 'playcanvas';
 
 import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
-import { startReveal } from './reveal';
-import { LANG_KEY, UI, detectLang } from './i18n';
+import { REVEAL, startReveal } from './reveal';
+import { AR_UI, LANG_KEY, UI, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
 import { setupTimeline, timelineAfterMount, timelineKeyframes } from './timeline';
@@ -43,21 +43,6 @@ const SCENE_CENTER: [number, number] = [15.8, 4.6];
 const SCENE_RADIUS = 75;
 /** La órbita no baja de la horizontal del ancla (0°): no se ve la maqueta desde abajo. */
 const ORBIT_MAX_PITCH = 0;
-/**
- * Radial Reveal de la entrada (ver reveal.ts), de la misma duración que la animación de cámara (8 s).
- * Los splats llegan hasta 116 m del centro (la mitad está a menos de 53 m), así que `radius` cubre
- * toda la escena y las ondas empiezan despacio en el centro y aceleran hacia afuera: la onda de
- * elevación (colores) sale `delay` s detrás de la de puntos y llega a `radius` justo a los 8 s,
- * cuando el efecto se retira solo. `dotScale` agranda los puntos del efecto original para esta escala.
- */
-const REVEAL = (() => {
-    const radius = 117;
-    const delay = 1.5;
-    const speed = 5; // m/s al arrancar
-    const travel = INTRO_SECONDS - delay; // lo que tarda la onda de colores en recorrer `radius`
-    const acceleration = (2 * (radius - speed * travel)) / (travel * travel);
-    return { radius, delay, speed, acceleration, lift: 3, band: 6, dotScale: 60 };
-})();
 /** Suelo del modo vuelo (m): la cámara no puede quedar bajo la maqueta. */
 const FLY_MIN_Y = GROUND_Y + 1.5;
 /** Distancia (m) a la pose del lugar a la que se considera que el vuelo terminó. */
@@ -73,6 +58,7 @@ const loaderFill = $<HTMLElement>('loader-fill');
 const loaderMessage = $<HTMLElement>('loader-message');
 const loaderKicker = $<HTMLElement>('loader-kicker');
 const langEl = $<HTMLElement>('lang');
+const arLink = $<HTMLAnchorElement>('ar-link');
 const mastKicker = $<HTMLElement>('masthead-kicker');
 const mastTitle = $<HTMLElement>('masthead-title');
 const chapterEl = $<HTMLElement>('chapter');
@@ -164,6 +150,19 @@ const bodyOf = (c: Chapter): string => {
     if (!c.howto) return t;
     const u = ui();
     return [t.replace('{tap}', coarsePointer ? u.tapTouch : u.tapMouse), ...(coarsePointer ? u.howTouch : u.howMouse)].join('\n\n');
+};
+
+/**
+ * Origen de las ondas del efecto en la entrada. Se conserva tal como se aprobó: el punto del suelo al que
+ * mira el primer cuadro, pasado al espacio local del splat (con la rotación de 180° del visor queda
+ * espejado respecto al mundo, por debajo del suelo). Es el aspecto que se ve y se aprobó; el efecto en
+ * realidad aumentada, en cambio, nace exactamente del punto donde se coloca la maqueta.
+ */
+const revealOrigin = (v: ViewerHandle, world: Pose['target']): Pose['target'] => {
+    const gs = (v.app.root.findComponents('gsplat') as GSplatComponent[])[0];
+    if (!gs) return world;
+    const p = gs.entity.getWorldTransform().clone().invert().transformPoint(new Vec3(...world));
+    return [p.x, p.y, p.z];
 };
 
 /** Índice de anotación de SuperSplat para cada lugar (solo los que tienen pose). */
@@ -270,7 +269,7 @@ const mountViewer = async () => {
             } else if (introActive) {
                 // el efecto se pone antes de mostrar la escena: nace de la oscuridad desde el primer cuadro
                 const center = introCenter ?? ([SCENE_CENTER[0], GROUND_Y, SCENE_CENTER[1]] as Pose['target']);
-                startReveal(v, { center, ...REVEAL });
+                startReveal(v.app, { center: revealOrigin(v, center), ...REVEAL });
                 playIntro(v);
             } else {
                 goTo(active);
@@ -509,6 +508,10 @@ const applyLang = () => {
     $<HTMLElement>('next').setAttribute('aria-label', ui().next);
     indexEl.setAttribute('aria-label', ui().places);
     langEl.querySelectorAll<HTMLElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    // botón de realidad aumentada: solo en teléfonos (pantalla táctil como entrada principal)
+    arLink.textContent = AR_UI[lang].button;
+    arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
+    arLink.hidden = !coarsePointer || AUTHORING;
 };
 
 langEl.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>

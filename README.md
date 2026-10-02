@@ -61,6 +61,20 @@ Arriba a la derecha hay un selector **EN | ES**. El idioma se elige por el naveg
 - La **Vista general** lleva además las instrucciones de uso (girar, zoom, mover), distintas para pantalla táctil y para ratón (`"howto": true` en su entrada de `story.json`).
 - Las herramientas de edición (`?editar`, `?animar`) siguen en español.
 
+## Realidad aumentada (solo teléfonos)
+
+En el visor, el botón **Ver en AR / View in AR** (solo en pantallas táctiles) abre `ar.html`, una página aparte: si algo falla en la AR, el visor no se toca.
+
+1. **Comenzar** pide cámara y movimiento (en iPhone el permiso debe salir de un toque).
+2. Se pide apuntar a una superficie plana (piso, mesa) y moverse despacio.
+3. Al detectarla aparece un círculo sobre ella; al tocarlo, la maqueta (~1 m) se coloca ahí y se expande con el mismo Radial Reveal del visor.
+4. **Colocar de nuevo** repite el proceso.
+
+- **Seguimiento: 8th Wall** (motor binario con SLAM, paquete `@8thwall/engine-binary`). Funciona en iPhone (Safari) y Android (Chrome) sin ARCore ni WebXR. El render es PlayCanvas, con el mismo splat del visor.
+- El motor **se copia tal cual** a `external/xr/` al compilar (`vite.config.ts`): su licencia exige no modificarlo y conservar su aviso de derechos de autor, que está en `ar.html` y en `external/xr/LICENSE`. Licencia: <https://github.com/8thwall/engine/blob/main/LICENSE> (Niantic Spatial).
+- La escala es en metros reales (`scale: 'absolute'`); el tamaño de la maqueta está en `MODEL_METERS`, en `src/ar-page.ts`.
+- `ar.html?demo` salta la cámara y las superficies, para probar la maqueta y el efecto en una computadora.
+
 ## Publicación
 
 GitHub Actions compila con Vite y publica `dist/`. En Settings → Pages el origen (**Source**) está en **GitHub Actions**, así que ya no existe una publicación aparte de la rama sin compilar.

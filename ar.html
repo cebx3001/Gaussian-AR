@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+        <meta name="theme-color" content="#3b3a35" />
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2738%27 fill=%27none%27 stroke=%27%23a6473e%27 stroke-width=%278%27/%3E%3C/svg%3E" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Libre+Franklin:wght@300;400;500;600&display=swap"
+        />
+        <title>San Sebastián · AR</title>
+
+        <!-- This product includes the XR Engine software developed by Niantic Spatial, Inc.
+             Copyright © 2026 Niantic Spatial, Inc. All rights reserved.
+             Licensed under the XR Engine License Agreement: https://github.com/8thwall/engine/blob/main/LICENSE
+             Provided "AS IS", without warranties (see the disclaimer in the License). -->
+        <script async src="./external/xr/xr.js" data-preload-chunks="slam"></script>
+    </head>
+    <body>
+        <canvas id="application-canvas"></canvas>
+
+        <div id="ar-ui">
+            <a id="ar-back" href="./"></a>
+
+            <div id="ar-lang" role="group" aria-label="Language / Idioma">
+                <button type="button" data-lang="en">EN</button>
+                <span aria-hidden="true">|</span>
+                <button type="button" data-lang="es">ES</button>
+            </div>
+
+            <!-- pantalla inicial: el toque de «Comenzar» es el gesto que permite pedir cámara y sensores -->
+            <section id="ar-start" class="ar-card">
+                <p id="ar-start-kicker" class="ar-kicker"></p>
+                <h1 id="ar-start-title"></h1>
+                <p id="ar-start-text"></p>
+                <button type="button" id="ar-start-btn"></button>
+            </section>
+
+            <!-- instrucciones sobre la cámara -->
+            <p id="ar-hint" hidden></p>
+
+            <button type="button" id="ar-again" hidden></button>
+
+            <section id="ar-error" class="ar-card" hidden>
+                <h2 id="ar-error-title"></h2>
+                <p id="ar-error-text"></p>
+            </section>
+        </div>
+
+        <script type="module" src="/src/ar-page.ts"></script>
+    </body>
+</html>
