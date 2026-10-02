@@ -81,6 +81,16 @@ const indexEl = $<HTMLElement>('index');
 // Datos
 // ---------------------------------------------------------------------------
 let story: Story = defaultStory();
+
+/** La Vista general es donde termina la animación de entrada, salvo que se le haya capturado otra pose. */
+{
+    const ks = [...(story.intro?.keyframes ?? [])].sort((a, b) => a.t - b.t);
+    const end = ks[ks.length - 1];
+    const general = story.chapters[0];
+    if (general && !general.pose && ks.length >= 2 && end) {
+        general.pose = { position: end.position, target: end.target, fov: end.fov };
+    }
+}
 if (EDIT_MODE) {
     // Las poses guardadas en este navegador se reaplican por id sobre los lugares actuales,
     // así sobreviven si se agregan o quitan lugares (los textos siempre vienen de story.json).
@@ -120,7 +130,7 @@ const groundHit = (origin: Vec3, dir: Vec3): Vec3 | null => {
     const d = dir.clone().normalize();
     if (d.y > -0.01) return null;
     const t = (GROUND_Y - origin.y) / d.y;
-    if (t <= 0 || t > 160) return null;
+    if (t <= 0 || t > 700) return null;
     const hit = origin.clone().add(d.mulScalar(t));
     return Math.hypot(hit.x - SCENE_CENTER[0], hit.z - SCENE_CENTER[1]) <= SCENE_RADIUS ? hit : null;
 };
@@ -137,13 +147,16 @@ let annotationOf: (number | undefined)[] = [];
 
 /** True mientras suena la animación de entrada. */
 let introActive = false;
-/** Dónde termina la cámara en la entrada: al llegar ahí sale el texto. */
+/** Dónde termina la cámara en la entrada y cuánto dura la pista (s). */
 let introGoal: Pose['position'] | null = null;
+let introDuration = INTRO_SECONDS;
+/** Dónde nace el efecto Radial Reveal: el punto del suelo al que mira el primer cuadro de la entrada. */
+let introCenter: Pose['target'] | null = null;
 
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
     const settings = defaultSettings();
-    settings.background = { color: [0.059, 0.055, 0.047] };
+    settings.background = { color: [59 / 255, 58 / 255, 53 / 255] }; // piedra oscura #3b3a35
     const withAnchor = (p: Pose): Pose => ({ ...p, target: anchorOf(p) });
     const first = s.chapters[0]?.pose;
     if (first) settings.cameras = [{ initial: withAnchor(first) }];
@@ -179,10 +192,14 @@ const buildSettings = (s: Story): ExperienceSettings => {
         // entrada hecha con la línea de tiempo (story.json) o, si no hay, la automática
         const custom = (s.intro?.keyframes?.length ?? 0) >= 2;
         const ks = custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, anchorOf(first), 33);
-        settings.animTracks = [trackFromKeyframes(ks)];
+        const track = trackFromKeyframes(ks);
+        settings.animTracks = [track];
         settings.startMode = 'animTrack';
         introActive = true;
         introGoal = lastOf(ks).position;
+        introDuration = track.duration;
+        const firstKf = [...ks].sort((a, b) => a.t - b.t)[0];
+        introCenter = anchorOf({ position: firstKf.position, target: firstKf.target, fov: firstKf.fov });
     }
     return settings;
 };
@@ -228,8 +245,7 @@ const mountViewer = async () => {
                 timelineAfterMount(v);
             } else if (introActive) {
                 // el efecto se pone antes de mostrar la escena: nace de la oscuridad desde el primer cuadro
-                const first = story.chapters[0]?.pose;
-                const center = first ? anchorOf(first) : ([SCENE_CENTER[0], GROUND_Y, SCENE_CENTER[1]] as Pose['target']);
+                const center = introCenter ?? ([SCENE_CENTER[0], GROUND_Y, SCENE_CENTER[1]] as Pose['target']);
                 startReveal(v, { center, ...REVEAL });
                 playIntro(v);
             } else {
@@ -313,7 +329,7 @@ const playIntro = (v: ViewerHandle) => {
         revealChapter();
         return;
     }
-    cancelArrival = waitForArrival(v, goal, () => {
+    cancelArrival = waitForIntroEnd(v, goal, introDuration, () => {
         cancelArrival = null;
         if (v !== viewer) return;
         // La entrada terminó: la vista general se vuelve el ancla. Si la animación acabó en otro
@@ -364,6 +380,27 @@ const goTo = (i: number) => {
 const enterFly = (v: ViewerHandle) => {
     if (AUTHORING || v.state.cameraMode === 'fly') return;
     v.state.cameraMode = 'fly';
+};
+
+/**
+ * Espera a que SuperSplat reproduzca la pista entera (hasta el segundo `duration`). No hay límite de
+ * tiempo: en un teléfono lento la animación tarda más, y cortarla enseñaría un movimiento que no es el suyo.
+ */
+const waitForIntroEnd = (v: ViewerHandle, goal: Pose['position'], duration: number, done: () => void) => {
+    const end = new Vec3(...goal);
+    let raf = 0;
+    const tick = () => {
+        const cam = (v.app.root.findComponents('camera') as CameraComponent[])[0];
+        const ended = v.state.cameraMode === 'anim' && v.state.animationTime >= duration - 0.03;
+        const there = !!cam && cam.entity.getPosition().distance(end) < ARRIVAL_DISTANCE;
+        if (ended || there) {
+            done();
+            return;
+        }
+        raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
 };
 
 /** Llama a `done` cuando la cámara del visor llega a `pose`, o queda quieta cerca de ella. */

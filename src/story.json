@@ -71,19 +71,7 @@
       "kicker": "Maqueta completa",
       "title": "Vista general",
       "text": "",
-      "pose": {
-        "position": [
-          66.6,
-          111.4,
-          77.0
-        ],
-        "target": [
-          15.8,
-          23,
-          4.6
-        ],
-        "fov": 60
-      }
+      "pose": null
     },
     {
       "id": "plaza",

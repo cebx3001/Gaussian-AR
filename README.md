@@ -23,7 +23,7 @@ Textos y poses de cámara en `src/story.json`. El modo caminata se quitó (la ca
 
 ## Animación de entrada
 
-Al abrir el visor suena una animación de cámara que termina en la **Vista general**. Se hace con una línea de tiempo de 8 s:
+Al abrir el visor suena una animación de cámara y la **Vista general** es donde termina (su último keyframe): al terminar, la cámara se queda ahí, sin movimiento extra, y aparece el texto. Se hace con una línea de tiempo de 8 s:
 
 1. Abre `…/Gaussian-AR/?animar`.
 2. Toca la línea para colocar el cabezal (el visor muestra la cámara en ese instante) y mueve la cámara con los gestos del visor.
@@ -41,6 +41,16 @@ Al abrir el visor, la escena no aparece de golpe: nace de la oscuridad con el **
 - El efecto original está pensado para objetos pequeños (sus puntos miden 5 mm); `dotScale` los agranda para esta escena de ~130 m.
 - Dura lo mismo que la animación de cámara (8 s): las ondas arrancan despacio en el centro y aceleran hacia afuera, y la de colores llega al borde de la escena (116 m) justo a los 8 s, cuando el efecto se retira solo.
 - Los parámetros (radio, velocidad inicial, desfase entre ondas, elevación, tamaño de los puntos) están en `REVEAL`, en `src/viewer-main.ts`; la aceleración se calcula sola para que termine a los 8 s. `?sinintro` salta la animación y el efecto.
+
+## Paleta
+
+| Uso | Color |
+|---|---|
+| Fondo (piedra oscura) | `#3B3A35` |
+| Texto e información (blanco piedra) | `#E7D8D6` |
+| Títulos, líneas, indicadores y elementos activos (rojo profundo) | `#A6473E` |
+
+Están definidos como variables al inicio de `src/viewer.css` (`--bg`, `--ink`, `--accent`); el fondo de la escena 3D se fija en `buildSettings`, en `src/viewer-main.ts`.
 
 ## Publicación
 
