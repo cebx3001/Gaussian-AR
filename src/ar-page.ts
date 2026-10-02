@@ -218,7 +218,7 @@ const initScene = async () => {
         stencil: false,
         powerPreference: 'high-performance'
     });
-    device.maxPixelRatio = 1; // la maqueta tiene ~360 mil splats: menos píxeles = más cuadros por segundo
+    device.maxPixelRatio = Math.min(window.devicePixelRatio, 1.5);
 
     const options = new AppOptions();
     options.graphicsDevice = device;
@@ -251,9 +251,7 @@ const initScene = async () => {
     anchorRoot.addChild(model);
 
     await new Promise<void>((resolve, reject) => {
-        // Versión ligera solo para AR (88 mil splats en vez de 360 mil): recortada alrededor de la plaza y
-        // simplificada con splat-transform (ver README). Menos trabajo gráfico = más procesador para el seguimiento.
-        const asset = new Asset('scene-ar', 'gsplat', { url: './scene-ar.compressed.ply', filename: 'scene-ar.compressed.ply' });
+        const asset = new Asset('scene.sog', 'gsplat', { url: './scene.sog', filename: 'scene.sog' });
         asset.once('load', () => {
             model.addComponent('gsplat', { asset, unified: true });
             resolve();
@@ -291,14 +289,18 @@ let framesSeen = 0;
 let realityFrames = 0;
 let lastTypes = '–';
 let scanSince = 0;
-let hitKind: 'surface' | 'point' | 'estimated' | null = null;
-let startCameraY: number | null = null;
+let hitKind: 'surface' | 'ground' | null = null;
 const DEBUG = params.has('debug');
 /** Segundos sin superficie antes de enseñar el diagnóstico y de ofrecer un plano estimado. */
 const DIAG_AFTER = 8;
-const FALLBACK_AFTER = 12;
-/** Altura típica (m) del teléfono sobre el suelo al sostenerlo de pie: para el plano estimado. */
-const HAND_HEIGHT = 1.25;
+/**
+ * El piso en el sistema de coordenadas de 8th Wall: el plano Y = 0. Con la escala relativa la cámara arranca en
+ * el origen que fija la integración (Y = 2 por defecto) y el suelo bajo ella queda en Y = 0 (documentación de
+ * XrController.configure / xrweb: «the y-position will depend on the camera's physical height from the ground
+ * plane»; foro oficial: «your camera's ground plane aligns with Y = 0»). Cualquier otra altura deja la maqueta
+ * flotando o hundida respecto al piso real y, al caminar, se desliza por paralaje.
+ */
+const GROUND_Y = 0;
 
 const TYPE_RANK: Record<string, number> = { DETECTED_SURFACE: 3, ESTIMATED_SURFACE: 2, FEATURE_POINT: 1 };
 
@@ -309,14 +311,13 @@ const TYPE_RANK: Record<string, number> = { DETECTED_SURFACE: 3, ESTIMATED_SURFA
 const queryHit = (): Vec3 | null => {
     const xr = window.XR8;
     if (!xr) return null;
-    const waited = (performance.now() - scanSince) / 1000;
     let best: { rank: number; pos: Vec3 } | null = null;
     const seen = new Set<string>();
     for (const h of xr.XrController.hitTest(0.5, 0.5, [])) {
         seen.add(h.type);
         const rank = TYPE_RANK[h.type] ?? 0;
         if (!rank) continue;
-        if (rank === 1 && waited < 4) continue; // los puntos sueltos solo como último recurso
+        if (rank < 2) continue; // un punto suelto del seguimiento no es una superficie
         if (h.type === 'DETECTED_SURFACE') {
             // un plano detectado casi vertical es una pared: no vale para colocar sobre él
             quat.set(h.rotation.x, h.rotation.y, h.rotation.z, h.rotation.w);
@@ -326,7 +327,6 @@ const queryHit = (): Vec3 | null => {
         if (!best || rank > best.rank) best = { rank, pos: new Vec3(h.position.x, h.position.y, h.position.z) };
     }
     lastTypes = seen.size ? [...seen].map((t) => t.replace('_SURFACE', '').replace('_POINT', '-PT')).join(',') : 'ninguno';
-    if (best) hitKind = best.rank === 1 ? 'point' : 'surface';
     return best ? best.pos : null;
 };
 
@@ -336,12 +336,15 @@ let floorY: number | null = null;
 const median = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1];
 
 /** Lo llama el motor en cada cuadro con datos de seguimiento. */
+let lastSurfaceAt = 0;
+
 const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
     framesSeen++;
     if (!e.processCpuResult?.reality) return;
     realityFrames++;
     engineReady = true;
-    if (startCameraY === null) startCameraY = camera.getPosition().y;
+    // colocada la maqueta, la detección ya no participa en nada: el ancla quedó fijada en el mundo
+    if (phase !== 'scanning' && phase !== 'ready') return;
     try {
         latestHit = queryHit();
         hitErrors = 0;
@@ -349,6 +352,7 @@ const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
             floorSamples.push(latestHit.y);
             if (floorSamples.length > 15) floorSamples.shift();
             floorY = median(floorSamples);
+            lastSurfaceAt = performance.now();
         }
     } catch {
         latestHit = null;
@@ -357,24 +361,22 @@ const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
 };
 
 /**
- * Dónde va el círculo: el punto donde el centro de la pantalla toca el plano (a la altura `floorY`).
- * Depende solo de la cámara, así que se desliza suave al mover el teléfono: nada de brincos de lado ni de
- * cambios bruscos de distancia. Sin lecturas tras unos segundos, se usa un plano estimado (último recurso).
+ * Dónde va el círculo: el punto donde el centro de la pantalla toca el plano de apoyo, todo en coordenadas del
+ * mundo de 8th Wall (las mismas en que la integración coloca la cámara de PlayCanvas). El plano es una
+ * superficie que el motor detectó de verdad (p. ej. una mesa: altura = mediana de sus lecturas) o, si no hay
+ * ninguna reciente, el piso del motor (Y = 0). Nunca una altura supuesta.
  */
 const findSurface = (): { position: Vec3 } | null => {
     if (DEMO) return { position: target.set(0, 0, -1.4) };
     if (!engineReady) return null;
-    let y = floorY;
-    if (y === null) {
-        if ((performance.now() - scanSince) / 1000 <= FALLBACK_AFTER || startCameraY === null) return null;
-        y = startCameraY - HAND_HEIGHT;
-        hitKind = 'estimated';
-    }
+    const onSurface = floorY !== null && performance.now() - lastSurfaceAt < 2000;
+    const y = onSurface ? (floorY as number) : GROUND_Y;
+    hitKind = onSurface ? 'surface' : 'ground';
     const c = camera.getPosition();
     const f = camera.forward;
     if (f.y > -0.15) return null; // mirando al horizonte: no hay plano al frente
     const t = (y - c.y) / f.y;
-    if (t < 0.25 || t > 6) return null;
+    if (t < 0.25 || t > 8) return null;
     return { position: target.set(c.x + f.x * t, y, c.z + f.z * t) };
 };
 
@@ -545,9 +547,10 @@ const startTracking = async () => {
     try {
         const xr = await waitForEngine();
         if (xr.loadChunk) await xr.loadChunk('slam');
-        // Escala RELATIVA (la predeterminada del motor): fija durante toda la sesión, así lo colocado se queda
-        // quieto. La escala «absoluta» (metros) se reestima mientras uno camina y, cuando el motor corrige su
-        // cálculo, todo su sistema de coordenadas se reajusta de golpe: la maqueta parecía caminar y saltar.
+        // Configuración del motor, explícita: seguimiento del mundo (SLAM) activo y escala RELATIVA, fija durante
+        // toda la sesión. Con la escala «absoluta» el motor reestima los metros mientras uno camina y reajusta su
+        // sistema de coordenadas: lo colocado se movería. El piso de este sistema es Y = 0 (ver GROUND_Y).
+        xr.XrController.configure({ disableWorldTracking: false, scale: 'responsive' });
         const modules: Xr8Module[] = [
             {
                 name: 'san-sebastian-ar',

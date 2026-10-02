@@ -72,19 +72,12 @@ En el visor, el botón **Ver en AR / View in AR** (solo en pantallas táctiles) 
 
 - **Seguimiento: 8th Wall** (motor binario con SLAM, paquete `@8thwall/engine-binary`). Funciona en iPhone (Safari) y Android (Chrome) sin ARCore ni WebXR. El render es PlayCanvas, con el mismo splat del visor.
 - El motor **se copia tal cual** a `external/xr/` al compilar (`vite.config.ts`): su licencia exige no modificarlo y conservar su aviso de derechos de autor, que está en `ar.html` y en `external/xr/LICENSE`. Licencia: <https://github.com/8thwall/engine/blob/main/LICENSE> (Niantic Spatial).
-- **Anclaje estable:** el motor trabaja con su escala *relativa* (la predeterminada). La escala «absoluta» (metros) se reestima mientras uno camina y, al corregirse, reajusta de golpe todo el sistema de coordenadas: la maqueta parecía caminar y saltar. Con la escala relativa, lo colocado se queda quieto.
+- **Configuración del motor** (explícita en `startTracking`): `XrController.configure({ disableWorldTracking: false, scale: 'responsive' })`. La escala «absoluta» reestima los metros mientras uno camina y reajusta el sistema de coordenadas.
 - **Tamaño:** como la escala es relativa, no hay «metros» fiables; la maqueta se coloca con un ancho de `SIZE_FACTOR` (0,8) veces la distancia a la que se coloca (`src/ar-page.ts`), y se ajusta con el **pellizco** de dos dedos (de ¼ a 4×). `ar.html?size=1.3` la agranda un 30 % para probar.
-- **Círculo estable:** el motor se consulta solo en el centro de la pantalla y de su respuesta se usa únicamente la **altura** del plano (mediana de las últimas lecturas). El círculo va donde el centro de la pantalla toca ese plano, así que se desliza suave con el teléfono, sin brincos de lado ni cambios bruscos de distancia.
-- **Maqueta ligera para AR** (`public/scene-ar.compressed.ply`, 88 mil splats en vez de 360 mil, 2,2 MB): menos trabajo gráfico deja más procesador al seguimiento. Se generó con la herramienta oficial de PlayCanvas:
-
-  ```bash
-  npx @playcanvas/splat-transform -w scene.sog -S -15.8,-23,4.6,80 -d 40% scene-ar.ply          # recorte (esfera de 80 m en la plaza) y simplificación
-  npx @playcanvas/splat-transform -w scene-ar.ply -H 1 scene-ar.compressed.ply                   # bandas de color de orden 1 y compresión
-  ```
-- Con movimientos rápidos, todo seguimiento web (sin ARCore) se apoya un instante en los sensores y puede deslizarse un poco: se nota menos con la maqueta ligera y moviendo el teléfono con calma.
+- **Anclaje:** todo vive en el sistema de coordenadas del mundo de 8th Wall, en el que la integración `XR8.PlayCanvas.runXr()` coloca la cámara de PlayCanvas en cada cuadro (posición, rotación y campo de visión de la cámara real). La cámara, el círculo y el ancla son hijos directos de la raíz de la escena; la maqueta es hija del ancla. Al tocar, la posición del círculo se copia **una sola vez** al ancla y la detección deja de consultarse.
+- **Dónde se apoya:** en una superficie que el motor detectó de verdad (p. ej. una mesa: altura = mediana de sus lecturas) o, si no hay ninguna, en el **piso de 8th Wall, el plano Y = 0** (con la escala relativa la cámara arranca 2 unidades por encima). Nunca en una altura supuesta: un apoyo a una altura distinta de la real deja la maqueta flotando o hundida y, al caminar, se desliza por paralaje. El círculo va donde el centro de la pantalla toca ese plano.
 - `ar.html?demo` salta la cámara y las superficies, para probar la maqueta y el efecto en una computadora.
 - `ar.html?debug` muestra siempre el diagnóstico de la búsqueda de superficie (cuadros procesados, tipos de resultado del motor, cuadros por segundo). También aparece solo si pasan 8 s sin encontrar nada.
-- Si el motor no devuelve superficie tras 12 s y la cámara mira hacia abajo, se ofrece un **plano estimado** (a ~1,25 m bajo la altura inicial del teléfono) para poder colocar la maqueta. Es un último recurso: no sigue la superficie real.
 
 ## Publicación
 
