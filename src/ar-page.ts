@@ -47,10 +47,20 @@ const DEMO = params.has('demo');
 
 /** Centro de la plaza sobre el suelo, en coordenadas del visor: es el punto que se «clava» en la superficie. */
 const PLAZA_CENTER = new Vec3(15.8, 23, 4.6);
-/** Tamaño del modelo en la realidad (m) y de la maqueta en unidades de la escena (~135). */
-const MODEL_METERS = 1;
+/** Diámetro de la maqueta en unidades de la escena (~135). */
 const SCENE_DIAMETER = 135;
-const SCALE = MODEL_METERS / SCENE_DIAMETER;
+/**
+ * Tamaño al colocarla: una fracción de la distancia a la que se coloca (en unidades del motor). El motor
+ * trabaja con una escala relativa (ver `startTracking`), así que un «metro» fijo no sería un metro real; en
+ * cambio, una maqueta tan ancha como una parte de la distancia se ve igual de cómoda en un piso a 1,5 m que
+ * en una mesa a 0,8 m. Se ajusta después con el pellizco. `?size=1.3` la agranda un 30 % (para probar).
+ */
+const SIZE_FACTOR = 0.8 * (Number(params.get('size')) || 1);
+const MIN_DIAMETER = 0.15;
+const MAX_DIAMETER = 8;
+/** Límites del pellizco: de un cuarto a cuatro veces el tamaño de partida. */
+const MIN_PINCH = 0.25;
+const MAX_PINCH = 4;
 /** Radio del círculo que marca dónde se colocará la maqueta (m). */
 const RING_RADIUS = 0.14;
 /** Cuadros seguidos con (o sin) superficie antes de cambiar de estado: evita parpadeos. */
@@ -194,6 +204,12 @@ const buildReticle = (): Entity => {
     return e;
 };
 
+/** Escala del modelo; su centro (el de la plaza, en coordenadas del visor) queda justo en el ancla. */
+const applyModelScale = (s: number) => {
+    model.setLocalScale(s, s, s);
+    model.setLocalPosition(-s * PLAZA_CENTER.x, -s * PLAZA_CENTER.y, -s * PLAZA_CENTER.z);
+};
+
 const initScene = async () => {
     const device = await createGraphicsDevice(canvas, {
         deviceTypes: ['webgl2'],
@@ -202,7 +218,7 @@ const initScene = async () => {
         stencil: false,
         powerPreference: 'high-performance'
     });
-    device.maxPixelRatio = Math.min(window.devicePixelRatio, 1.5);
+    device.maxPixelRatio = 1; // la maqueta tiene ~360 mil splats: menos píxeles = más cuadros por segundo
 
     const options = new AppOptions();
     options.graphicsDevice = device;
@@ -230,9 +246,7 @@ const initScene = async () => {
     app.root.addChild(anchorRoot);
     model = new Entity('model');
     model.setLocalEulerAngles(0, 0, 180); // misma orientación que en el visor
-    model.setLocalScale(SCALE, SCALE, SCALE);
-    // el centro de la plaza (en coordenadas del visor) queda justo en el ancla
-    model.setLocalPosition(-SCALE * PLAZA_CENTER.x, -SCALE * PLAZA_CENTER.y, -SCALE * PLAZA_CENTER.z);
+    applyModelScale(1 / SCENE_DIAMETER); // provisional; el tamaño real se fija al colocar
     model.enabled = false;
     anchorRoot.addChild(model);
 
@@ -355,10 +369,26 @@ const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
 };
 
 /** Punto de una superficie horizontal en el centro de la pantalla, o null. */
+const recentHits: Vec3[] = [];
+let lastRealHitAt = 0;
+const median = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1];
+
+/** Mediana de las últimas superficies encontradas: quita el temblor del círculo. */
+const smoothedHit = (hit: Vec3): Vec3 => {
+    recentHits.push(hit.clone());
+    if (recentHits.length > 7) recentHits.shift();
+    return new Vec3(median(recentHits.map((p) => p.x)), median(recentHits.map((p) => p.y)), median(recentHits.map((p) => p.z)));
+};
+
 const findSurface = (): { position: Vec3 } | null => {
     if (DEMO) return { position: target.set(0, 0, -1.4) };
     if (!engineReady) return null;
-    if (latestHit) return { position: latestHit };
+    if (latestHit) {
+        lastRealHitAt = performance.now();
+        return { position: smoothedHit(latestHit) };
+    }
+    // un instante sin resultado no hace saltar el círculo: se conserva el último unos segundos
+    if (recentHits.length && performance.now() - lastRealHitAt < 1500) return { position: recentHits[recentHits.length - 1] };
     // sin superficie después de un buen rato: se ofrece un plano estimado para poder colocar la maqueta
     if ((performance.now() - scanSince) / 1000 > FALLBACK_AFTER) {
         const p = estimatedFloor();
@@ -369,6 +399,7 @@ const findSurface = (): { position: Vec3 } | null => {
 
 const debugEl = $<HTMLElement>('ar-debug');
 let debugTick = 0;
+let fps = 0;
 const updateDebug = () => {
     if (DEMO) return;
     const waited = (performance.now() - scanSince) / 1000;
@@ -379,10 +410,11 @@ const updateDebug = () => {
     const c = camera.getPosition();
     debugEl.textContent =
         `cuadros ${framesSeen} · con datos ${realityFrames} · tipos: ${lastTypes}` +
-        ` · hit: ${hitKind ?? 'no'} · cámara y ${c.y.toFixed(2)} m`;
+        ` · hit: ${hitKind ?? 'no'} · cámara y ${c.y.toFixed(2)} m · ${fps.toFixed(0)} fps`;
 };
 
 const onUpdate = (dt: number) => {
+    if (dt > 0) fps = fps ? fps * 0.92 + (1 / dt) * 0.08 : 1 / dt;
     updateDebug();
     if (phase !== 'scanning' && phase !== 'ready') return;
 
@@ -392,7 +424,7 @@ const onUpdate = (dt: number) => {
         foundFrames++;
         // el círculo sigue a la superficie con un poco de suavizado
         if (!reticle.enabled) reticle.setPosition(hit.position);
-        else reticle.setPosition(new Vec3().lerp(reticle.getPosition(), hit.position, 0.35));
+        else reticle.setPosition(new Vec3().lerp(reticle.getPosition(), hit.position, 0.22));
         pulse += dt * 3;
         const s = 1 + Math.sin(pulse) * 0.025;
         reticle.setLocalScale(s, 1, s);
@@ -411,6 +443,12 @@ const onUpdate = (dt: number) => {
 const place = () => {
     if (phase !== 'ready') return;
     const base = reticle.getPosition().clone();
+    // tamaño: una parte de la distancia a la que se coloca (en unidades del motor)
+    const diameter = Math.min(MAX_DIAMETER, Math.max(MIN_DIAMETER, base.distance(camera.getPosition()) * SIZE_FACTOR));
+    const scale = diameter / SCENE_DIAMETER;
+    applyModelScale(scale);
+    pinchFactor = 1;
+    anchorRoot.setLocalScale(1, 1, 1);
     // el modelo se orienta con la mirada de quien lo coloca
     const f = camera.forward;
     const yaw = (Math.atan2(f.x, f.z) * 180) / Math.PI;
@@ -420,7 +458,7 @@ const place = () => {
     setPhase('revealing');
 
     // Radial Reveal: el efecto se aplica antes de mostrar la maqueta, así nace de la oscuridad
-    stopReveal = startReveal(app, { center: [base.x, base.y, base.z], scale: SCALE, ...REVEAL }, () => {
+    stopReveal = startReveal(app, { center: [base.x, base.y, base.z], scale, ...REVEAL }, () => {
         stopReveal = null;
         if (phase === 'revealing') setPhase('placed');
     });
@@ -431,6 +469,9 @@ const again = () => {
     stopReveal?.();
     stopReveal = null;
     model.enabled = false;
+    pinchFactor = 1;
+    anchorRoot.setLocalScale(1, 1, 1);
+    recentHits.length = 0;
     foundFrames = 0;
     lostFrames = 0;
     setPhase('scanning');
@@ -443,6 +484,36 @@ window.addEventListener('pointerup', (e) => {
     place();
 });
 againBtn.addEventListener('click', again);
+
+// Pellizco con dos dedos: cambia el tamaño de la maqueta ya colocada (crece o se encoge desde su centro,
+// que es el ancla). Con la maqueta expandiéndose no se permite: el efecto está calculado para su tamaño.
+let pinchFactor = 1;
+const pinchPointers = new Map<number, { x: number; y: number }>();
+let pinchStart: { dist: number; factor: number } | null = null;
+const pinchDistance = () => {
+    const [a, b] = [...pinchPointers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+};
+window.addEventListener('pointerdown', (e) => {
+    if (phase !== 'placed' || (e.target as HTMLElement).closest('a, button, #ar-lang')) return;
+    pinchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinchPointers.size === 2) pinchStart = { dist: Math.max(1, pinchDistance()), factor: pinchFactor };
+});
+window.addEventListener('pointermove', (e) => {
+    const p = pinchPointers.get(e.pointerId);
+    if (!p) return;
+    p.x = e.clientX;
+    p.y = e.clientY;
+    if (pinchPointers.size !== 2 || !pinchStart) return;
+    pinchFactor = Math.min(MAX_PINCH, Math.max(MIN_PINCH, pinchStart.factor * (pinchDistance() / pinchStart.dist)));
+    anchorRoot.setLocalScale(pinchFactor, pinchFactor, pinchFactor);
+});
+const endPinch = (e: PointerEvent) => {
+    pinchPointers.delete(e.pointerId);
+    if (pinchPointers.size < 2) pinchStart = null;
+};
+window.addEventListener('pointerup', endPinch);
+window.addEventListener('pointercancel', endPinch);
 
 // ---------------------------------------------------------------------------
 // Arranque del seguimiento (8th Wall)
@@ -492,8 +563,9 @@ const startTracking = async () => {
     try {
         const xr = await waitForEngine();
         if (xr.loadChunk) await xr.loadChunk('slam');
-        // escala en metros reales: sin esto, «1 metro» del modelo sería una unidad arbitraria del motor
-        xr.XrController.configure({ scale: 'absolute' });
+        // Escala RELATIVA (la predeterminada del motor): fija durante toda la sesión, así lo colocado se queda
+        // quieto. La escala «absoluta» (metros) se reestima mientras uno camina y, cuando el motor corrige su
+        // cálculo, todo su sistema de coordenadas se reajusta de golpe: la maqueta parecía caminar y saltar.
         const modules: Xr8Module[] = [
             {
                 name: 'san-sebastian-ar',
