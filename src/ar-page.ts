@@ -251,7 +251,9 @@ const initScene = async () => {
     anchorRoot.addChild(model);
 
     await new Promise<void>((resolve, reject) => {
-        const asset = new Asset('scene.sog', 'gsplat', { url: './scene.sog', filename: 'scene.sog' });
+        // Versión ligera solo para AR (88 mil splats en vez de 360 mil): recortada alrededor de la plaza y
+        // simplificada con splat-transform (ver README). Menos trabajo gráfico = más procesador para el seguimiento.
+        const asset = new Asset('scene-ar', 'gsplat', { url: './scene-ar.compressed.ply', filename: 'scene-ar.compressed.ply' });
         asset.once('load', () => {
             model.addComponent('gsplat', { asset, unified: true });
             resolve();
@@ -299,58 +301,39 @@ const FALLBACK_AFTER = 12;
 const HAND_HEIGHT = 1.25;
 
 const TYPE_RANK: Record<string, number> = { DETECTED_SURFACE: 3, ESTIMATED_SURFACE: 2, FEATURE_POINT: 1 };
-/** Puntos de la pantalla donde se busca: el centro y la zona de abajo, donde suele estar el piso. */
-const PROBES: [number, number][] = [
-    [0.5, 0.5],
-    [0.5, 0.62],
-    [0.5, 0.75],
-    [0.35, 0.62],
-    [0.65, 0.62]
-];
 
 /**
- * Busca una superficie en el centro de la pantalla (y en su zona baja). Se pide al motor todos los tipos de
- * resultado y se elige el mejor: superficie detectada, superficie estimada y, pasados unos segundos, puntos
- * del seguimiento. No se descarta por la orientación de la superficie: la rotación que da el motor para las
- * superficies estimadas no es fiable y filtrarla dejaba sin círculo.
+ * Consulta al motor qué superficie hay en el centro de la pantalla (un único punto: consultar varios hacía
+ * que el círculo brincara de uno a otro). De la respuesta solo se usa la ALTURA: ver `findSurface`.
  */
 const queryHit = (): Vec3 | null => {
     const xr = window.XR8;
     if (!xr) return null;
     const waited = (performance.now() - scanSince) / 1000;
-    let best: { rank: number; type: string; pos: Vec3 } | null = null;
+    let best: { rank: number; pos: Vec3 } | null = null;
     const seen = new Set<string>();
-    for (const [x, y] of PROBES) {
-        for (const h of xr.XrController.hitTest(x, y, [])) {
-            seen.add(h.type);
-            const rank = TYPE_RANK[h.type] ?? 0;
-            if (!rank) continue;
-            if (rank === 1 && waited < 4) continue; // los puntos sueltos solo como último recurso
-            if (h.type === 'DETECTED_SURFACE') {
-                // un plano detectado casi vertical es una pared: no vale para colocar sobre él
-                quat.set(h.rotation.x, h.rotation.y, h.rotation.z, h.rotation.w);
-                quat.transformVector(Vec3.UP, normal);
-                if (Math.abs(normal.y) < 0.35) continue;
-            }
-            if (!best || rank > best.rank) best = { rank, type: h.type, pos: new Vec3(h.position.x, h.position.y, h.position.z) };
+    for (const h of xr.XrController.hitTest(0.5, 0.5, [])) {
+        seen.add(h.type);
+        const rank = TYPE_RANK[h.type] ?? 0;
+        if (!rank) continue;
+        if (rank === 1 && waited < 4) continue; // los puntos sueltos solo como último recurso
+        if (h.type === 'DETECTED_SURFACE') {
+            // un plano detectado casi vertical es una pared: no vale para colocar sobre él
+            quat.set(h.rotation.x, h.rotation.y, h.rotation.z, h.rotation.w);
+            quat.transformVector(Vec3.UP, normal);
+            if (Math.abs(normal.y) < 0.35) continue;
         }
-        if (best && best.rank >= 2) break;
+        if (!best || rank > best.rank) best = { rank, pos: new Vec3(h.position.x, h.position.y, h.position.z) };
     }
     lastTypes = seen.size ? [...seen].map((t) => t.replace('_SURFACE', '').replace('_POINT', '-PT')).join(',') : 'ninguno';
-    hitKind = best ? (best.rank === 1 ? 'point' : 'surface') : null;
+    if (best) hitKind = best.rank === 1 ? 'point' : 'surface';
     return best ? best.pos : null;
 };
 
-/** Plano estimado: el suelo a una altura de mano por debajo de donde empezó la cámara (último recurso). */
-const estimatedFloor = (): Vec3 | null => {
-    const f = camera.forward;
-    if (startCameraY === null || f.y > -0.25) return null;
-    const c = camera.getPosition();
-    const t = (startCameraY - HAND_HEIGHT - c.y) / f.y;
-    if (t < 0.6 || t > 4) return null;
-    hitKind = 'estimated';
-    return new Vec3(c.x + f.x * t, c.y + f.y * t, c.z + f.z * t);
-};
+// Altura del plano: mediana de las últimas lecturas. Las lecturas individuales tiemblan, la mediana no.
+const floorSamples: number[] = [];
+let floorY: number | null = null;
+const median = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1];
 
 /** Lo llama el motor en cada cuadro con datos de seguimiento. */
 const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
@@ -362,39 +345,37 @@ const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
     try {
         latestHit = queryHit();
         hitErrors = 0;
+        if (latestHit) {
+            floorSamples.push(latestHit.y);
+            if (floorSamples.length > 15) floorSamples.shift();
+            floorY = median(floorSamples);
+        }
     } catch {
         latestHit = null;
         if (++hitErrors > 60) fail('generic', 'hitTest: el motor falla de forma sostenida');
     }
 };
 
-/** Punto de una superficie horizontal en el centro de la pantalla, o null. */
-const recentHits: Vec3[] = [];
-let lastRealHitAt = 0;
-const median = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1];
-
-/** Mediana de las últimas superficies encontradas: quita el temblor del círculo. */
-const smoothedHit = (hit: Vec3): Vec3 => {
-    recentHits.push(hit.clone());
-    if (recentHits.length > 7) recentHits.shift();
-    return new Vec3(median(recentHits.map((p) => p.x)), median(recentHits.map((p) => p.y)), median(recentHits.map((p) => p.z)));
-};
-
+/**
+ * Dónde va el círculo: el punto donde el centro de la pantalla toca el plano (a la altura `floorY`).
+ * Depende solo de la cámara, así que se desliza suave al mover el teléfono: nada de brincos de lado ni de
+ * cambios bruscos de distancia. Sin lecturas tras unos segundos, se usa un plano estimado (último recurso).
+ */
 const findSurface = (): { position: Vec3 } | null => {
     if (DEMO) return { position: target.set(0, 0, -1.4) };
     if (!engineReady) return null;
-    if (latestHit) {
-        lastRealHitAt = performance.now();
-        return { position: smoothedHit(latestHit) };
+    let y = floorY;
+    if (y === null) {
+        if ((performance.now() - scanSince) / 1000 <= FALLBACK_AFTER || startCameraY === null) return null;
+        y = startCameraY - HAND_HEIGHT;
+        hitKind = 'estimated';
     }
-    // un instante sin resultado no hace saltar el círculo: se conserva el último unos segundos
-    if (recentHits.length && performance.now() - lastRealHitAt < 1500) return { position: recentHits[recentHits.length - 1] };
-    // sin superficie después de un buen rato: se ofrece un plano estimado para poder colocar la maqueta
-    if ((performance.now() - scanSince) / 1000 > FALLBACK_AFTER) {
-        const p = estimatedFloor();
-        if (p) return { position: p };
-    }
-    return null;
+    const c = camera.getPosition();
+    const f = camera.forward;
+    if (f.y > -0.15) return null; // mirando al horizonte: no hay plano al frente
+    const t = (y - c.y) / f.y;
+    if (t < 0.25 || t > 6) return null;
+    return { position: target.set(c.x + f.x * t, y, c.z + f.z * t) };
 };
 
 const debugEl = $<HTMLElement>('ar-debug');
@@ -424,7 +405,7 @@ const onUpdate = (dt: number) => {
         foundFrames++;
         // el círculo sigue a la superficie con un poco de suavizado
         if (!reticle.enabled) reticle.setPosition(hit.position);
-        else reticle.setPosition(new Vec3().lerp(reticle.getPosition(), hit.position, 0.22));
+        else reticle.setPosition(new Vec3().lerp(reticle.getPosition(), hit.position, 0.5));
         pulse += dt * 3;
         const s = 1 + Math.sin(pulse) * 0.025;
         reticle.setLocalScale(s, 1, s);
@@ -471,7 +452,8 @@ const again = () => {
     model.enabled = false;
     pinchFactor = 1;
     anchorRoot.setLocalScale(1, 1, 1);
-    recentHits.length = 0;
+    floorSamples.length = 0;
+    floorY = null;
     foundFrames = 0;
     lostFrames = 0;
     setPhase('scanning');
