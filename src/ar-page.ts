@@ -291,7 +291,7 @@ let lastTypes = '–';
 let scanSince = 0;
 let hitKind: 'surface' | 'ground' | null = null;
 const DEBUG = params.has('debug');
-/** Segundos sin superficie antes de enseñar el diagnóstico y de ofrecer un plano estimado. */
+/** Segundos sin superficie detectada antes de enseñar el diagnóstico. */
 const DIAG_AFTER = 8;
 /**
  * El piso en el sistema de coordenadas de 8th Wall: el plano Y = 0. Con la escala relativa la cámara arranca en
