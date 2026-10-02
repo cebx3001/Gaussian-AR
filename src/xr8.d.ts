@@ -9,7 +9,7 @@ type Xr8Hit = {
 
 type Xr8Module = {
     name: string;
-    onUpdate?: (e: { processCpuResult?: { reality?: unknown } }) => void;
+    onUpdate?: (e: { frameStartResult?: { videoTime?: number }; processCpuResult?: { reality?: unknown } }) => void;
     onException?: (error: unknown) => void;
     onCameraStatusChange?: (e: { status: string }) => void;
     onDeviceIncompatible?: (e: unknown) => void;

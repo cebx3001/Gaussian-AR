@@ -38,6 +38,8 @@ import {
     createGraphicsDevice
 } from 'playcanvas';
 
+import { createRecorder } from './ar-recorder';
+import type { Recorder } from './ar-recorder';
 import { AR_UI, LANG_KEY, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { REVEAL, startReveal } from './reveal';
@@ -263,6 +265,13 @@ const initScene = async () => {
 
     app.start();
     app.on('update', onUpdate);
+    if (REC) {
+        recorder = createRecorder({ app, camera, anchorRoot, reticle, phase: () => phase });
+        // el panel del grabador va arriba: la instrucción baja para no quedar tapada
+        const s = document.createElement('style');
+        s.textContent = '#ar-hint{top:auto!important;bottom:calc(max(8px, env(safe-area-inset-bottom)) + 116px)!important}';
+        document.head.append(s);
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -291,6 +300,9 @@ let lastTypes = '–';
 let scanSince = 0;
 let hitKind: 'surface' | 'ground' | null = null;
 const DEBUG = params.has('debug');
+/** `?rec`: grabador TEMPORAL de diagnóstico del seguimiento (ver ar-recorder.ts). No cambia el comportamiento. */
+const REC = params.has('rec');
+let recorder: Recorder | null = null;
 /** Segundos sin superficie detectada antes de enseñar el diagnóstico. */
 const DIAG_AFTER = 8;
 /**
@@ -437,6 +449,7 @@ const place = () => {
     const yaw = (Math.atan2(f.x, f.z) * 180) / Math.PI;
     anchorRoot.setPosition(base);
     anchorRoot.setEulerAngles(0, yaw, 0);
+    recorder?.markPlacement(base);
     reticle.enabled = false;
     setPhase('revealing');
 
@@ -449,6 +462,7 @@ const place = () => {
 };
 
 const again = () => {
+    recorder?.addEvent('colocar de nuevo');
     stopReveal?.();
     stopReveal = null;
     model.enabled = false;
@@ -550,7 +564,8 @@ const startTracking = async () => {
         // Configuración del motor, explícita: seguimiento del mundo (SLAM) activo y escala RELATIVA, fija durante
         // toda la sesión. Con la escala «absoluta» el motor reestima los metros mientras uno camina y reajusta su
         // sistema de coordenadas: lo colocado se movería. El piso de este sistema es Y = 0 (ver GROUND_Y).
-        xr.XrController.configure({ disableWorldTracking: false, scale: 'responsive' });
+        // con ?rec se piden también los puntos del mundo del motor (worldPoints), solo para registrarlos
+        xr.XrController.configure({ disableWorldTracking: false, scale: 'responsive', enableWorldPoints: REC });
         const modules: Xr8Module[] = [
             {
                 name: 'san-sebastian-ar',
@@ -562,6 +577,7 @@ const startTracking = async () => {
                 }
             }
         ];
+        if (recorder) modules.push(recorder.module as Xr8Module);
         // la integración con PlayCanvas espera la ENTIDAD de la cámara (llama a getPosition y a camera.nearClip),
         // aunque su documentación diga «componente»
         xr.PlayCanvas.runXr({ pcCamera: camera, pcApp: app }, modules, {
@@ -573,6 +589,7 @@ const startTracking = async () => {
         foundFrames = 0;
         lostFrames = 0;
         setPhase('scanning');
+        recorder?.start();
     } catch (err) {
         fail('generic', err);
     }

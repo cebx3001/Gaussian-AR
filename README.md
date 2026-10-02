@@ -79,6 +79,15 @@ En el visor, el botón **Ver en AR / View in AR** (solo en pantallas táctiles) 
 - `ar.html?demo` salta la cámara y las superficies, para probar la maqueta y el efecto en una computadora.
 - `ar.html?debug` muestra siempre el diagnóstico de la búsqueda de superficie (cuadros procesados, tipos de resultado del motor, cuadros por segundo). También aparece solo si pasan 8 s sin encontrar nada.
 
+### Diagnóstico del seguimiento: `ar.html?rec` (temporal)
+
+Graba, cuadro a cuadro, toda la cadena del seguimiento para correlacionarla con una grabación de pantalla (`src/ar-recorder.ts`). No cambia el comportamiento; además pide al motor sus puntos del mundo (`enableWorldPoints`).
+
+- **Panel en vivo** (arriba): reloj con milisegundos (para cruzar con el vídeo), estado del motor (`trackingStatus` / `trackingReason`), número y confianza de los puntos del mundo, pose de cámara de 8th Wall (`reality.position` / `rotation`) y de PlayCanvas con su diferencia, campo de visión de ambos, ancla (posición, rotación, escala y **proyección en pantalla**), retícula y fase. Al colocar aparece **ANCLA COLOCADA** con su hora exacta.
+- **MARCA**: añade una marca numerada con su hora (para señalar «aquí vi el salto»). No coloca la maqueta.
+- **JSON / CSV / Compartir**: descargan el registro. El JSON trae: `meta`, `placement`, `events` (inicio, cambios de `reality.trackingstatus`, colocación, marcas), `rows` (una fila por cuadro dibujado), `engine_frames` (cada cuadro del motor, con `videoTime`) y `world_points` (cada 10 cuadros del motor, los 60 puntos de mayor confianza: `[id, confianza, x, y, z]`). El CSV es la tabla `rows`.
+- Qué columna responde a qué: **A** (salta la pose de 8th Wall) → `r_*`, `track_*`; **B** (PlayCanvas no sigue a 8th Wall) → `d_pos_m`, `d_ang_deg`; **C** (cambia el ancla) → `anchor_*`; **D** (datos estables pero lo visual se mueve) → `anchor_scr_*`, `r_fov_deg` / `pc_fov_deg` contra el vídeo. El deslizamiento del mapa del motor se ve en `world_points` (mismo `id` cambiando de posición).
+
 ## Publicación
 
 GitHub Actions compila con Vite y publica `dist/`. En Settings → Pages el origen (**Source**) está en **GitHub Actions**, así que ya no existe una publicación aparte de la rama sin compilar.
