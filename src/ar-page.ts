@@ -266,7 +266,19 @@ const initScene = async () => {
     app.start();
     app.on('update', onUpdate);
     if (REC) {
-        recorder = createRecorder({ app, camera, anchorRoot, reticle, phase: () => phase });
+        recorder = createRecorder({
+            app,
+            camera,
+            anchorRoot,
+            reticle,
+            phase: () => phase,
+            // de dónde sale el plano del círculo: superficie del motor (con su altura) o el piso del motor (Y = 0)
+            placementInfo: () => ({
+                source: phase === 'scanning' || phase === 'ready' ? hitKind : null,
+                planeY: hitKind === 'surface' ? floorY : hitKind === 'ground' ? GROUND_Y : null,
+                hits: lastHitRaw
+            })
+        });
         // el panel del grabador va arriba: la instrucción baja para no quedar tapada
         const s = document.createElement('style');
         s.textContent = '#ar-hint{top:auto!important;bottom:calc(max(8px, env(safe-area-inset-bottom)) + 116px)!important}';
@@ -299,6 +311,8 @@ let realityFrames = 0;
 let lastTypes = '–';
 let scanSince = 0;
 let hitKind: 'surface' | 'ground' | null = null;
+/** Respuesta cruda de la última consulta de superficie (solo la lee el grabador ?rec). */
+let lastHitRaw: { type: string; position: { x: number; y: number; z: number } }[] = [];
 const DEBUG = params.has('debug');
 /** `?rec`: grabador TEMPORAL de diagnóstico del seguimiento (ver ar-recorder.ts). No cambia el comportamiento. */
 const REC = params.has('rec');
@@ -325,7 +339,9 @@ const queryHit = (): Vec3 | null => {
     if (!xr) return null;
     let best: { rank: number; pos: Vec3 } | null = null;
     const seen = new Set<string>();
-    for (const h of xr.XrController.hitTest(0.5, 0.5, [])) {
+    const raw = xr.XrController.hitTest(0.5, 0.5, []);
+    lastHitRaw = raw.map((h) => ({ type: h.type, position: h.position }));
+    for (const h of raw) {
         seen.add(h.type);
         const rank = TYPE_RANK[h.type] ?? 0;
         if (!rank) continue;

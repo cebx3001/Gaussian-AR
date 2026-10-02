@@ -87,6 +87,7 @@ Graba, cuadro a cuadro, toda la cadena del seguimiento para correlacionarla con 
 - **MARCA**: añade una marca numerada con su hora (para señalar «aquí vi el salto»). No coloca la maqueta.
 - **JSON / CSV / Compartir**: descargan el registro. El JSON trae: `meta`, `placement`, `events` (inicio, cambios de `reality.trackingstatus`, colocación, marcas), `rows` (una fila por cuadro dibujado), `engine_frames` (cada cuadro del motor, con `videoTime`) y `world_points` (cada 10 cuadros del motor, los 60 puntos de mayor confianza: `[id, confianza, x, y, z]`). El CSV es la tabla `rows`.
 - Qué columna responde a qué: **A** (salta la pose de 8th Wall) → `r_*`, `track_*`; **B** (PlayCanvas no sigue a 8th Wall) → `d_pos_m`, `d_ang_deg`; **C** (cambia el ancla) → `anchor_*`; **D** (datos estables pero lo visual se mueve) → `anchor_scr_*`, `r_fov_deg` / `pc_fov_deg` contra el vídeo. El deslizamiento del mapa del motor se ve en `world_points` (mismo `id` cambiando de posición).
+- Plano de colocación (antes de colocar): `plane_source` (`surface` = superficie de `hitTest`, `ground` = piso del motor Y = 0) y `plane_y`; `hit_n` / `hit_types` / `hit0_*` = respuesta cruda de `hitTest(0.5, 0.5)`; `reticle_depth` frente a `wp_c_depth` / `wp_c_y` (mediana de los puntos del mapa a menos de 4° del centro de la pantalla) compara la profundidad del círculo con la de lo que realmente hay en el centro.
 
 ## Publicación
 

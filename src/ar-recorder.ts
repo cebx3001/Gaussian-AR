@@ -45,6 +45,10 @@ type EngineFrame = {
     aspect: number | null;
     wp_count: number;
     wp_mean_conf: number | null;
+    /** Profundidad y altura (medianas) de los puntos del mapa a <4° del eje de la cámara: dónde está de verdad lo que hay en el centro de la pantalla. */
+    wp_c_n: number;
+    wp_c_depth: number | null;
+    wp_c_y: number | null;
 };
 
 type RenderRow = Record<string, string | number | boolean | null>;
@@ -55,6 +59,8 @@ export type RecorderDeps = {
     anchorRoot: Entity;
     reticle: Entity;
     phase: () => string;
+    /** Origen del plano de la retícula y respuesta cruda de hitTest (antes de colocar). */
+    placementInfo: () => { source: string | null; planeY: number | null; hits: { type: string; position: { x: number; y: number; z: number } }[] };
 };
 
 const r4 = (n: number) => Math.round(n * 1e4) / 1e4;
@@ -79,7 +85,7 @@ const angleDeg = (a: Q4, b: Q4) => {
 };
 
 export const createRecorder = (deps: RecorderDeps) => {
-    const { app, camera, anchorRoot, reticle, phase } = deps;
+    const { app, camera, anchorRoot, reticle, phase, placementInfo } = deps;
     let startEpoch = 0;
     let recording = false;
     let engineIndex = -1;
@@ -112,6 +118,22 @@ export const createRecorder = (deps: RecorderDeps) => {
             if (!r) return;
             const o = r.intrinsics;
             const wp = r.worldPoints ?? [];
+            // puntos del mapa en el centro de la pantalla (eje −Z de la cámara de 8th Wall)
+            let wpC: { d: number; y: number }[] = [];
+            if (r.position && r.rotation && wp.length) {
+                const fwd = new Quat(r.rotation.x, r.rotation.y, r.rotation.z, r.rotation.w).transformVector(new Vec3(0, 0, -1));
+                const c = r.position;
+                wpC = wp
+                    .map((p) => {
+                        const dx = p.position.x - c.x, dy = p.position.y - c.y, dz = p.position.z - c.z;
+                        const d = Math.hypot(dx, dy, dz);
+                        const cos = (dx * fwd.x + dy * fwd.y + dz * fwd.z) / (d || 1);
+                        return { d, y: p.position.y, cos };
+                    })
+                    .filter((p) => p.cos > Math.cos((4 * Math.PI) / 180))
+                    .map(({ d, y }) => ({ d, y }));
+            }
+            const med = (a: number[]) => (a.length ? [...a].sort((x, y) => x - y)[a.length >> 1] : null);
             const f: EngineFrame = {
                 i: ++engineIndex,
                 t_ms: t(),
@@ -124,7 +146,10 @@ export const createRecorder = (deps: RecorderDeps) => {
                 fov_deg: o ? r4((2 * Math.atan(1 / o[5]) * 180) / Math.PI) : null,
                 aspect: o ? r4(o[5] / o[0]) : null,
                 wp_count: wp.length,
-                wp_mean_conf: wp.length ? r4(wp.reduce((s, p) => s + p.confidence, 0) / wp.length) : null
+                wp_mean_conf: wp.length ? r4(wp.reduce((s, p) => s + p.confidence, 0) / wp.length) : null,
+                wp_c_n: wpC.length,
+                wp_c_depth: wpC.length ? r4(med(wpC.map((p) => p.d)) as number) : null,
+                wp_c_y: wpC.length ? r4(med(wpC.map((p) => p.y)) as number) : null
             };
             lastEngine = f;
             lastStatus = f.track_status;
@@ -169,6 +194,7 @@ export const createRecorder = (deps: RecorderDeps) => {
             scr = [Math.round(anchorScreen.x * 10) / 10, Math.round(anchorScreen.y * 10) / 10];
         }
         const e = lastEngine;
+        const pinfo = placementInfo();
         const dPos = e?.r_pos ? r4(Math.hypot(cPos[0] - e.r_pos[0], cPos[1] - e.r_pos[1], cPos[2] - e.r_pos[2])) : null;
         const dAng = e?.r_rot ? r4(angleDeg(cRot, e.r_rot)) : null;
         const row: RenderRow = {
@@ -218,6 +244,17 @@ export const createRecorder = (deps: RecorderDeps) => {
             reticle_pz: reticle.enabled ? r4(reticle.getPosition().z) : null,
             wp_count: e?.wp_count ?? null,
             wp_mean_conf: e?.wp_mean_conf ?? null,
+            wp_c_n: e?.wp_c_n ?? null,
+            wp_c_depth: e?.wp_c_depth ?? null,
+            wp_c_y: e?.wp_c_y ?? null,
+            reticle_depth: reticle.enabled ? r4(reticle.getPosition().distance(camera.getPosition())) : null,
+            plane_source: pinfo.source,
+            plane_y: pinfo.planeY === null ? null : r4(pinfo.planeY),
+            hit_n: pinfo.source ? pinfo.hits.length : null,
+            hit_types: pinfo.source ? pinfo.hits.map((h) => h.type).join('|') : null,
+            hit0_px: pinfo.source && pinfo.hits[0] ? r4(pinfo.hits[0].position.x) : null,
+            hit0_py: pinfo.source && pinfo.hits[0] ? r4(pinfo.hits[0].position.y) : null,
+            hit0_pz: pinfo.source && pinfo.hits[0] ? r4(pinfo.hits[0].position.z) : null,
             fps: r4(fps),
             mark: lastMark
         };
@@ -276,6 +313,7 @@ export const createRecorder = (deps: RecorderDeps) => {
             `ANCLA  p ${fmt(aPos)}  r° ${eulerOf(aRot)}  esc ${row.anchor_scale}\n` +
             `       en pantalla ${row.anchor_scr_x ?? '—'}, ${row.anchor_scr_y ?? '—'} px\n` +
             `RETÍC  ${row.reticle_on ? fmt([Number(row.reticle_px), Number(row.reticle_py), Number(row.reticle_pz)]) : '—'}   fase ${row.phase}\n` +
+            `PLANO  ${row.plane_source ?? '—'} y=${row.plane_y ?? '—'}  hit ${row.hit_types || '—'}   prof. retíc ${row.reticle_depth ?? '—'} / mapa ${row.wp_c_depth ?? '—'} (y ${row.wp_c_y ?? '—'})\n` +
             (pl ? `<b>ANCLA COLOCADA en t=${(pl.t_ms / 1000).toFixed(3)} s (${pl.clock})</b>` : 'ancla aún no colocada') +
             (markCount ? `   marcas ${markCount}` : '');
     };
@@ -295,7 +333,8 @@ export const createRecorder = (deps: RecorderDeps) => {
             pc_: 'pose de la entidad cámara de PlayCanvas al terminar el cuadro',
             d_pos_m_d_ang_deg: 'diferencia PlayCanvas vs 8th Wall (último cuadro del motor)',
             anchor_scr: 'proyección del ancla en pantalla (px CSS) con la cámara de PlayCanvas',
-            world_points: 'cada 10 cuadros del motor, los 60 puntos de mayor confianza: [id, confidence, x, y, z]'
+            world_points: 'cada 10 cuadros del motor, los 60 puntos de mayor confianza: [id, confidence, x, y, z]',
+            plane: 'plane_source = de dónde sale el plano del círculo (surface: superficie de hitTest, ground: piso del motor Y=0); hit_* = respuesta cruda de hitTest(0.5,0.5); wp_c_* = puntos del mapa a <4° del centro de la pantalla; reticle_depth vs wp_c_depth compara la profundidad del círculo con la del mapa'
         }
     });
     const toJSON = () =>
@@ -360,7 +399,10 @@ export const createRecorder = (deps: RecorderDeps) => {
                 camera_pos: v3(camera.getPosition()),
                 camera_rot: q4(camera.getRotation()),
                 reality_pos: lastEngine?.r_pos ?? null,
-                reality_rot: lastEngine?.r_rot ?? null
+                reality_rot: lastEngine?.r_rot ?? null,
+                plane: placementInfo(),
+                map_center_depth: lastEngine?.wp_c_depth ?? null,
+                map_center_y: lastEngine?.wp_c_y ?? null
             };
             lastMark = 'COLOCACIÓN';
             addEvent('ancla colocada', placement);
