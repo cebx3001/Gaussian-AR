@@ -83,7 +83,7 @@ body.reading #masthead {
 
 #masthead-title {
     margin: 0;
-    color: var(--accent);
+    color: var(--ink);
     font-family: var(--display);
     font-weight: 500;
     font-size: clamp(1.7rem, 7vw, 2.6rem);
@@ -202,7 +202,7 @@ body.edit #masthead {
 
 #chapter-title {
     margin: 0 0 14px;
-    color: var(--accent);
+    color: var(--ink);
     font-family: var(--display);
     font-weight: 500;
     font-size: clamp(1.9rem, 8vw, 3rem);
@@ -399,7 +399,7 @@ body.edit #masthead {
 
 #loader-title {
     margin: 0 0 8px;
-    color: var(--accent);
+    color: var(--ink);
     font-family: var(--display);
     font-weight: 500;
     font-size: 2.6rem;
