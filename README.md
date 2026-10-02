@@ -74,6 +74,8 @@ En el visor, el botón **Ver en AR / View in AR** (solo en pantallas táctiles) 
 - El motor **se copia tal cual** a `external/xr/` al compilar (`vite.config.ts`): su licencia exige no modificarlo y conservar su aviso de derechos de autor, que está en `ar.html` y en `external/xr/LICENSE`. Licencia: <https://github.com/8thwall/engine/blob/main/LICENSE> (Niantic Spatial).
 - La escala es en metros reales (`scale: 'absolute'`); el tamaño de la maqueta está en `MODEL_METERS`, en `src/ar-page.ts`.
 - `ar.html?demo` salta la cámara y las superficies, para probar la maqueta y el efecto en una computadora.
+- `ar.html?debug` muestra siempre el diagnóstico de la búsqueda de superficie (cuadros procesados, tipos de resultado del motor). También aparece solo si pasan 8 s sin encontrar nada.
+- Si el motor no devuelve superficie tras 12 s y la cámara mira hacia abajo, se ofrece un **plano estimado** (a ~1,25 m bajo la altura inicial del teléfono) para poder colocar la maqueta. Es un último recurso: no sigue la superficie real.
 
 ## Publicación
 

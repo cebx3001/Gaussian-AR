@@ -129,6 +129,7 @@ const render = () => {
 };
 
 const setPhase = (p: Phase) => {
+    if (p === 'scanning') scanSince = performance.now();
     phase = p;
     render();
 };
@@ -269,43 +270,120 @@ let engineReady = false;
 let latestHit: Vec3 | null = null;
 let hitErrors = 0;
 
-/** Punto de una superficie horizontal en el centro de la pantalla, o null. */
+// diagnóstico (qué ve el motor): se muestra solo si pasan unos segundos sin encontrar superficie, o con ?debug
+let framesSeen = 0;
+let realityFrames = 0;
+let lastTypes = '–';
+let scanSince = 0;
+let hitKind: 'surface' | 'point' | 'estimated' | null = null;
+let startCameraY: number | null = null;
+const DEBUG = params.has('debug');
+/** Segundos sin superficie antes de enseñar el diagnóstico y de ofrecer un plano estimado. */
+const DIAG_AFTER = 8;
+const FALLBACK_AFTER = 12;
+/** Altura típica (m) del teléfono sobre el suelo al sostenerlo de pie: para el plano estimado. */
+const HAND_HEIGHT = 1.25;
+
+const TYPE_RANK: Record<string, number> = { DETECTED_SURFACE: 3, ESTIMATED_SURFACE: 2, FEATURE_POINT: 1 };
+/** Puntos de la pantalla donde se busca: el centro y la zona de abajo, donde suele estar el piso. */
+const PROBES: [number, number][] = [
+    [0.5, 0.5],
+    [0.5, 0.62],
+    [0.5, 0.75],
+    [0.35, 0.62],
+    [0.65, 0.62]
+];
+
+/**
+ * Busca una superficie en el centro de la pantalla (y en su zona baja). Se pide al motor todos los tipos de
+ * resultado y se elige el mejor: superficie detectada, superficie estimada y, pasados unos segundos, puntos
+ * del seguimiento. No se descarta por la orientación de la superficie: la rotación que da el motor para las
+ * superficies estimadas no es fiable y filtrarla dejaba sin círculo.
+ */
 const queryHit = (): Vec3 | null => {
     const xr = window.XR8;
     if (!xr) return null;
-    const hits = xr.XrController.hitTest(0.5, 0.5, ['ESTIMATED_SURFACE', 'DETECTED_SURFACE']);
-    for (const h of hits) {
-        if (h.type !== 'ESTIMATED_SURFACE' && h.type !== 'DETECTED_SURFACE') continue;
-        // solo superficies planas y horizontales (piso, mesa): su normal apunta hacia arriba
-        quat.set(h.rotation.x, h.rotation.y, h.rotation.z, h.rotation.w);
-        quat.transformVector(Vec3.UP, normal);
-        if (normal.y < 0.7) continue;
-        return new Vec3(h.position.x, h.position.y, h.position.z);
+    const waited = (performance.now() - scanSince) / 1000;
+    let best: { rank: number; type: string; pos: Vec3 } | null = null;
+    const seen = new Set<string>();
+    for (const [x, y] of PROBES) {
+        for (const h of xr.XrController.hitTest(x, y, [])) {
+            seen.add(h.type);
+            const rank = TYPE_RANK[h.type] ?? 0;
+            if (!rank) continue;
+            if (rank === 1 && waited < 4) continue; // los puntos sueltos solo como último recurso
+            if (h.type === 'DETECTED_SURFACE') {
+                // un plano detectado casi vertical es una pared: no vale para colocar sobre él
+                quat.set(h.rotation.x, h.rotation.y, h.rotation.z, h.rotation.w);
+                quat.transformVector(Vec3.UP, normal);
+                if (Math.abs(normal.y) < 0.35) continue;
+            }
+            if (!best || rank > best.rank) best = { rank, type: h.type, pos: new Vec3(h.position.x, h.position.y, h.position.z) };
+        }
+        if (best && best.rank >= 2) break;
     }
-    return null;
+    lastTypes = seen.size ? [...seen].map((t) => t.replace('_SURFACE', '').replace('_POINT', '-PT')).join(',') : 'ninguno';
+    hitKind = best ? (best.rank === 1 ? 'point' : 'surface') : null;
+    return best ? best.pos : null;
+};
+
+/** Plano estimado: el suelo a una altura de mano por debajo de donde empezó la cámara (último recurso). */
+const estimatedFloor = (): Vec3 | null => {
+    const f = camera.forward;
+    if (startCameraY === null || f.y > -0.25) return null;
+    const c = camera.getPosition();
+    const t = (startCameraY - HAND_HEIGHT - c.y) / f.y;
+    if (t < 0.6 || t > 4) return null;
+    hitKind = 'estimated';
+    return new Vec3(c.x + f.x * t, c.y + f.y * t, c.z + f.z * t);
 };
 
 /** Lo llama el motor en cada cuadro con datos de seguimiento. */
 const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
+    framesSeen++;
     if (!e.processCpuResult?.reality) return;
+    realityFrames++;
     engineReady = true;
+    if (startCameraY === null) startCameraY = camera.getPosition().y;
     try {
         latestHit = queryHit();
         hitErrors = 0;
     } catch {
         latestHit = null;
-        if (++hitErrors > 60) fail('generic', 'hitTest: el motor falla de forma sostenida'); // el motor falla de forma sostenida: se avisa en vez de quedarse mudo
+        if (++hitErrors > 60) fail('generic', 'hitTest: el motor falla de forma sostenida');
     }
 };
 
 /** Punto de una superficie horizontal en el centro de la pantalla, o null. */
 const findSurface = (): { position: Vec3 } | null => {
     if (DEMO) return { position: target.set(0, 0, -1.4) };
-    if (!engineReady || !latestHit) return null;
-    return { position: latestHit };
+    if (!engineReady) return null;
+    if (latestHit) return { position: latestHit };
+    // sin superficie después de un buen rato: se ofrece un plano estimado para poder colocar la maqueta
+    if ((performance.now() - scanSince) / 1000 > FALLBACK_AFTER) {
+        const p = estimatedFloor();
+        if (p) return { position: p };
+    }
+    return null;
+};
+
+const debugEl = $<HTMLElement>('ar-debug');
+let debugTick = 0;
+const updateDebug = () => {
+    if (DEMO) return;
+    const waited = (performance.now() - scanSince) / 1000;
+    const show = DEBUG || ((phase === 'scanning' || phase === 'ready') && !latestHit && waited > DIAG_AFTER);
+    debugEl.hidden = !show;
+    if (!show) return;
+    if (debugEl.textContent && ++debugTick % 15) return; // se refresca cada ~15 cuadros
+    const c = camera.getPosition();
+    debugEl.textContent =
+        `cuadros ${framesSeen} · con datos ${realityFrames} · tipos: ${lastTypes}` +
+        ` · hit: ${hitKind ?? 'no'} · cámara y ${c.y.toFixed(2)} m`;
 };
 
 const onUpdate = (dt: number) => {
+    updateDebug();
     if (phase !== 'scanning' && phase !== 'ready') return;
 
     const hit = findSurface();
