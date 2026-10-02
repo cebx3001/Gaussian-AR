@@ -331,8 +331,10 @@ const GROUND_Y = 0;
 const TYPE_RANK: Record<string, number> = { DETECTED_SURFACE: 3, ESTIMATED_SURFACE: 2, FEATURE_POINT: 1 };
 
 /**
- * Consulta al motor qué superficie hay en el centro de la pantalla (un único punto: consultar varios hacía
- * que el círculo brincara de uno a otro). De la respuesta solo se usa la ALTURA: ver `findSurface`.
+ * Consulta al motor qué hay en el centro de la pantalla. Se aceptan los tres tipos de resultado, prefiriendo
+ * plano detectado > superficie estimada > punto del seguimiento. Los FEATURE_POINT SÍ cuentan: en las pruebas
+ * sobre una mesa el motor solo devolvió FEATURE_POINT (200 de 212 cuadros, todos a la altura de la mesa), y
+ * descartarlos mandaba el círculo al piso del motor, tres veces más lejos que la mesa real.
  */
 const queryHit = (): Vec3 | null => {
     const xr = window.XR8;
@@ -345,7 +347,6 @@ const queryHit = (): Vec3 | null => {
         seen.add(h.type);
         const rank = TYPE_RANK[h.type] ?? 0;
         if (!rank) continue;
-        if (rank < 2) continue; // un punto suelto del seguimiento no es una superficie
         if (h.type === 'DETECTED_SURFACE') {
             // un plano detectado casi vertical es una pared: no vale para colocar sobre él
             quat.set(h.rotation.x, h.rotation.y, h.rotation.z, h.rotation.w);
@@ -358,14 +359,28 @@ const queryHit = (): Vec3 | null => {
     return best ? best.pos : null;
 };
 
-// Altura del plano: mediana de las últimas lecturas. Las lecturas individuales tiemblan, la mediana no.
+// Altura del apoyo: mediana de las últimas lecturas. Los puntos sueltos que caen lejos de esa altura (otro
+// objeto, ruido) se ignoran; si siguen llegando muchos seguidos es que se apunta a otra superficie y se adopta.
 const floorSamples: number[] = [];
 let floorY: number | null = null;
+let rejectedInRow = 0;
 const median = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1];
-
-/** Lo llama el motor en cada cuadro con datos de seguimiento. */
+const OUTLIER = 0.3; // unidades del motor
 let lastSurfaceAt = 0;
 
+const addSurfaceSample = (y: number) => {
+    if (floorY !== null && floorSamples.length >= 5 && Math.abs(y - floorY) > OUTLIER) {
+        if (++rejectedInRow < 10) return;
+        floorSamples.length = 0; // cambio de superficie: se empieza de nuevo
+    }
+    rejectedInRow = 0;
+    floorSamples.push(y);
+    if (floorSamples.length > 15) floorSamples.shift();
+    floorY = median(floorSamples);
+    lastSurfaceAt = performance.now();
+};
+
+/** Lo llama el motor en cada cuadro con datos de seguimiento. */
 const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
     framesSeen++;
     if (!e.processCpuResult?.reality) return;
@@ -376,12 +391,7 @@ const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
     try {
         latestHit = queryHit();
         hitErrors = 0;
-        if (latestHit) {
-            floorSamples.push(latestHit.y);
-            if (floorSamples.length > 15) floorSamples.shift();
-            floorY = median(floorSamples);
-            lastSurfaceAt = performance.now();
-        }
+        if (latestHit) addSurfaceSample(latestHit.y);
     } catch {
         latestHit = null;
         if (++hitErrors > 60) fail('generic', 'hitTest: el motor falla de forma sostenida');
@@ -389,11 +399,14 @@ const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
 };
 
 /**
- * Dónde va el círculo: el punto donde el centro de la pantalla toca el plano de apoyo, todo en coordenadas del
- * mundo de 8th Wall (las mismas en que la integración coloca la cámara de PlayCanvas). El plano es una
- * superficie que el motor detectó de verdad (p. ej. una mesa: altura = mediana de sus lecturas) o, si no hay
- * ninguna reciente, el piso del motor (Y = 0). Nunca una altura supuesta.
+ * Dónde va el círculo: el punto donde el centro de la pantalla toca el plano de apoyo, en coordenadas del mundo
+ * de 8th Wall (las mismas en que la integración coloca la cámara de PlayCanvas). El plano es la superficie que el
+ * motor tiene en el centro de la pantalla (altura = mediana de sus lecturas recientes) o, solo si no devolvió
+ * nada en 2 s, su piso (Y = 0).
+ * Comprobación de profundidad: el círculo nunca queda más lejos que el punto real que el motor devuelve en esa
+ * misma dirección; si el plano daría un punto más lejano, se usa la profundidad medida.
  */
+const MAX_DEPTH_RATIO = 1.15;
 const findSurface = (): { position: Vec3 } | null => {
     if (DEMO) return { position: target.set(0, 0, -1.4) };
     if (!engineReady) return null;
@@ -403,9 +416,14 @@ const findSurface = (): { position: Vec3 } | null => {
     const c = camera.getPosition();
     const f = camera.forward;
     if (f.y > -0.15) return null; // mirando al horizonte: no hay plano al frente
-    const t = (y - c.y) / f.y;
+    let t = (y - c.y) / f.y;
+    // solo con una lectura coherente con la superficie (no un punto atípico de otro objeto)
+    if (latestHit && onSurface && Math.abs(latestHit.y - (floorY as number)) <= OUTLIER) {
+        const measured = latestHit.distance(c);
+        if (t > measured * MAX_DEPTH_RATIO) t = measured;
+    }
     if (t < 0.25 || t > 8) return null;
-    return { position: target.set(c.x + f.x * t, y, c.z + f.z * t) };
+    return { position: target.set(c.x + f.x * t, c.y + f.y * t, c.z + f.z * t) };
 };
 
 const debugEl = $<HTMLElement>('ar-debug');
@@ -486,6 +504,7 @@ const again = () => {
     anchorRoot.setLocalScale(1, 1, 1);
     floorSamples.length = 0;
     floorY = null;
+    rejectedInRow = 0;
     foundFrames = 0;
     lostFrames = 0;
     setPhase('scanning');
