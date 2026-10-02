@@ -19,8 +19,10 @@ export type RevealOptions = {
     center: [number, number, number];
     /** Distancia a la que termina el efecto: debe cubrir toda la escena. */
     radius: number;
-    /** Velocidad de las ondas (unidades de la escena por segundo). */
+    /** Velocidad inicial de las ondas (unidades de la escena por segundo). */
     speed: number;
+    /** Cuánto aumenta esa velocidad por segundo (0 = frente a velocidad constante). */
+    acceleration?: number;
     /** Segundos que la onda de elevación va detrás de la de puntos. */
     delay: number;
     /** Intensidad de la elevación y el temblor (unidades de la escena). */
@@ -46,7 +48,7 @@ export const startReveal = (v: ViewerHandle, o: RevealOptions): (() => void) => 
     const fx = new GSplatRevealRadial({ app: v.app, entity: gs.entity, enabled: false, attributes: {} } as never);
     fx.center.copy(local);
     fx.endRadius = o.radius;
-    fx.acceleration = 0; // frente de velocidad constante
+    fx.acceleration = o.acceleration ?? 0;
     fx.delay = o.delay;
     fx.speed = o.speed;
     fx.bandWidth = o.band ?? 1;

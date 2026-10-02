@@ -39,7 +39,8 @@ Al abrir el visor, la escena no aparece de golpe: nace de la oscuridad con el **
 
 - Se usa el shader y la lógica del efecto oficial. El visor de SuperSplat dibuja en modo «unified», así que se conecta con `setWorkBufferModifier` y actualiza el work buffer en cada cuadro mientras dura (`src/reveal.ts`).
 - El efecto original está pensado para objetos pequeños (sus puntos miden 5 mm); `dotScale` los agranda para esta escena de ~130 m.
-- Los parámetros (velocidad, desfase entre ondas, elevación, tamaño de los puntos) están en `REVEAL`, en `src/viewer-main.ts`. Suena junto con la animación de entrada; `?sinintro` la salta junto con el efecto.
+- Dura lo mismo que la animación de cámara (8 s): las ondas arrancan despacio en el centro y aceleran hacia afuera, y la de colores llega al borde de la escena (116 m) justo a los 8 s, cuando el efecto se retira solo.
+- Los parámetros (radio, velocidad inicial, desfase entre ondas, elevación, tamaño de los puntos) están en `REVEAL`, en `src/viewer-main.ts`; la aceleración se calcula sola para que termine a los 8 s. `?sinintro` salta la animación y el efecto.
 
 ## Publicación
 

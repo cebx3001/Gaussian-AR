@@ -42,11 +42,20 @@ const SCENE_RADIUS = 75;
 /** La órbita no baja de la horizontal del ancla (0°): no se ve la maqueta desde abajo. */
 const ORBIT_MAX_PITCH = 0;
 /**
- * Radial Reveal de la entrada (ver reveal.ts): a 14 m/s la onda de puntos cubre la maqueta (~70 m de
- * radio) en 5 s y la de colores, 1,5 s detrás, en 6,5 s: dentro de los 8 s de la animación.
- * `radius` cubre toda la escena; `dotScale` agranda los puntos del efecto original para esta escala.
+ * Radial Reveal de la entrada (ver reveal.ts), de la misma duración que la animación de cámara (8 s).
+ * Los splats llegan hasta 116 m del centro (la mitad está a menos de 53 m), así que `radius` cubre
+ * toda la escena y las ondas empiezan despacio en el centro y aceleran hacia afuera: la onda de
+ * elevación (colores) sale `delay` s detrás de la de puntos y llega a `radius` justo a los 8 s,
+ * cuando el efecto se retira solo. `dotScale` agranda los puntos del efecto original para esta escala.
  */
-const REVEAL = { radius: 120, speed: 14, delay: 1.5, lift: 3, band: 6, dotScale: 60 };
+const REVEAL = (() => {
+    const radius = 117;
+    const delay = 1.5;
+    const speed = 5; // m/s al arrancar
+    const travel = INTRO_SECONDS - delay; // lo que tarda la onda de colores en recorrer `radius`
+    const acceleration = (2 * (radius - speed * travel)) / (travel * travel);
+    return { radius, delay, speed, acceleration, lift: 3, band: 6, dotScale: 60 };
+})();
 /** Suelo del modo vuelo (m): la cámara no puede quedar bajo la maqueta. */
 const FLY_MIN_Y = GROUND_Y + 1.5;
 /** Distancia (m) a la pose del lugar a la que se considera que el vuelo terminó. */
