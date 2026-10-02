@@ -182,3 +182,12 @@ body {
     transform: translateX(-50%);
     white-space: nowrap;
 }
+
+/* detalle técnico del error: pequeño, para poder reportarlo */
+#ar-error-detail {
+    margin: 12px 0 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: rgba(var(--ink-rgb), 0.55);
+    word-break: break-word;
+}

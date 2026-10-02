@@ -72,6 +72,7 @@ const againBtn = $<HTMLButtonElement>('ar-again');
 const errorCard = $<HTMLElement>('ar-error');
 const errorTitle = $<HTMLElement>('ar-error-title');
 const errorText = $<HTMLElement>('ar-error-text');
+const errorDetail = $<HTMLElement>('ar-error-detail');
 
 // ---------------------------------------------------------------------------
 // Idioma y estados de la interfaz
@@ -82,6 +83,7 @@ type ErrorKind = 'notMobile' | 'camera' | 'device' | 'generic';
 let lang: Lang = detectLang();
 let phase: Phase = 'start';
 let errorKind: ErrorKind = 'generic';
+let errorInfo = '';
 let sceneReady = false;
 
 const t = () => AR_UI[lang];
@@ -119,6 +121,8 @@ const render = () => {
         }[errorKind];
         errorTitle.textContent = errorKind === 'notMobile' ? msg[0] : u.startKicker;
         errorText.textContent = errorKind === 'notMobile' ? msg[1] : msg[0];
+        errorDetail.textContent = errorInfo;
+        errorDetail.hidden = !errorInfo;
     }
     langEl.querySelectorAll<HTMLElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
     document.title = `San Sebastián · ${u.startKicker}`;
@@ -129,8 +133,11 @@ const setPhase = (p: Phase) => {
     render();
 };
 
-const fail = (kind: ErrorKind) => {
+/** Muestra el error; `info` es el detalle técnico (qué falló) para poder reportarlo. */
+const fail = (kind: ErrorKind, info: unknown = '') => {
     errorKind = kind;
+    errorInfo = info instanceof Error ? `${info.name}: ${info.message}` : String(info ?? '').slice(0, 220);
+    if (info) console.error('[AR]', info);
     setPhase('error');
 };
 
@@ -253,9 +260,17 @@ const normal = new Vec3();
 const quat = new Quat();
 let pulse = 0;
 
+/**
+ * El motor de 8th Wall solo admite consultas de superficie cuando ya procesó cuadros de la cámara: antes
+ * de eso `hitTest` se cae por dentro (acceso fuera de memoria). Por eso se consulta únicamente dentro de su
+ * propio ciclo (`onUpdate` del módulo) y solo desde el primer cuadro con datos; el resultado queda aquí.
+ */
+let engineReady = false;
+let latestHit: Vec3 | null = null;
+let hitErrors = 0;
+
 /** Punto de una superficie horizontal en el centro de la pantalla, o null. */
-const findSurface = (): { position: Vec3 } | null => {
-    if (DEMO) return { position: target.set(0, 0, -1.4) };
+const queryHit = (): Vec3 | null => {
     const xr = window.XR8;
     if (!xr) return null;
     const hits = xr.XrController.hitTest(0.5, 0.5, ['ESTIMATED_SURFACE', 'DETECTED_SURFACE']);
@@ -265,9 +280,29 @@ const findSurface = (): { position: Vec3 } | null => {
         quat.set(h.rotation.x, h.rotation.y, h.rotation.z, h.rotation.w);
         quat.transformVector(Vec3.UP, normal);
         if (normal.y < 0.7) continue;
-        return { position: target.set(h.position.x, h.position.y, h.position.z) };
+        return new Vec3(h.position.x, h.position.y, h.position.z);
     }
     return null;
+};
+
+/** Lo llama el motor en cada cuadro con datos de seguimiento. */
+const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
+    if (!e.processCpuResult?.reality) return;
+    engineReady = true;
+    try {
+        latestHit = queryHit();
+        hitErrors = 0;
+    } catch {
+        latestHit = null;
+        if (++hitErrors > 60) fail('generic', 'hitTest: el motor falla de forma sostenida'); // el motor falla de forma sostenida: se avisa en vez de quedarse mudo
+    }
+};
+
+/** Punto de una superficie horizontal en el centro de la pantalla, o null. */
+const findSurface = (): { position: Vec3 } | null => {
+    if (DEMO) return { position: target.set(0, 0, -1.4) };
+    if (!engineReady || !latestHit) return null;
+    return { position: latestHit };
 };
 
 const onUpdate = (dt: number) => {
@@ -373,7 +408,7 @@ const startTracking = async () => {
     }
 
     if (!(await requestMotionPermission())) {
-        fail('camera');
+        fail('camera', 'permiso de movimiento denegado');
         return;
     }
     try {
@@ -384,22 +419,27 @@ const startTracking = async () => {
         const modules: Xr8Module[] = [
             {
                 name: 'san-sebastian-ar',
-                onException: () => fail('generic'),
-                onDeviceIncompatible: () => fail('device'),
+                onUpdate: onEngineFrame,
+                onException: (err) => fail('generic', err),
+                onDeviceIncompatible: (info) => fail('device', info),
                 onCameraStatusChange: (e) => {
-                    if (e.status === 'failed') fail('camera');
+                    if (e.status === 'failed') fail('camera', 'la cámara no pudo abrirse');
                 }
             }
         ];
-        xr.PlayCanvas.runXr({ pcCamera: camera.camera, pcApp: app }, modules, {
+        // la integración con PlayCanvas espera la ENTIDAD de la cámara (llama a getPosition y a camera.nearClip),
+        // aunque su documentación diga «componente»
+        xr.PlayCanvas.runXr({ pcCamera: camera, pcApp: app }, modules, {
             canvas,
             allowedDevices: xr.XrConfig.device().MOBILE
         });
+        engineReady = false;
+        latestHit = null;
         foundFrames = 0;
         lostFrames = 0;
         setPhase('scanning');
-    } catch {
-        fail('generic');
+    } catch (err) {
+        fail('generic', err);
     }
 };
 
