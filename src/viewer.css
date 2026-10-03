@@ -51,9 +51,12 @@ button {
 }
 
 /* ---------- Escenario: el visor de SuperSplat ocupa todo ---------- */
+/* fondo: piedra oscura con un patrón de hexágonos en el color del texto al 10 % (el lienzo 3D es transparente) */
 #stage {
     position: fixed;
     inset: 0;
+    background: var(--bg) url('./assets/pattern.svg') repeat;
+    background-size: 52px 90px;
 }
 
 /* ---------- Cabecera ---------- */
@@ -315,7 +318,8 @@ body.edit #masthead {
         right: auto;
         width: min(36rem, 62vw);
         max-height: none;
-        padding: 18px 24px 8px 28px;
+        /* empieza debajo del título, que siempre queda visible */
+        padding: calc(max(18px, env(safe-area-inset-top)) + 74px) 24px 8px 28px;
         display: flex;
         flex-direction: column;
     }
@@ -372,7 +376,8 @@ body.edit #masthead {
     place-content: center;
     justify-items: center;
     gap: 10px;
-    background: var(--bg);
+    background: var(--bg) url('./assets/pattern.svg') repeat;
+    background-size: 52px 90px;
     transition: opacity 0.8s ease;
 }
 

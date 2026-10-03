@@ -6,6 +6,12 @@
         <meta name="theme-color" content="#3b3a35" />
         <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2738%27 fill=%27none%27 stroke=%27%23a6473e%27 stroke-width=%278%27/%3E%3C/svg%3E" />
         <title>San Sebastián · Realidad aumentada</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Libre+Franklin:wght@600&display=swap"
+        />
 
         <!-- This product includes the XR Engine software developed by Niantic Spatial, Inc.
              Copyright © 2026 Niantic Spatial, Inc. All rights reserved.
@@ -43,9 +49,35 @@
                 z-index: 20;
             }
             #top a {
+                position: fixed;
+                left: 22px;
+                bottom: calc(22px + env(safe-area-inset-bottom));
                 color: #e7d8d6;
                 text-decoration: none;
                 font-size: 15px;
+            }
+            #masthead {
+                position: fixed;
+                top: max(18px, env(safe-area-inset-top));
+                left: 22px;
+                z-index: 30;
+                pointer-events: none;
+                text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+            }
+            #masthead p {
+                margin: 0;
+            }
+            #mast-kicker {
+                margin-bottom: 2px !important;
+                font: 600 12px 'Libre Franklin', system-ui, sans-serif;
+                letter-spacing: 0.24em;
+                text-transform: uppercase;
+                color: #a6473e;
+            }
+            #mast-title {
+                font: 500 clamp(1.7rem, 7vw, 2.6rem) / 1 'Cormorant Garamond', Georgia, serif;
+                letter-spacing: 0.01em;
+                color: #e7d8d6;
             }
             #lang button {
                 background: none;
@@ -70,7 +102,8 @@
                 gap: 16px;
                 padding: 24px;
                 text-align: center;
-                background: #111;
+                background: #111 url('./src/assets/pattern.svg') repeat;
+                background-size: 52px 90px;
                 z-index: 10;
             }
             #start h1 {
@@ -174,6 +207,7 @@
 
         <div id="top">
             <a id="back" href="./"></a>
+            <span></span>
             <div id="top-right">
                 <div id="lang" role="group" aria-label="Language / Idioma">
                     <button type="button" data-lang="en">EN</button>
@@ -183,6 +217,12 @@
                 <img class="logo" src="./logo.png" alt="" />
             </div>
         </div>
+
+        <!-- título: siempre visible (inicio y cámara) -->
+        <header id="masthead">
+            <p id="mast-kicker"></p>
+            <p id="mast-title"></p>
+        </header>
 
         <section id="start">
             <h1 id="kicker"></h1>
