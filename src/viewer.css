@@ -119,12 +119,11 @@ body.edit #masthead {
     position: fixed;
     left: 0;
     right: 0;
+    /* empieza justo debajo del título y de «Ver en AR»; si el texto es largo, el panel se desplaza */
+    top: calc(max(18px, env(safe-area-inset-top)) + 122px);
     bottom: var(--index-h);
-    /* nunca sube hasta la cabecera; si el texto es largo, el panel se desplaza */
-    max-height: calc(100vh - var(--index-h) - 110px);
-    max-height: calc(100dvh - var(--index-h) - 110px);
     overflow: hidden;
-    padding: 30px 22px 6px;
+    padding: 6px 22px 6px;
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
     /* oculto mientras la cámara vuela; aparece con un fundido al llegar */
     opacity: 0;
@@ -147,14 +146,11 @@ body.edit #masthead {
         right: auto;
         width: min(31rem, 42vw);
         max-height: none;
-        padding: calc(max(18px, env(safe-area-inset-top)) + 96px) 44px 110px;
+        padding: calc(max(18px, env(safe-area-inset-top)) + 128px) 44px 110px;
         display: flex;
         flex-direction: column;
     }
     /* el texto se apoya abajo, pero si es largo crece hacia arriba sin pisar la cabecera */
-    #chapter > :first-child {
-        margin-top: auto;
-    }
 }
 
 #chapter.enter > * {
@@ -187,9 +183,6 @@ body.edit #masthead {
 #chapter.scroll {
     overflow-y: auto;
     overscroll-behavior: contain;
-    /* con texto largo el panel deja libre la parte de arriba para tocar la escena */
-    max-height: 58vh;
-    max-height: 58dvh;
 }
 
 #chapter.scroll.shown {
@@ -339,12 +332,7 @@ body.edit #masthead {
         width: min(36rem, 62vw);
         max-height: none;
         /* empieza debajo del título, que siempre queda visible */
-        padding: calc(max(18px, env(safe-area-inset-top)) + 74px) 24px 8px 28px;
-        display: flex;
-        flex-direction: column;
-    }
-    #chapter > :first-child {
-        margin-top: auto;
+        padding: calc(max(18px, env(safe-area-inset-top)) + 112px) 24px 8px 28px;
     }
     #chapter.scroll {
         max-height: none;
@@ -744,7 +732,7 @@ body.animar #ed-export-box {
     z-index: 6;
     top: max(12px, env(safe-area-inset-top));
     right: 14px;
-    height: 38px;
+    height: 26px;
     width: auto;
     pointer-events: none;
     filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6));
@@ -753,8 +741,8 @@ body.animar #ed-export-box {
 #lang {
     position: fixed;
     z-index: 6;
-    top: max(12px, env(safe-area-inset-top));
-    right: 74px;
+    top: max(8px, env(safe-area-inset-top));
+    right: 56px;
     display: flex;
     align-items: center;
     gap: 2px;
@@ -799,8 +787,9 @@ body.animar #logo {
 #ar-link {
     position: fixed;
     z-index: 6;
-    top: calc(max(12px, env(safe-area-inset-top)) + 56px);
-    right: 14px;
+    /* a la izquierda, debajo del título */
+    top: calc(max(18px, env(safe-area-inset-top)) + 64px);
+    left: 22px;
     padding: 6px 2px 4px;
     font-family: var(--display);
     font-size: 1.25rem;
