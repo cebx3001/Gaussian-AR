@@ -59,6 +59,26 @@ button {
     background-size: 52px 90px;
 }
 
+/* velo oscuro, sin bordes, detrás de la descripción (body.reading): aparece con un fundido y se va al instante */
+#veil {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.03);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+}
+
+body.reading #veil {
+    opacity: 1;
+    transition: opacity 0.7s ease;
+}
+
+body.edit #veil,
+body.animar #veil {
+    display: none;
+}
+
 /* ---------- Cabecera ---------- */
 #masthead {
     position: fixed;
