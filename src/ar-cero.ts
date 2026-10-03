@@ -10,6 +10,8 @@
 // ---------------------------------------------------------------------------
 import * as pc from 'playcanvas';
 
+import { createReport } from './ar-report';
+
 type Hit = { type: string; position: { x: number; y: number; z: number } };
 type Module = {
     name: string;
@@ -74,11 +76,15 @@ app.root.addChild(cube);
 
 app.start();
 
+// botón «Enviar resultado» (modelo, navegador, GPU, fps, seguimiento) para las pruebas en otros teléfonos
+const report = createReport(canvas);
+
 // ---- estado en pantalla: seguimiento y cuadros por segundo
 let tracking = '—';
 let fps = 0;
 app.on('update', (dt: number) => {
     if (dt > 0) fps = fps ? fps * 0.9 + (1 / dt) * 0.1 : 1 / dt;
+    report.frame();
 });
 setInterval(() => {
     status.textContent = `${tracking} · ${fps.toFixed(0)} fps`;
@@ -103,7 +109,8 @@ const place = (sx: number, sy: number) => {
     }
     cube.setPosition(p);
     cube.enabled = true;
-    hint.textContent = `Cubo colocado (${hits.length ? hits[0].type : 'piso Y=0'}). Camina alrededor: ¿se queda fijo? Toca de nuevo para moverlo.`;
+    report.placed(hits.length ? hits[0].type : 'piso Y=0');
+    hint.textContent = `Cubo colocado. Camina alrededor y agáchate; luego toca «Enviar resultado» arriba a la derecha.`;
 };
 
 let touchStart: { x: number; y: number; t: number } | null = null;
@@ -145,9 +152,18 @@ $('start-btn').addEventListener('click', async () => {
         onDeviceIncompatible: () => fail('dispositivo o navegador no compatible'),
         onCameraStatusChange: (e) => {
             if (e.status === 'failed') fail('no se pudo abrir la cámara');
+            if (e.status === 'hasVideo') report.start();
             if (e.status === 'hasVideo') hint.textContent = 'Mueve el teléfono despacio y toca el piso o una mesa para colocar el cubo.';
         },
-        listeners: [{ event: 'reality.trackingstatus', process: (e) => (tracking = `${e.detail.status ?? '?'}${e.detail.reason ? ' / ' + e.detail.reason : ''}`) }]
+        listeners: [
+            {
+                event: 'reality.trackingstatus',
+                process: (e) => {
+                    tracking = `${e.detail.status ?? '?'}${e.detail.reason ? ' / ' + e.detail.reason : ''}`;
+                    report.tracking(e.detail.status ?? '?', e.detail.reason);
+                }
+            }
+        ]
     };
     XR.XrController.configure({ disableWorldTracking: false });
     XR.PlayCanvas.run({ pcCamera: camera, pcApp: app }, [XR.XrController.pipelineModule(), errors], { canvas });
