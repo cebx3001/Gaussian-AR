@@ -408,13 +408,14 @@ const queryHit = (): Vec3 | null => {
     return best ? best.pos : null;
 };
 
-// Altura de lo que hay en el centro según hitTest (mediana de las últimas lecturas; los puntos sueltos lejos de esa
-// altura se ignoran). SOLO diagnóstico (`?debug`, `?rec`): la colocación usa siempre el piso del motor, Y = 0.
+// Altura del apoyo: mediana de las últimas lecturas. Los puntos sueltos que caen lejos de esa altura (otro
+// objeto, ruido) se ignoran; si siguen llegando muchos seguidos es que se apunta a otra superficie y se adopta.
 const floorSamples: number[] = [];
 let floorY: number | null = null;
 let rejectedInRow = 0;
 const median = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1];
 const OUTLIER = 0.3; // unidades del motor
+let lastSurfaceAt = 0;
 
 const addSurfaceSample = (y: number) => {
     if (floorY !== null && floorSamples.length >= 5 && Math.abs(y - floorY) > OUTLIER) {
@@ -425,6 +426,7 @@ const addSurfaceSample = (y: number) => {
     floorSamples.push(y);
     if (floorSamples.length > 15) floorSamples.shift();
     floorY = median(floorSamples);
+    lastSurfaceAt = performance.now();
 };
 
 /** Lo llama el motor en cada cuadro con datos de seguimiento. */
@@ -446,24 +448,31 @@ const onEngineFrame = (e: { processCpuResult?: { reality?: unknown } }) => {
 };
 
 /**
- * Dónde va el círculo: el punto donde el centro de la pantalla toca el PISO de 8th Wall (Y = 0), en coordenadas
- * del mundo del motor (las mismas en que la integración coloca la cámara de PlayCanvas).
- * Siempre el piso, nunca la altura de un resultado de hitTest: el seguimiento de mundo de 8th Wall es «floor based
- * only» y recalcula continuamente un único plano horizontal, Y = 0; para seguir la superficie, la base del objeto
- * debe estar en Y = 0 (documentación oficial: World Tracking Issues / Tracking and Camera Issues). Colocar a la
- * altura de un FEATURE_POINT o de una mesa deja la maqueta fuera del plano que el motor estabiliza.
- * hitTest se sigue consultando solo para el diagnóstico (`?debug`, `?rec`).
+ * Dónde va el círculo: el punto donde el centro de la pantalla toca el plano de apoyo, en coordenadas del mundo
+ * de 8th Wall (las mismas en que la integración coloca la cámara de PlayCanvas). El plano es la superficie que el
+ * motor tiene en el centro de la pantalla (altura = mediana de sus lecturas recientes) o, solo si no devolvió
+ * nada en 2 s, su piso (Y = 0).
+ * Comprobación de profundidad: el círculo nunca queda más lejos que el punto real que el motor devuelve en esa
+ * misma dirección; si el plano daría un punto más lejano, se usa la profundidad medida.
  */
+const MAX_DEPTH_RATIO = 1.15;
 const findSurface = (): { position: Vec3 } | null => {
     if (DEMO) return { position: target.set(0, 0, -1.4) };
     if (!engineReady) return null;
-    hitKind = 'ground';
+    const onSurface = floorY !== null && performance.now() - lastSurfaceAt < 2000;
+    const y = onSurface ? (floorY as number) : GROUND_Y;
+    hitKind = onSurface ? 'surface' : 'ground';
     const c = camera.getPosition();
     const f = camera.forward;
-    if (f.y > -0.15) return null; // mirando al horizonte: no hay piso al frente
-    const t = (GROUND_Y - c.y) / f.y;
+    if (f.y > -0.15) return null; // mirando al horizonte: no hay plano al frente
+    let t = (y - c.y) / f.y;
+    // solo con una lectura coherente con la superficie (no un punto atípico de otro objeto)
+    if (latestHit && onSurface && Math.abs(latestHit.y - (floorY as number)) <= OUTLIER) {
+        const measured = latestHit.distance(c);
+        if (t > measured * MAX_DEPTH_RATIO) t = measured;
+    }
     if (t < 0.25 || t > 8) return null;
-    return { position: target.set(c.x + f.x * t, GROUND_Y, c.z + f.z * t) };
+    return { position: target.set(c.x + f.x * t, c.y + f.y * t, c.z + f.z * t) };
 };
 
 const debugEl = $<HTMLElement>('ar-debug');
