@@ -42,6 +42,14 @@ const ORBIT_DEG = 30;
 const STEP = 0.1;
 /** Largo del respiro sin texto, en pantallas de scroll. */
 const PAUSE_SCREENS = 0.9;
+/**
+ * Lugares con giro propio. La fuente es una roseta vista desde arriba: gira 180° y empieza a girar en cuanto la
+ * cámara llega (durante la lectura), con un respiro más largo para que el giro sea lento.
+ */
+const SPIN: Record<string, { deg: number; fromArrival: boolean; pause: number }> = {
+    fuente: { deg: 180, fromArrival: true, pause: 1.8 }
+};
+const pauseScreens = (i: number) => SPIN[chapters[i]?.id]?.pause ?? PAUSE_SCREENS;
 
 // ---- textos de esta página
 const TEXT: Record<Lang, { cue: string; endKicker: string; endTitle: string; explore: string; back: string }> = {
@@ -100,6 +108,24 @@ const orbitPose = (p: Pose, deg: number): Pose => {
     };
 };
 
+/**
+ * Vista cenital (justo encima, mirando abajo): girar alrededor del eje vertical no cambiaría nada. Se inclina unos
+ * grados hacia el lado desde donde llega la cámara; casi no se nota, pero así el giro hace rotar la vista.
+ */
+const tiltIfOverhead = (p: Pose, from: Pose): Pose => {
+    const dx = p.position[0] - p.target[0];
+    const dz = p.position[2] - p.target[2];
+    const h = Math.abs(p.position[1] - p.target[1]);
+    if (Math.hypot(dx, dz) > h * 0.05) return p;
+    let ux = from.position[0] - p.target[0];
+    let uz = from.position[2] - p.target[2];
+    const l = Math.hypot(ux, uz) || 1;
+    ux /= l;
+    uz /= l;
+    const off = h * 0.08;
+    return { ...p, position: [p.target[0] + ux * off, p.position[1], p.target[2] + uz * off] };
+};
+
 /** Viaje entre dos vistas: curva suave que sube un poco a mitad de camino para pasar por encima de la plaza. */
 const travelPose = (a: Pose, b: Pose, u: number): Pose => {
     const e = easeInOut(u);
@@ -137,24 +163,33 @@ const buildTrack = () => {
 
     let from: Pose = first;
     chapters.forEach((c, i) => {
+        const spin = SPIN[c.id];
+        const pose = spin ? tiltIfOverhead(c.pose, from) : c.pose;
         if (i > 0) {
             const seg: Seg = { kind: 'travel', i, t0: t, t1: t + TRAVEL };
             const a = from;
-            sample(seg, (u) => travelPose(a, c.pose, u));
+            sample(seg, (u) => travelPose(a, pose, u));
             segs.push(seg);
             t = seg.t1;
         }
+        // el giro alterna de lado en cada lugar
+        const deg = (i % 2 ? -1 : 1) * (spin?.deg ?? ORBIT_DEG);
         const read: Seg = { kind: 'read', i, t0: t, t1: t + READ };
-        sample(read, () => c.pose);
+        if (spin?.fromArrival) {
+            // gira desde que llega: la primera mitad mientras se lee (arranca suave), la otra en el respiro
+            sample(read, (u) => orbitPose(pose, deg * 0.5 * u * u));
+        } else {
+            sample(read, () => pose);
+        }
         segs.push(read);
         t = read.t1;
-        // el giro alterna de lado en cada lugar
-        const deg = (i % 2 ? -1 : 1) * ORBIT_DEG;
-        const orbit: Seg = { kind: 'orbit', i, t0: t, t1: t + ORBIT };
-        sample(orbit, (u) => orbitPose(c.pose, deg * easeInOut(u)));
+        const orbitLen = spin ? ORBIT * 2 : ORBIT;
+        const orbit: Seg = { kind: 'orbit', i, t0: t, t1: t + orbitLen };
+        if (spin?.fromArrival) sample(orbit, (u) => orbitPose(pose, deg * (0.5 + 0.5 * (1 - (1 - u) * (1 - u)))));
+        else sample(orbit, (u) => orbitPose(pose, deg * easeInOut(u)));
         segs.push(orbit);
         t = orbit.t1;
-        from = orbitPose(c.pose, deg);
+        from = orbitPose(pose, deg);
     });
     return trackFromKeyframes(keyframes, t);
 };
@@ -269,7 +304,7 @@ const readStart = (i: number) => (i === 0 ? 0 : (blocks[i]?.offsetTop ?? 0) - RE
 const layout = () => {
     const vh = scroller.clientHeight;
     storyEl.style.paddingTop = `${READ_TOP}px`;
-    pauses.forEach((p) => (p.style.height = `${Math.round(vh * (1 + PAUSE_SCREENS))}px`));
+    pauses.forEach((p, i) => (p.style.height = `${Math.round(vh * (1 + pauseScreens(i)))}px`));
     map = [];
     const segOf = (kind: Seg['kind'], i: number) => segs.find((g) => g.kind === kind && g.i === i)!;
     blocks.forEach((b, i) => {
@@ -282,7 +317,7 @@ const layout = () => {
         const rd = segOf('read', i);
         map.push({ s: i === 0 ? 0 : top - READ_TOP, t: rd.t0, i }, { s: bottom, t: rd.t1, i });
         const ob = segOf('orbit', i);
-        map.push({ s: bottom, t: ob.t0, i }, { s: bottom + vh * PAUSE_SCREENS, t: ob.t1, i });
+        map.push({ s: bottom, t: ob.t0, i }, { s: bottom + vh * pauseScreens(i), t: ob.t1, i });
     });
     map.sort((a, b) => a.s - b.s);
 };
