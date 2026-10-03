@@ -119,12 +119,11 @@ body.edit #masthead {
     position: fixed;
     left: 0;
     right: 0;
+    /* empieza justo debajo del título y de «Ver en AR»; si el texto es largo, el panel se desplaza */
+    top: calc(max(18px, env(safe-area-inset-top)) + 122px);
     bottom: var(--index-h);
-    /* en el teléfono ocupa como mucho media pantalla, abajo; si el texto es largo, el panel se desplaza */
-    max-height: 50vh;
-    max-height: 50dvh;
     overflow: hidden;
-    padding: 30px 22px 6px;
+    padding: 6px 22px 6px;
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
     /* oculto mientras la cámara vuela; aparece con un fundido al llegar */
     opacity: 0;
