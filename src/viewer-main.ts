@@ -194,6 +194,43 @@ const revealOrigin = (v: ViewerHandle, from: Pose['position'], to: Pose['target'
     return hit ?? to;
 };
 
+/**
+ * Llama a `done` cuando el Gaussian se está dibujando de verdad: con la compilación de shaders en paralelo, el motor
+ * omite los draws cuyo shader aún no está listo (la escena «corre» pero no se ve). Se espera a que el copiado al work
+ * buffer (con el efecto) y el dibujo del splat se ejecuten con shader válido. Tope de 20 s por si acaso.
+ */
+const waitUntilDrawn = (v: ViewerHandle, done: () => void) => {
+    type Dev = { draw: (...a: unknown[]) => unknown; shader: { name?: string } | null; shaderValid?: boolean };
+    const dev = v.app.graphicsDevice as unknown as Dev;
+    const orig = dev.draw;
+    let copied = false;
+    let drawn = false;
+    dev.draw = function (this: Dev, ...a: unknown[]) {
+        const r = orig.apply(this, a);
+        const name = this.shader?.name ?? '';
+        if (this.shaderValid) {
+            if (name.includes('SplatCopyToWorkBuffer')) copied = true;
+            else if (name.includes('Splat')) drawn = true;
+        }
+        return r;
+    };
+    const start = performance.now();
+    let finished = false;
+    const tick = () => {
+        if (finished) return;
+        v.app.renderNextFrame = true;
+        if ((copied && drawn) || performance.now() - start > 20000) {
+            finished = true;
+            dev.draw = orig;
+            // un cuadro más para que lo dibujado llegue a la pantalla
+            requestAnimationFrame(() => done());
+            return;
+        }
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+};
+
 /** Índice de anotación de SuperSplat para cada lugar (solo los que tienen pose). */
 let annotationOf: (number | undefined)[] = [];
 
@@ -319,11 +356,22 @@ const mountViewer = async () => {
                 v.state.animationPaused = true;
                 const origin = introFirst ? revealOrigin(v, introFirst.position, introFirst.target) : center;
                 const radius = Math.hypot(origin[0] - MODEL_CENTER[0], origin[1] - MODEL_CENTER[1], origin[2] - MODEL_CENTER[2]) + 100;
-                startReveal(v.app, { center: origin, ...revealFor(radius, INTRO_HOLD + introDuration, 15, 0.7) });
-                window.setTimeout(() => {
-                    if (v === viewer && introActive) v.state.animationPaused = false;
-                }, INTRO_HOLD * 1000);
-                playIntro(v);
+                const opts = { center: origin, ...revealFor(radius, INTRO_HOLD + introDuration, 15, 0.7) };
+                // El efecto se pone ya para que sus shaders empiecen a compilarse; mientras no estén listos el
+                // Gaussian no se dibuja (en un teléfono puede tardar segundos). Cuando de verdad se dibuja, el efecto
+                // se reinicia desde cero, se quita la pantalla de carga y empieza el reloj de la entrada.
+                let stop = startReveal(v.app, opts);
+                waitUntilDrawn(v, () => {
+                    if (v !== viewer) return;
+                    stop();
+                    stop = startReveal(v.app, opts);
+                    loader.dataset.hidden = 'true';
+                    window.setTimeout(() => {
+                        if (v === viewer && introActive) v.state.animationPaused = false;
+                    }, INTRO_HOLD * 1000);
+                    playIntro(v);
+                });
+                return;
             } else {
                 goTo(active);
             }
