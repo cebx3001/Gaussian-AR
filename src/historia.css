@@ -1,0 +1,199 @@
+/* ---------------------------------------------------------------------------
+   Historia con scroll (historia.html): la maqueta fija de fondo y los textos que suben encima.
+   Usa las piezas del visor (viewer.css): cabecera, idioma, logo, «Ver en AR», barra de lugares, carga.
+   --------------------------------------------------------------------------- */
+
+/* el escenario no recibe toques mientras se cuenta la historia: el dedo hace scroll */
+#stage {
+    pointer-events: none;
+}
+
+body.exploring #stage {
+    pointer-events: auto;
+}
+
+/* velo: su opacidad la pone el código según el texto que hay en pantalla */
+#veil {
+    background: rgba(0, 0, 0, 0.3);
+    transition: opacity 0.25s linear;
+}
+
+/* área de scroll: entre la cabecera y la barra de lugares; los bordes se desvanecen */
+#scroller {
+    position: fixed;
+    z-index: 3;
+    left: 0;
+    right: 0;
+    top: calc(max(18px, env(safe-area-inset-top)) + 122px);
+    bottom: var(--index-h);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
+
+#scroller::-webkit-scrollbar {
+    display: none;
+}
+
+/* mientras corre la entrada no se puede hacer scroll y el texto todavía no aparece */
+body.locked #scroller {
+    overflow: hidden;
+    opacity: 0;
+}
+
+body.ready #scroller {
+    opacity: 1;
+    transition: opacity 0.8s ease;
+}
+
+body.exploring #scroller,
+body.exploring #veil {
+    display: none;
+}
+
+#story {
+    position: relative;
+    padding: 0 22px;
+}
+
+/* ---------- un lugar ---------- */
+.block {
+    max-width: 34rem;
+    padding: 6px 0 24px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+}
+
+.block .rule {
+    width: 44px;
+    height: 1px;
+    margin-bottom: 18px;
+    background: var(--accent);
+}
+
+.block .kicker,
+.end .kicker {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.block .title,
+.end .title {
+    margin: 0 0 14px;
+    color: #f7f0ee;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 6.6vw, 2.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+}
+
+.block .text p {
+    margin: 0 0 0.8em;
+    font-size: var(--fs-text);
+    line-height: 1.55;
+    color: #f7f0ee;
+    text-wrap: pretty;
+}
+
+/* capitular en el primer párrafo */
+.block .text p:first-child::first-letter {
+    float: left;
+    margin: 0.06em 0.1em 0 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 3.1em;
+    line-height: 0.8;
+    color: var(--accent);
+}
+
+/* aviso de la Vista general: cómo se avanza */
+.block .cue {
+    margin: 18px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(var(--ink-rgb), 0.8);
+}
+
+.block .cue span {
+    display: inline-block;
+    margin-left: 6px;
+    color: var(--accent);
+    animation: sube 1.6s ease-in-out infinite;
+}
+
+@keyframes sube {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+/* respiro sin texto: la altura la pone el código (más de una pantalla) */
+.pause {
+    pointer-events: none;
+}
+
+/* ---------- final ---------- */
+.end {
+    min-height: 70vh;
+    min-height: 70dvh;
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    max-width: 34rem;
+    padding-bottom: 40px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+}
+
+.end .explore,
+#back-story {
+    padding: 6px 2px 4px;
+    font-family: var(--display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid var(--accent);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+}
+
+#back-story {
+    position: fixed;
+    z-index: 6;
+    left: 22px;
+    bottom: calc(var(--index-h) + 14px);
+}
+
+/* en «Explorar libremente» la barra de lugares no lleva a ningún sitio: se oculta */
+body.exploring #index {
+    display: none;
+}
+
+body.exploring #back-story {
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 10px);
+}
+
+/* ---------- computadora: el texto en una columna a la izquierda ---------- */
+@media (min-width: 820px) {
+    #story {
+        padding: 0 44px;
+    }
+    .block,
+    .end {
+        max-width: min(31rem, 42vw);
+    }
+}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <meta name="theme-color" content="#3b3a35" />
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2738%27 fill=%27none%27 stroke=%27%23a6473e%27 stroke-width=%278%27/%3E%3C/svg%3E" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Libre+Franklin:wght@300;400;500;600&display=swap"
+        />
+        <title>San Sebastián · Cuenca</title>
+    </head>
+    <body class="locked">
+        <div id="stage"></div>
+        <!-- velo oscuro detrás del texto: su opacidad sigue al texto que está en pantalla -->
+        <div id="veil"></div>
+
+        <a id="logo-link" href="https://wa.me/593992730095" target="_blank" rel="noopener" aria-label="WhatsApp"><img id="logo" src="./logo.png" alt="" /></a>
+
+        <div id="lang" role="group" aria-label="Language / Idioma">
+            <button type="button" data-lang="en">EN</button>
+            <span aria-hidden="true">|</span>
+            <button type="button" data-lang="es">ES</button>
+        </div>
+
+        <a id="ar-link" href="ar-cero.html" hidden></a>
+
+        <header id="masthead">
+            <p id="masthead-kicker"></p>
+            <h1 id="masthead-title"></h1>
+        </header>
+
+        <!-- la historia: el scroll de esta capa mueve la cámara (src/historia.ts) -->
+        <main id="scroller">
+            <div id="story"></div>
+        </main>
+
+        <button type="button" id="back-story" hidden></button>
+
+        <nav id="index" aria-label="Lugares"></nav>
+
+        <div id="loader" role="status" aria-live="polite">
+            <p id="loader-kicker"></p>
+            <p id="loader-title">San Sebastián</p>
+            <div id="loader-bar"><div id="loader-fill"></div></div>
+            <p id="loader-message"></p>
+        </div>
+
+        <script>
+            // idioma de la pantalla de carga, antes de que cargue el resto del código
+            (function () {
+                var l = new URLSearchParams(location.search).get('lang');
+                try { if (l !== 'es' && l !== 'en') l = localStorage.getItem('san-sebastian:lang'); } catch (e) {}
+                if (l !== 'es' && l !== 'en') l = (navigator.language || 'es').toLowerCase().indexOf('es') === 0 ? 'es' : 'en';
+                var t = l === 'es' ? ['Cuenca · Patrimonio', 'Cargando la plaza'] : ['Cuenca · Heritage', 'Loading the square'];
+                document.documentElement.lang = l;
+                document.getElementById('loader-kicker').textContent = t[0];
+                document.getElementById('loader-message').textContent = t[1];
+            })();
+        </script>
+        <script type="module" src="/src/historia.ts"></script>
+    </body>
+</html>
