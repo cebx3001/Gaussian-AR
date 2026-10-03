@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+        <title>AR desde cero · paso 1</title>
+
+        <!-- This product includes the XR Engine software developed by Niantic Spatial, Inc.
+             Copyright © 2026 Niantic Spatial, Inc. All rights reserved.
+             Licensed under the XR Engine License Agreement: https://github.com/8thwall/engine/blob/main/LICENSE
+             Provided "AS IS", without warranties (see the disclaimer in the License). -->
+        <script async src="./external/xr/xr.js" data-preload-chunks="slam"></script>
+
+        <style>
+            html,
+            body {
+                margin: 0;
+                height: 100%;
+                overflow: hidden;
+                background: #000;
+                font: 15px/1.35 system-ui, sans-serif;
+                color: #fff;
+                -webkit-tap-highlight-color: transparent;
+            }
+            #application-canvas {
+                position: fixed;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                display: block;
+                touch-action: none;
+            }
+            #start {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 16px;
+                padding: 24px;
+                text-align: center;
+                background: #111;
+                z-index: 10;
+            }
+            #start button {
+                height: 52px;
+                padding: 0 28px;
+                font: 600 17px system-ui, sans-serif;
+                color: #111;
+                background: #fff;
+                border: 0;
+                border-radius: 999px;
+            }
+            #hint {
+                position: fixed;
+                left: 12px;
+                right: 12px;
+                bottom: calc(16px + env(safe-area-inset-bottom));
+                padding: 10px 14px;
+                text-align: center;
+                background: rgba(0, 0, 0, 0.55);
+                border-radius: 12px;
+                pointer-events: none;
+                z-index: 5;
+            }
+            #status {
+                position: fixed;
+                left: 8px;
+                top: calc(8px + env(safe-area-inset-top));
+                padding: 4px 8px;
+                font: 12px ui-monospace, monospace;
+                background: rgba(0, 0, 0, 0.55);
+                border-radius: 6px;
+                pointer-events: none;
+                z-index: 5;
+            }
+            [hidden] {
+                display: none !important;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="application-canvas"></canvas>
+        <div id="start">
+            <p>Paso 1: 8th Wall + PlayCanvas, configuración oficial, un cubo.</p>
+            <button type="button" id="start-btn">Comenzar</button>
+        </div>
+        <p id="hint" hidden></p>
+        <p id="status" hidden></p>
+        <script type="module" src="/src/ar-cero.ts"></script>
+    </body>
+</html>
