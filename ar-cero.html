@@ -75,8 +75,8 @@
             }
             #start .kicker {
                 margin: 0;
-                font-size: 13px;
-                letter-spacing: 0.12em;
+                font-size: 15px;
+                letter-spacing: 0.14em;
                 text-transform: uppercase;
                 color: #c98a82;
             }
@@ -155,6 +155,22 @@
                 border-radius: 6px;
                 pointer-events: none;
             }
+            #top-right {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .logo {
+                height: 38px;
+                width: auto;
+                pointer-events: none;
+                filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6));
+            }
+            #logo-ar {
+                position: fixed;
+                top: calc(10px + env(safe-area-inset-top));
+                right: 12px;
+            }
             [hidden] {
                 display: none !important;
             }
@@ -165,16 +181,18 @@
 
         <div id="top">
             <a id="back" href="./"></a>
-            <div id="lang" role="group" aria-label="Language / Idioma">
-                <button type="button" data-lang="en">EN</button>
-                <span aria-hidden="true">|</span>
-                <button type="button" data-lang="es">ES</button>
+            <div id="top-right">
+                <div id="lang" role="group" aria-label="Language / Idioma">
+                    <button type="button" data-lang="en">EN</button>
+                    <span aria-hidden="true">|</span>
+                    <button type="button" data-lang="es">ES</button>
+                </div>
+                <img class="logo" src="./logo.png" alt="" />
             </div>
         </div>
 
         <section id="start">
             <p class="kicker" id="kicker"></p>
-            <h1 id="title"></h1>
             <p id="intro"></p>
             <ol id="steps"></ol>
             <p id="install-note" class="note" hidden></p>
@@ -183,6 +201,7 @@
 
         <!-- todo lo que va encima de la cámara (en AR nativa es el overlay DOM de WebXR) -->
         <div id="ui">
+            <img id="logo-ar" class="logo" src="./logo.png" alt="" hidden />
             <p id="hint" hidden></p>
             <button type="button" id="again" hidden></button>
             <p id="status" hidden></p>

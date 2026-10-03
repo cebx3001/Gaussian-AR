@@ -728,11 +728,23 @@ body.animar #ed-export-box {
 }
 
 /* ---------- Selector de idioma (EN | ES) ---------- */
+/* logo, en la esquina superior derecha */
+#logo {
+    position: fixed;
+    z-index: 6;
+    top: max(12px, env(safe-area-inset-top));
+    right: 14px;
+    height: 38px;
+    width: auto;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6));
+}
+
 #lang {
     position: fixed;
     z-index: 6;
     top: max(12px, env(safe-area-inset-top));
-    right: 12px;
+    right: 74px;
     display: flex;
     align-items: center;
     gap: 2px;
@@ -761,7 +773,9 @@ body.animar #ed-export-box {
 }
 
 body.edit #lang,
-body.animar #lang {
+body.animar #lang,
+body.edit #logo,
+body.animar #logo {
     display: none;
 }
 
@@ -775,7 +789,7 @@ body.animar #lang {
 #ar-link {
     position: fixed;
     z-index: 6;
-    top: calc(max(12px, env(safe-area-inset-top)) + 48px);
+    top: calc(max(12px, env(safe-area-inset-top)) + 56px);
     right: 14px;
     padding: 9px 16px;
     font-family: var(--text);

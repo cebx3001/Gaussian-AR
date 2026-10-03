@@ -16,7 +16,6 @@
 import * as pc from 'playcanvas';
 
 import { AR_CERO } from './ar-cero-text';
-import { createReport } from './ar-report';
 import { LANG_KEY, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { REVEAL, startReveal } from './reveal';
@@ -67,9 +66,12 @@ camera.setPosition(0, 1.5, 0);
 app.root.addChild(camera);
 
 // ---- la maqueta: el mismo scene.sog del visor. Con la rotación de 180° del visor, el centro de la plaza (a ras de
-// su suelo) está en PLAZA_CENTER; se lleva al punto tocado. La escena mide unos 135 de diámetro.
+// su suelo) está en PLAZA_CENTER; se lleva al punto tocado. El 95 % de los splats está a menos de 93,5 del centro:
+// ese diámetro (187) es el «tamaño» de la maqueta.
 const PLAZA_CENTER = new pc.Vec3(15.8, 23, 4.6);
-const SCENE_DIAMETER = 135;
+const SCENE_DIAMETER = 187;
+/** Tamaño al colocarla: 1 m (en el modo nativo las unidades son metros; en el web, aproximadamente). */
+const SIZE_M = 1;
 const anchor = new pc.Entity('anchor'); // posición y giro; su escala es el pellizco
 const model = new pc.Entity('model');
 model.setLocalEulerAngles(0, 0, 180);
@@ -104,20 +106,17 @@ app.assets.load(asset);
 
 app.start();
 
-// botón «Enviar resultado» (modelo, navegador, GPU, fps, seguimiento) para las pruebas en otros teléfonos
-const report = createReport(canvas, ui);
 
 // modo de seguimiento y último resultado del hit test nativo (WebXR)
 let mode: 'nativo' | 'web' | '' = '';
 let xrHit: pc.Vec3 | null = null;
 let xrHitAt = 0;
 
-// ---- cuadros por segundo (para el reporte) y línea de estado (solo con ?debug)
+// ---- cuadros por segundo y línea de estado (solo con ?debug)
 let tracking = '—';
 let fps = 0;
 app.on('update', (dt: number) => {
     if (dt > 0) fps = fps ? fps * 0.9 + (1 / dt) * 0.1 : 1 / dt;
-    report.frame();
 });
 if (DEBUG) setInterval(() => (status.textContent = `${mode || '—'} · ${tracking} · ${fps.toFixed(0)} fps`), 500);
 
@@ -128,7 +127,6 @@ const render = () => {
     document.title = `San Sebastián · ${u.kicker}`;
     $('back').textContent = u.back;
     $('kicker').textContent = u.kicker;
-    $('title').textContent = u.title;
     $('intro').textContent = u.intro;
     $('steps').innerHTML = u.steps.map((s) => `<li>${s}</li>`).join('');
     $('install-note').innerHTML = u.installNote;
@@ -138,6 +136,7 @@ const render = () => {
 
     $('start').hidden = phase !== 'start';
     $('top').hidden = phase !== 'start' && phase !== 'error';
+    $('logo-ar').hidden = !$('top').hidden;
     again.hidden = phase !== 'placed';
     status.hidden = !DEBUG || phase === 'start';
     const msg: Partial<Record<Phase, string>> = {
@@ -196,7 +195,6 @@ app.root.addChild(reticle);
 
 const TYPES = ['DETECTED_SURFACE', 'ESTIMATED_SURFACE', 'FEATURE_POINT'];
 const target = new pc.Vec3();
-let lastHitType = '';
 let hitFrames = 0;
 let missFrames = 0;
 let pulse = 0;
@@ -219,7 +217,6 @@ app.on('update', (dt: number) => {
     if (hit) {
         missFrames = 0;
         hitFrames++;
-        lastHitType = hit.type;
         target.set(hit.pos.x, hit.pos.y, hit.pos.z);
         if (!reticle.enabled) reticle.setPosition(target);
         else reticle.setPosition(new pc.Vec3().lerp(reticle.getPosition(), target, 0.35));
@@ -270,8 +267,8 @@ let stopReveal: (() => void) | null = null;
 const place = () => {
     if (phase !== 'ready' || !modelReady || !reticle.enabled) return;
     const p = reticle.getPosition().clone();
-    // tamaño: 0,8 veces la distancia a la que se coloca (así siempre cabe a la vista); el pellizco lo ajusta
-    setSize(Math.min(4, Math.max(0.3, p.distance(camera.getPosition()) * 0.8)));
+    // tamaño fijo de 1 m; el pellizco lo ajusta
+    setSize(SIZE_M);
     pinchFactor = 1;
     anchor.setLocalScale(1, 1, 1);
     anchor.setPosition(p);
@@ -282,12 +279,11 @@ const place = () => {
     stopReveal?.();
     stopReveal = startReveal(app, { center: [p.x, p.y, p.z], scale: modelScale, ...REVEAL }, () => (stopReveal = null));
     anchor.enabled = true;
-    report.placed(lastHitType || '?');
     setPhase('placed');
 };
 // toque en la pantalla (modo web) y «select» de WebXR (modo nativo: la pantalla la toma el navegador)
 ui.addEventListener('click', (e) => {
-    if ((e.target as HTMLElement).closest('a, button, #report-sheet')) return;
+    if ((e.target as HTMLElement).closest('a, button')) return;
     place();
 });
 app.xr?.input.on('select', place);
@@ -350,7 +346,7 @@ const requestMotionPermission = async () => {
 // modo web: 8th Wall, como en el ejemplo oficial
 const startWeb = async (why = '') => {
     mode = 'web';
-    report.setMode(why ? `web (el nativo no arrancó: ${why})` : 'web');
+    if (why) console.warn('[AR] el modo nativo no arrancó:', why);
     setPhase('loading');
     const XR = await waitXr8();
     const errors: Module = {
@@ -361,7 +357,6 @@ const startWeb = async (why = '') => {
             if (e.status === 'failed') fail(t().errCamera);
             if (e.status === 'hasVideo') {
                 cameraOn = true;
-                report.start();
                 setPhase(modelReady ? 'scan' : 'loading');
             }
         },
@@ -370,7 +365,6 @@ const startWeb = async (why = '') => {
                 event: 'reality.trackingstatus',
                 process: (e) => {
                     tracking = `${e.detail.status ?? '?'}${e.detail.reason ? ' / ' + e.detail.reason : ''}`;
-                    report.tracking(e.detail.status ?? '?', e.detail.reason);
                 }
             }
         ]
@@ -382,7 +376,6 @@ const startWeb = async (why = '') => {
 // modo nativo: ARCore a través de WebXR
 const startNative = () => {
     mode = 'nativo';
-    report.setMode('nativo');
     const xr = app.xr!;
     xr.domOverlay.root = ui; // instrucciones y botones encima de la cámara
     const fallback = (why: string) => {
@@ -396,8 +389,6 @@ const startNative = () => {
     xr.once('start', () => {
         cameraOn = true;
         tracking = 'nativo';
-        report.start();
-        report.tracking('NORMAL');
         setPhase(modelReady ? 'scan' : 'loading');
         xr.hitTest.start({
             spaceType: pc.XRSPACE_VIEWER,
