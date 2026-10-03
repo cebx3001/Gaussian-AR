@@ -3,7 +3,9 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-        <title>Prueba AR</title>
+        <meta name="theme-color" content="#3b3a35" />
+        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2750%27 cy=%2750%27 r=%2738%27 fill=%27none%27 stroke=%27%23a6473e%27 stroke-width=%278%27/%3E%3C/svg%3E" />
+        <title>San Sebastián · Realidad aumentada</title>
 
         <!-- This product includes the XR Engine software developed by Niantic Spatial, Inc.
              Copyright © 2026 Niantic Spatial, Inc. All rights reserved.
@@ -17,8 +19,8 @@
                 margin: 0;
                 height: 100%;
                 overflow: hidden;
-                background: #000;
-                font: 15px/1.35 system-ui, sans-serif;
+                background: #141311;
+                font: 15px/1.4 system-ui, sans-serif;
                 color: #fff;
                 -webkit-tap-highlight-color: transparent;
             }
@@ -30,6 +32,34 @@
                 display: block;
                 touch-action: none;
             }
+            #top {
+                position: fixed;
+                left: 12px;
+                right: 12px;
+                top: calc(10px + env(safe-area-inset-top));
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                z-index: 20;
+            }
+            #top a {
+                color: #e7d8d6;
+                text-decoration: none;
+                font-size: 15px;
+            }
+            #lang button {
+                background: none;
+                border: 0;
+                color: #9a908e;
+                font: 600 14px system-ui, sans-serif;
+                padding: 6px 4px;
+            }
+            #lang button.on {
+                color: #fff;
+            }
+            #lang span {
+                color: #6b6361;
+            }
             #start {
                 position: fixed;
                 inset: 0;
@@ -37,24 +67,22 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                gap: 16px;
+                gap: 14px;
                 padding: 24px;
                 text-align: center;
-                background: #111;
+                background: #141311;
                 z-index: 10;
             }
-            #start button {
-                height: 52px;
-                padding: 0 28px;
-                font: 600 17px system-ui, sans-serif;
-                color: #111;
-                background: #fff;
-                border: 0;
-                border-radius: 999px;
+            #start .kicker {
+                margin: 0;
+                font-size: 13px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: #c98a82;
             }
             #start h1 {
                 margin: 0;
-                font-size: 24px;
+                font-size: 26px;
             }
             #start p,
             #start ol {
@@ -68,6 +96,25 @@
                 padding-left: 22px;
                 line-height: 1.6;
             }
+            #start .note {
+                font-size: 14px;
+                color: #aaa;
+            }
+            #start-btn {
+                height: 52px;
+                padding: 0 30px;
+                font: 600 17px system-ui, sans-serif;
+                color: #fff;
+                background: #a6473e;
+                border: 0;
+                border-radius: 999px;
+            }
+            #ui {
+                position: fixed;
+                inset: 0;
+                z-index: 5;
+                touch-action: none;
+            }
             #hint {
                 position: fixed;
                 left: 12px;
@@ -77,10 +124,9 @@
                 padding: 14px 16px;
                 font-size: 17px;
                 text-align: center;
-                background: rgba(0, 0, 0, 0.65);
+                background: rgba(20, 19, 17, 0.72);
                 border-radius: 14px;
                 pointer-events: none;
-                z-index: 5;
             }
             #hint b {
                 font-size: 19px;
@@ -89,39 +135,25 @@
                 position: fixed;
                 left: 50%;
                 transform: translateX(-50%);
-                bottom: calc(120px + env(safe-area-inset-bottom));
+                bottom: calc(130px + env(safe-area-inset-bottom));
                 height: 44px;
                 padding: 0 20px;
                 font: 600 15px system-ui, sans-serif;
                 color: #fff;
-                background: rgba(0, 0, 0, 0.6);
+                background: rgba(20, 19, 17, 0.7);
                 border: 1px solid rgba(255, 255, 255, 0.6);
                 border-radius: 999px;
-                z-index: 6;
             }
             #status {
                 position: fixed;
                 left: 8px;
                 top: calc(8px + env(safe-area-inset-top));
+                margin: 0;
                 padding: 4px 8px;
                 font: 12px ui-monospace, monospace;
                 background: rgba(0, 0, 0, 0.55);
                 border-radius: 6px;
                 pointer-events: none;
-                z-index: 5;
-            }
-            #ui {
-                position: fixed;
-                inset: 0;
-                pointer-events: none;
-                z-index: 5;
-            }
-            #ui button {
-                pointer-events: auto;
-            }
-            #start .note {
-                font-size: 14px;
-                color: #aaa;
             }
             [hidden] {
                 display: none !important;
@@ -130,22 +162,32 @@
     </head>
     <body>
         <canvas id="application-canvas"></canvas>
-        <div id="start">
-            <h1>Maqueta en realidad aumentada</h1>
-            <p>Vas a ver la maqueta sobre tu mesa o tu piso, a través de la cámara.</p>
-            <ol>
-                <li>Toca <b>Comenzar</b> y permite el uso de la cámara.</li>
-                <li>Apunta a una mesa o al piso y mueve el teléfono despacio.</li>
-                <li>Cuando aparezca un círculo, toca la pantalla.</li>
-            </ol>
-            <p id="install-note" class="note" hidden>Si aparece un aviso para instalar o actualizar algo, puedes tocar <b>Cancelar</b>: igual va a funcionar.</p>
-            <button type="button" id="start-btn">Comenzar</button>
+
+        <div id="top">
+            <a id="back" href="./"></a>
+            <div id="lang" role="group" aria-label="Language / Idioma">
+                <button type="button" data-lang="en">EN</button>
+                <span aria-hidden="true">|</span>
+                <button type="button" data-lang="es">ES</button>
+            </div>
         </div>
+
+        <section id="start">
+            <p class="kicker" id="kicker"></p>
+            <h1 id="title"></h1>
+            <p id="intro"></p>
+            <ol id="steps"></ol>
+            <p id="install-note" class="note" hidden></p>
+            <button type="button" id="start-btn"></button>
+        </section>
+
+        <!-- todo lo que va encima de la cámara (en AR nativa es el overlay DOM de WebXR) -->
         <div id="ui">
             <p id="hint" hidden></p>
-            <button type="button" id="again" hidden>Colocar de nuevo</button>
+            <button type="button" id="again" hidden></button>
             <p id="status" hidden></p>
         </div>
+
         <script type="module" src="/src/ar-cero.ts"></script>
     </body>
 </html>
