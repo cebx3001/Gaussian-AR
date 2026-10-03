@@ -174,7 +174,6 @@ const render = () => {
     again.hidden = phase !== 'placed';
     status.hidden = !DEBUG || phase === 'start';
     const msg: Partial<Record<Phase, string>> = {
-        loading: `<b>${cameraOn ? u.loadingModel : u.openingCamera}</b>${cameraOn && loadPct ? ` ${loadPct} %` : ''}`,
         scan: `<b>${u.scan}</b><br>${u.scanTip}`,
         ready: `<b>${u.ready}</b><br>${u.readyTip}`,
         placed: `<b>${u.placed}</b> ${u.placedTip}`,
@@ -182,6 +181,17 @@ const render = () => {
     };
     hint.innerHTML = msg[phase] ?? '';
     hint.hidden = !msg[phase];
+    hint.classList.toggle('err', phase === 'error');
+    // carga: aviso grande en el centro, con barra y porcentaje
+    const loading = $('loading');
+    loading.hidden = phase !== 'loading';
+    if (phase === 'loading') {
+        const showPct = cameraOn && loadPct > 0;
+        $('loading-text').textContent = (cameraOn ? u.loadingModel : u.openingCamera).replace(/…$/, '');
+        loading.classList.toggle('busy', !showPct);
+        $('loading-fill').style.transform = showPct ? `scaleX(${loadPct / 100})` : '';
+        $('loading-pct').textContent = showPct ? `${loadPct} %` : '';
+    }
 };
 const setPhase = (p: Phase) => {
     phase = p;

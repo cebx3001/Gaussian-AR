@@ -657,7 +657,8 @@ window.addEventListener(
         if (e.pointerType === 'touch') touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (touches.size === 2) gesture = touchSpan();
         const target = e.target as HTMLElement;
-        if (target.closest('#index, #chapter-nav')) return;
+        // los controles de arriba (idioma, «Ver en AR», logo) no ocultan el texto: el idioma cambia a la vista
+        if (target.closest('#index, #chapter-nav, #lang, #ar-link, #logo-link')) return;
         // texto largo (se desplaza): un toque lo oculta al soltar; arrastrar lo desplaza
         if (target.closest('#chapter.scroll')) {
             textTap = { x: e.clientX, y: e.clientY, t: performance.now() };

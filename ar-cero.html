@@ -48,7 +48,7 @@
                 align-items: center;
                 z-index: 20;
             }
-            #top a {
+            #top #back {
                 position: fixed;
                 left: 22px;
                 bottom: calc(22px + env(safe-area-inset-bottom));
@@ -189,6 +189,19 @@
             #hint b {
                 font-size: 19px;
             }
+            /* error: en el centro, con el estilo de la pantalla de inicio */
+            #hint.err {
+                top: 50%;
+                bottom: auto;
+                transform: translateY(-50%);
+                color: rgba(231, 216, 214, 0.85);
+            }
+            #hint.err b {
+                display: inline-block;
+                margin-bottom: 8px;
+                font: 500 2rem / 1.1 'Cormorant Garamond', Georgia, serif;
+                color: #e7d8d6;
+            }
             #again {
                 position: fixed;
                 left: 50%;
@@ -234,6 +247,61 @@
                 top: calc(10px + env(safe-area-inset-top));
                 right: 12px;
             }
+            #loading {
+                position: fixed;
+                left: 24px;
+                right: 24px;
+                top: 50%;
+                transform: translateY(-50%);
+                display: grid;
+                justify-items: center;
+                gap: 12px;
+                text-align: center;
+                pointer-events: none;
+                text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+            }
+            #loading p {
+                margin: 0;
+            }
+            #loading-text {
+                font: 500 1.9rem / 1.1 'Cormorant Garamond', Georgia, serif;
+                color: #e7d8d6;
+            }
+            #loading-bar {
+                position: relative;
+                width: 160px;
+                height: 2px;
+                overflow: hidden;
+                background: rgba(231, 216, 214, 0.25);
+            }
+            #loading-fill {
+                position: absolute;
+                inset: 0;
+                background: #a6473e;
+                transform-origin: left;
+                transform: scaleX(0);
+                transition: transform 0.3s ease;
+            }
+            /* sin porcentaje (abriendo la cámara): la barra corre de lado a lado */
+            #loading.busy #loading-fill {
+                width: 35%;
+                transform: none;
+                transition: none;
+                animation: corre 1.2s ease-in-out infinite;
+            }
+            @keyframes corre {
+                from {
+                    left: -35%;
+                }
+                to {
+                    left: 100%;
+                }
+            }
+            #loading-pct {
+                font: 600 13px 'Libre Franklin', system-ui, sans-serif;
+                letter-spacing: 0.18em;
+                color: rgba(231, 216, 214, 0.8);
+            }
             [hidden] {
                 display: none !important;
             }
@@ -272,6 +340,12 @@
         <!-- todo lo que va encima de la cámara (en AR nativa es el overlay DOM de WebXR) -->
         <div id="ui">
             <img id="logo-ar" class="logo" src="./logo.png" alt="" hidden />
+            <!-- aviso de carga, en el centro: siempre a la vista mientras algo carga -->
+            <div id="loading" role="status" aria-live="polite" hidden>
+                <p id="loading-text"></p>
+                <div id="loading-bar"><div id="loading-fill"></div></div>
+                <p id="loading-pct"></p>
+            </div>
             <p id="hint" hidden></p>
             <button type="button" id="again" hidden></button>
             <p id="status" hidden></p>
