@@ -1,6 +1,6 @@
 :root {
     color-scheme: dark;
-    --index-h: calc(max(12px, env(safe-area-inset-bottom)) + 74px);
+    --index-h: calc(max(8px, env(safe-area-inset-bottom)) + 74px);
     /* paleta: piedra oscura (fondo), blanco piedra (información), rojo profundo (títulos y detalles) */
     --bg: #3b3a35;
     --bg-rgb: 59, 58, 53;
@@ -251,40 +251,44 @@ body.edit #masthead {
 
 
 /* ---------- Índice de capítulos ---------- */
+/* misma barra que el modo de edición: fondo translúcido con desenfoque, borde fino y botones suaves */
 #index {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: var(--index-h);
-    align-items: flex-start;
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
     display: flex;
-    justify-content: center;
+    align-items: stretch;
     gap: 6px;
-    padding: 0 12px max(12px, env(safe-area-inset-bottom));
+    padding: 6px;
+    background: rgba(var(--bg-rgb), 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 4px;
 }
 
 .chapter-link {
     flex: 1;
     min-width: 0;
-    max-width: 150px;
-    padding: 10px 4px 6px;
-    background: none;
-    border: none;
-    border-top: 1px solid rgba(var(--ink-rgb), 0.18);
-    font-family: var(--display);
-    font-size: 1.15rem;
-    line-height: 1.1;
+    min-height: 44px;
+    padding: 5px 4px;
+    font-family: var(--text);
+    font-size: 12.5px;
+    line-height: 1.15;
     text-align: center;
     text-wrap: balance;
-    color: var(--muted);
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 10px rgba(0, 0, 0, 0.85);
-    transition: color 0.3s, border-color 0.3s;
+    color: var(--ink);
+    background: rgba(var(--ink-rgb), 0.07);
+    border: 1px solid rgba(var(--ink-rgb), 0.12);
+    border-radius: 4px;
+    transition: background-color 0.3s, border-color 0.3s;
 }
 
 .chapter-link.on {
-    color: var(--ink);
-    border-top: 2px solid var(--accent);
+    font-weight: 600;
+    background: var(--accent);
+    border-color: var(--accent);
 }
 
 @media (min-width: 820px) {
@@ -292,16 +296,12 @@ body.edit #masthead {
         left: auto;
         right: 32px;
         bottom: 28px;
-        gap: 22px;
-        padding: 0;
-        height: auto;
-        background: none;
     }
     .chapter-link {
         flex: none;
-        max-width: none;
-        padding: 10px 2px 4px;
-        font-size: 1.25rem;
+        min-height: 36px;
+        padding: 0 14px;
+        font-size: 13px;
         white-space: nowrap;
     }
 }
@@ -309,7 +309,7 @@ body.edit #masthead {
 /* ---------- Teléfono en horizontal (pantalla baja) ---------- */
 @media (orientation: landscape) and (max-height: 600px) {
     :root {
-        --index-h: calc(max(6px, env(safe-area-inset-bottom)) + 46px);
+        --index-h: calc(max(6px, env(safe-area-inset-bottom)) + 56px);
     }
     #chapter {
         top: 0;
@@ -352,18 +352,11 @@ body.edit #masthead {
         padding-top: 6px;
     }
     #index {
-        left: 0;
-        right: 0;
-        bottom: 0;
-        justify-content: center;
-        gap: 22px;
-        padding: 0 16px max(6px, env(safe-area-inset-bottom));
+        bottom: max(6px, env(safe-area-inset-bottom));
     }
     .chapter-link {
-        flex: 0 1 auto;
-        max-width: none;
-        padding: 8px 4px 6px;
-        font-size: 1.05rem;
+        min-height: 34px;
+        padding: 0 10px;
         white-space: nowrap;
     }
 }
