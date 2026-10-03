@@ -110,6 +110,19 @@
                 pointer-events: none;
                 z-index: 5;
             }
+            #ui {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 5;
+            }
+            #ui button {
+                pointer-events: auto;
+            }
+            #start .note {
+                font-size: 14px;
+                color: #aaa;
+            }
             [hidden] {
                 display: none !important;
             }
@@ -125,11 +138,14 @@
                 <li>Apunta a una mesa o al piso y mueve el teléfono despacio.</li>
                 <li>Cuando aparezca un círculo, toca la pantalla.</li>
             </ol>
+            <p id="install-note" class="note" hidden>Si aparece un aviso para instalar o actualizar algo, puedes tocar <b>Cancelar</b>: igual va a funcionar.</p>
             <button type="button" id="start-btn">Comenzar</button>
         </div>
-        <p id="hint" hidden></p>
-        <button type="button" id="again" hidden>Colocar de nuevo</button>
-        <p id="status" hidden></p>
+        <div id="ui">
+            <p id="hint" hidden></p>
+            <button type="button" id="again" hidden>Colocar de nuevo</button>
+            <p id="status" hidden></p>
+        </div>
         <script type="module" src="/src/ar-cero.ts"></script>
     </body>
 </html>

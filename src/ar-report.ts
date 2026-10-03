@@ -6,7 +6,8 @@
 // ---------------------------------------------------------------------------
 type UAData = { brands?: { brand: string; version: string }[]; getHighEntropyValues?: (h: string[]) => Promise<Record<string, string>> };
 
-export const createReport = (canvas: HTMLCanvasElement) => {
+export const createReport = (canvas: HTMLCanvasElement, container: HTMLElement = document.body) => {
+    let mode = '—';
     const t0 = performance.now();
     const secs = (ms: number) => Math.round((ms - t0) / 100) / 10;
 
@@ -107,6 +108,7 @@ export const createReport = (canvas: HTMLCanvasElement) => {
             'Prueba AR (maqueta)',
             `Teléfono: ${d.model} · ${d.os}`,
             `Navegador: ${d.browser}`,
+            `Modo de seguimiento: ${mode}`,
             `GPU: ${gpu}`,
             `Pantalla: ${innerWidth}×${innerHeight} @${devicePixelRatio}`,
             `FPS: promedio ${avg.toFixed(0)} · mínimo ${s.length ? s[0].toFixed(0) : '—'} · p10 ${p10.toFixed(0)} (${s.length} s medidos)`,
@@ -156,7 +158,9 @@ export const createReport = (canvas: HTMLCanvasElement) => {
         '<button type="button" class="ok">Se quedó fija</button>' +
         '<button type="button" class="bad">Se movió</button>' +
         '<button type="button" class="skip">Enviar sin opinar</button>';
-    document.body.append(button, sheet);
+    container.append(button, sheet);
+    // en AR nativa (WebXR) un toque sobre estos botones no debe colocar la maqueta
+    for (const el of [button, sheet]) el.addEventListener('beforexrselect', (e) => e.preventDefault());
     button.addEventListener('click', () => (sheet.hidden = false));
     sheet.querySelector('.ok')!.addEventListener('click', () => void send('se quedó FIJA'));
     sheet.querySelector('.bad')!.addEventListener('click', () => void send('se MOVIÓ'));
@@ -167,6 +171,8 @@ export const createReport = (canvas: HTMLCanvasElement) => {
         /** Empieza a contar fps (al abrir la cámara). */
         start: () => (measuring = true),
         tracking,
-        placed
+        placed,
+        /** Qué sigue al teléfono: «nativo» (ARCore vía WebXR) o «web». */
+        setMode: (m: string) => (mode = m)
     };
 };
