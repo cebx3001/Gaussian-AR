@@ -17,7 +17,7 @@
              Copyright © 2026 Niantic Spatial, Inc. All rights reserved.
              Licensed under the XR Engine License Agreement: https://github.com/8thwall/engine/blob/main/LICENSE
              Provided "AS IS", without warranties (see the disclaimer in the License). -->
-        <script async src="./external/xr/xr.js" data-preload-chunks="slam"></script>
+        <!-- el motor web (./external/xr/xr.js) se carga desde src/ar-cero.ts solo cuando hace falta -->
 
         <style>
             html,
@@ -219,6 +219,10 @@
                 align-items: center;
                 gap: 10px;
             }
+            #top-right a {
+                display: flex;
+                padding: 6px;
+            }
             .logo {
                 height: 26px;
                 width: auto;
@@ -247,7 +251,7 @@
                     <span aria-hidden="true">|</span>
                     <button type="button" data-lang="es">ES</button>
                 </div>
-                <img class="logo" src="./logo.png" alt="" />
+                <a href="https://wa.me/593992730095" target="_blank" rel="noopener" aria-label="WhatsApp"><img class="logo" src="./logo.png" alt="" /></a>
             </div>
         </div>
 
