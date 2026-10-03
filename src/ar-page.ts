@@ -613,6 +613,9 @@ const startTracking = async () => {
             }
         ];
         if (recorder) modules.push(recorder.module as Xr8Module);
+        // La integración de 8th Wall toma la posición inicial de la cámara como referencia espacial.
+        // Arrancamos en la altura documentada de 2 m antes de conectar el tracking.
+        camera.setPosition(0, 2, 0);
         // la integración con PlayCanvas espera la ENTIDAD de la cámara (llama a getPosition y a camera.nearClip),
         // aunque su documentación diga «componente»
         xr.PlayCanvas.runXr({ pcCamera: camera, pcApp: app }, modules, {
