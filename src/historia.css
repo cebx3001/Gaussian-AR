@@ -240,64 +240,6 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
     bottom: calc(var(--index-h) + 14px);
 }
 
-/* ---------- barra de lugares: solo texto, sin recuadros ----------
-   Va en su propia franja, debajo del área de scroll (que termina en --index-h): el texto que sube no la pisa.
-   Sigue a la vista en «Explorar libremente» para volver a cualquier lugar. */
-#index {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    min-height: var(--index-h);
-    box-sizing: border-box;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    align-content: center;
-    gap: 2px 18px;
-    padding: 6px 16px max(8px, env(safe-area-inset-bottom));
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0));
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border: 0;
-    border-radius: 0;
-}
-
-#index .chapter-link {
-    flex: none;
-    min-height: 0;
-    padding: 6px 0 3px;
-    font-family: var(--display);
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    white-space: nowrap;
-    color: rgba(247, 240, 238, 0.62);
-    background: none;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 10px rgba(0, 0, 0, 0.8);
-    transition: color 0.3s, border-color 0.3s;
-}
-
-#index .chapter-link.on {
-    font-weight: 600;
-    color: #fff;
-    background: none;
-    border-bottom-color: var(--accent);
-}
-
-@media (min-width: 820px) {
-    #index {
-        justify-content: flex-end;
-        padding: 0 32px 22px;
-        gap: 4px 26px;
-    }
-    #index .chapter-link {
-        font-size: 15px;
-    }
-}
-
 /* ---------- computadora: el texto en una columna a la izquierda ---------- */
 @media (min-width: 820px) {
     #story {

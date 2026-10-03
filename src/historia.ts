@@ -30,6 +30,16 @@ import { revealOrigin, waitUntilDrawn } from './splat-util';
 
 const MODEL_CENTER: Vec3Tuple = [-1.5, 23, 8.4];
 
+// Límites que lee el parche de SuperSplat (vite.config.ts), como en el modo recorrido: al explorar no se puede mirar
+// por debajo de la maqueta, el vuelo no baja del suelo y un toque no cambia el centro de giro.
+{
+    const g = globalThis as unknown as Record<string, number>;
+    g.__ORBIT_PITCH_MIN = -90;
+    g.__ORBIT_PITCH_MAX = 0;
+    g.__FLY_MIN_Y = 23 + 1.5;
+    g.__NO_PICK = 1;
+}
+
 // ---- tiempos de la pista (segundos de pista, no de reloj: el scroll los recorre)
 /** Viaje de un lugar al siguiente. */
 const TRAVEL = 4;
