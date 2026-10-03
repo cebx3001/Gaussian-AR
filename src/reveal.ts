@@ -53,14 +53,16 @@ export type RevealOptions = {
  * `dotScale` agranda los puntos del efecto original para esta escena.
  */
 export const REVEAL_SECONDS = 8;
-export const REVEAL = (() => {
-    const radius = 117;
+/** Parámetros para que las ondas lleguen a `radius` (unidades de la escena) justo a los REVEAL_SECONDS. */
+export const revealFor = (radius: number) => {
     const delay = 1.5;
     const speed = 5; // al arrancar
     const travel = REVEAL_SECONDS - delay; // lo que tarda la onda de colores en recorrer `radius`
     const acceleration = (2 * (radius - speed * travel)) / (travel * travel);
     return { radius, delay, speed, acceleration, lift: 3, band: 6, dotScale: 60 };
-})();
+};
+/** Desde el centro de la maqueta: cubre toda la escena. */
+export const REVEAL = revealFor(117);
 
 /** Arranca el efecto sobre el splat de la app. Devuelve una función que lo detiene. */
 export const startReveal = (app: AppBase, o: RevealOptions, onDone?: () => void): (() => void) => {

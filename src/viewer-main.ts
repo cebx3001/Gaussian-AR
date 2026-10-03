@@ -21,7 +21,7 @@ import { Vec3 } from 'playcanvas';
 import type { CameraComponent, Entity, GSplatComponent } from 'playcanvas';
 
 import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
-import { REVEAL, startReveal } from './reveal';
+import { revealFor, startReveal } from './reveal';
 import { AR_UI, LANG_KEY, UI, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
@@ -184,6 +184,8 @@ let introGoal: Pose['position'] | null = null;
 let introDuration = INTRO_SECONDS;
 /** Dónde nace el efecto Radial Reveal: el punto del suelo al que mira el primer cuadro de la entrada. */
 let introCenter: Pose['target'] | null = null;
+/** Hasta dónde llegan las ondas del Radial Reveal de la entrada (unidades de la escena). */
+let introRadius = 117;
 
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
@@ -236,8 +238,12 @@ const buildSettings = (s: Story): ExperienceSettings => {
         introActive = true;
         introGoal = lastOf(ks).position;
         introDuration = track.duration;
+        // El Radial Reveal nace donde mira el primer cuadro (lo que se ve al empezar) y sus ondas crecen hasta cubrir
+        // toda la maqueta (a lo sumo ~100 del centro) justo al terminar la entrada. Antes el radio era fijo (117 desde el centro): si el primer
+        // cuadro miraba a un borde, casi toda la maqueta aparecía de golpe al final.
         const firstKf = [...ks].sort((a, b) => a.t - b.t)[0];
-        introCenter = anchorOf({ position: firstKf.position, target: firstKf.target, fov: firstKf.fov });
+        introCenter = custom ? firstKf.target : MODEL_CENTER;
+        introRadius = Math.hypot(introCenter[0] - MODEL_CENTER[0], introCenter[1] - MODEL_CENTER[1], introCenter[2] - MODEL_CENTER[2]) + 100;
     }
     return settings;
 };
@@ -284,7 +290,7 @@ const mountViewer = async () => {
             } else if (introActive) {
                 // el efecto se pone antes de mostrar la escena: nace de la oscuridad desde el primer cuadro
                 const center = introCenter ?? ([SCENE_CENTER[0], GROUND_Y, SCENE_CENTER[1]] as Pose['target']);
-                startReveal(v.app, { center: revealOrigin(v, center), ...REVEAL });
+                startReveal(v.app, { center: revealOrigin(v, center), ...revealFor(introRadius) });
                 playIntro(v);
             } else {
                 goTo(active);
