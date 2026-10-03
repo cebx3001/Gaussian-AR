@@ -284,8 +284,6 @@ const mountViewer = async () => {
             lang: 'es'
         });
         viewer = v;
-        (window as unknown as { __v: unknown }).__v = v;
-        (window as unknown as { __v: unknown }).__v = v;
         v.state.showAnnotations = false;
         // SuperSplat guarda esta opción en el navegador: una visita anterior pudo dejarla activada
         v.state.gamingControls = false;
