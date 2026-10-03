@@ -242,11 +242,14 @@ let introDuration = INTRO_SECONDS;
 /** Dónde nace el efecto Radial Reveal: el punto del suelo al que mira el primer cuadro de la entrada. */
 let introCenter: Pose['target'] | null = null;
 /**
- * La entrada: el Radial Reveal dura REVEAL_SECONDS (8 s) y la animación de cámara (INTRO_SECONDS, 6 s) va centrada
- * dentro: la cámara espera INTRO_HOLD (1 s) en el primer cuadro mientras empieza a aparecer la escena, recorre la
- * animación y el reveal termina 1 s después de que la cámara llega a la Vista general.
+ * La entrada: la animación de cámara (INTRO_SECONDS, 6 s) y el Radial Reveal (REVEAL_SECONDS, 8 s) empiezan a la vez;
+ * la cámara llega a la Vista general a los 6 s y el reveal sigue 2 s más: desde la pose final se ve llegar la última
+ * onda. INTRO_HOLD es la espera de la cámara en el primer cuadro antes de arrancar (ninguna).
  */
-const INTRO_HOLD = (REVEAL_SECONDS - INTRO_SECONDS) / 2;
+const INTRO_HOLD = 0;
+/** El Radial Reveal de la entrada ya terminó; si la cámara llegó antes, `introRevealWaiter` muestra el texto al terminar. */
+let introRevealDone = true;
+let introRevealWaiter: (() => void) | null = null;
 /** Primer cuadro de la entrada: el Radial Reveal nace en lo que se ve en el centro de la pantalla en ese cuadro. */
 let introFirst: Keyframe | null = null;
 
@@ -368,7 +371,11 @@ const mountViewer = async () => {
                 waitUntilDrawn(v, () => {
                     if (v !== viewer) return;
                     stop();
-                    stop = startReveal(v.app, opts);
+                    introRevealDone = false;
+                    stop = startReveal(v.app, opts, () => {
+                        introRevealDone = true;
+                        introRevealWaiter?.();
+                    });
                     loader.dataset.hidden = 'true';
                     window.setTimeout(() => {
                         if (v === viewer && introActive) v.state.animationPaused = false;
@@ -474,9 +481,14 @@ const playIntro = (v: ViewerHandle) => {
     cancelArrival = waitForIntroEnd(v, goal, introDuration, () => {
         cancelArrival = null;
         if (v !== viewer) return;
-        // La entrada terminó: la vista general se vuelve el ancla. Si la animación acabó en otro
-        // sitio, la cámara vuela hasta ella y el texto sale al llegar; si ya está, sale enseguida.
-        goTo(0);
+        // La entrada terminó: la vista general se vuelve el ancla. El texto sale cuando termina también el Radial
+        // Reveal, para que desde la pose final se vea llegar la última onda.
+        if (introRevealDone) goTo(0);
+        else
+            introRevealWaiter = () => {
+                introRevealWaiter = null;
+                if (v === viewer && introActive) goTo(0); // si la persona ya tocó la pantalla, no se interrumpe lo que hace
+            };
     });
 };
 
