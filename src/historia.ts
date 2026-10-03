@@ -52,9 +52,25 @@ const SPIN: Record<string, { deg: number; fromArrival: boolean; pause: number }>
 const pauseScreens = (i: number) => SPIN[chapters[i]?.id]?.pause ?? PAUSE_SCREENS;
 
 // ---- textos de esta página
-const TEXT: Record<Lang, { cue: string; endKicker: string; endTitle: string; explore: string; back: string }> = {
+type PageText = {
+    cue: string;
+    /** Bienvenida: sustituye en esta página al texto de la Vista general (que en el visor explica el uso). */
+    welcome: { kicker: string; title: string; text: string };
+    endKicker: string;
+    endTitle: string;
+    explore: string;
+    back: string;
+};
+const TEXT: Record<Lang, PageText> = {
     es: {
         cue: 'Desliza',
+        welcome: {
+            kicker: 'Recorrido en tres dimensiones',
+            title: 'Patrimonio que se recorre',
+            text:
+                'Lo que tienes enfrente no es una ilustración ni una maqueta dibujada: es el espacio tal como existe, capturado en tres dimensiones a partir de fotografías del lugar. Cada fachada, cada árbol y cada camino ocupan su sitio real.\n\n' +
+                'Este recorrido te lleva por sus rincones, uno a uno, y por las historias que guardan. Avanza a tu ritmo: la cámara te acompaña.'
+        },
         endKicker: 'Fin del recorrido',
         endTitle: 'Ahora, explórala a tu manera',
         explore: 'Explorar libremente',
@@ -62,6 +78,13 @@ const TEXT: Record<Lang, { cue: string; endKicker: string; endTitle: string; exp
     },
     en: {
         cue: 'Scroll down',
+        welcome: {
+            kicker: 'A three-dimensional tour',
+            title: 'Heritage you can walk through',
+            text:
+                'What you see is not an illustration or a drawn model: it is the space as it exists, captured in three dimensions from photographs of the place. Every façade, every tree and every path sits where it really is.\n\n' +
+                'This tour takes you through its corners, one by one, and through the stories they hold. Move at your own pace: the camera comes with you.'
+        },
         endKicker: 'End of the tour',
         endTitle: 'Now explore it your own way',
         explore: 'Explore freely',
@@ -201,6 +224,10 @@ const INTRO_END = segs[0].t1;
 // Textos
 // ---------------------------------------------------------------------------
 const textOf = (c: Chapter) => (lang === 'en' && c.en ? c.en : { nav: c.nav, kicker: c.kicker, title: c.title, text: c.text });
+/** Texto de cada bloque: el primero es la bienvenida de esta página. */
+const blockText = (c: Chapter, i: number) => (i === 0 ? { ...textOf(c), ...TEXT[lang].welcome } : textOf(c));
+/** `**negrita**` → <strong>, sobre texto ya escapado. */
+const bold = (s: string) => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 let blocks: HTMLElement[] = [];
@@ -212,8 +239,8 @@ const renderStory = () => {
     storyEl.replaceChildren();
     blocks = [];
     pauses = [];
-    chapters.forEach((c) => {
-        const t = textOf(c);
+    chapters.forEach((c, i) => {
+        const t = blockText(c, i);
         const art = document.createElement('article');
         art.className = 'block';
         const body = t.text.replace('{tap}', coarsePointer ? u.tapTouch : u.tapMouse);
@@ -231,7 +258,11 @@ const renderStory = () => {
     });
     const end = document.createElement('section');
     end.className = 'end';
-    end.innerHTML = `<p class="kicker">${esc(tx.endKicker)}</p><h2 class="title">${esc(tx.endTitle)}</h2><button type="button" class="explore">${esc(tx.explore)}</button>`;
+    // las instrucciones de uso van aquí, cuando de verdad se usan
+    const how = (coarsePointer ? u.howTouch : u.howMouse).map((h) => `<li>${bold(esc(h))}</li>`).join('');
+    end.innerHTML =
+        `<p class="kicker">${esc(tx.endKicker)}</p><h2 class="title">${esc(tx.endTitle)}</h2>` +
+        `<ul class="how">${how}</ul><button type="button" class="explore">${esc(tx.explore)}</button>`;
     end.querySelector('button')!.addEventListener('click', explore);
     storyEl.append(end);
     backStory.textContent = tx.back;
@@ -441,7 +472,7 @@ const tick = () => {
     // velo: tanto como texto haya en pantalla
     const vh = scroller.clientHeight;
     let cover = 0;
-    for (const b of blocks) {
+    for (const b of [...blocks, storyEl.querySelector<HTMLElement>('.end')].filter((e): e is HTMLElement => !!e)) {
         const r = b.getBoundingClientRect();
         const box = scroller.getBoundingClientRect();
         const vis = Math.min(r.bottom, box.bottom) - Math.max(r.top, box.top);
