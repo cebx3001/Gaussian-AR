@@ -4,9 +4,9 @@
 // Solo lo que pide el ejemplo oficial de 8th Wall para PlayCanvas
 // (github.com/8thwall/web/blob/master/gettingstarted/playcanvas/scripts/xrcontroller.js):
 //   XR8.XrController.configure(...) + XR8.PlayCanvas.run({pcCamera, pcApp}, [XR8.XrController.pipelineModule()], {canvas})
-// con una aplicación estándar de PlayCanvas, una luz y un cubo que se coloca tocando la pantalla.
+// con una aplicación estándar de PlayCanvas y la maqueta (scene.sog) que se coloca tocando la pantalla.
 // Nada del código de ar.html: ni escala calculada, ni grabador, ni detección propia de superficies.
-// Si el cubo se ve fijo, esta es la base; en el paso 2 el cubo se cambia por el Gaussian.
+// Paso 2: el cubo del paso 1 se cambió por el Gaussian, sin reveal, pellizco ni nada más.
 // ---------------------------------------------------------------------------
 import * as pc from 'playcanvas';
 
@@ -54,25 +54,33 @@ camera.addComponent('camera', { nearClip: 0.01, farClip: 100 });
 camera.setPosition(0, 1.5, 0);
 app.root.addChild(camera);
 
-const light = new pc.Entity('light');
-light.addComponent('light', { type: 'directional', intensity: 1.2 });
-light.setEulerAngles(45, 30, 0);
-app.root.addChild(light);
-app.scene.ambientLight = new pc.Color(0.45, 0.45, 0.45);
-
-// cubo de 0,3 de lado, con la base en su punto de apoyo
-const SIZE = 0.3;
-const cube = new pc.Entity('cube');
-const box = new pc.Entity('box');
-const mat = new pc.StandardMaterial();
-mat.diffuse = new pc.Color(0.85, 0.2, 0.2);
-mat.update();
-box.addComponent('render', { type: 'box', material: mat });
-box.setLocalScale(SIZE, SIZE, SIZE);
-box.setLocalPosition(0, SIZE / 2, 0);
-cube.addChild(box);
-cube.enabled = false;
-app.root.addChild(cube);
+// ---- la maqueta: el mismo scene.sog del visor. Con la rotación de 180° del visor, el centro de la plaza (a ras de
+// su suelo) está en PLAZA_CENTER; se lleva al punto tocado. La escena mide unos 135 de diámetro.
+const PLAZA_CENTER = new pc.Vec3(15.8, 23, 4.6);
+const SCENE_DIAMETER = 135;
+const anchor = new pc.Entity('anchor');
+const model = new pc.Entity('model');
+model.setLocalEulerAngles(0, 0, 180);
+anchor.addChild(model);
+anchor.enabled = false;
+app.root.addChild(anchor);
+const setSize = (diameter: number) => {
+    const s = diameter / SCENE_DIAMETER;
+    model.setLocalScale(s, s, s);
+    model.setLocalPosition(-s * PLAZA_CENTER.x, -s * PLAZA_CENTER.y, -s * PLAZA_CENTER.z);
+};
+let modelReady = false;
+const asset = new pc.Asset('scene.sog', 'gsplat', { url: './scene.sog', filename: 'scene.sog' });
+asset.once('load', () => {
+    model.addComponent('gsplat', { asset });
+    modelReady = true;
+    if (hint.dataset.waiting) {
+        delete hint.dataset.waiting;
+        hint.textContent = 'Mueve el teléfono despacio y toca una superficie plana para colocar la maqueta.';
+    }
+});
+app.assets.add(asset);
+app.assets.load(asset);
 
 app.start();
 
@@ -93,7 +101,7 @@ setInterval(() => {
 // ---- tocar para colocar: lo que 8th Wall tiene en ese punto de la pantalla; si no devuelve nada, su piso (Y = 0)
 const place = (sx: number, sy: number) => {
     const XR = xr8();
-    if (!XR) return;
+    if (!XR || !modelReady) return;
     const x = sx / window.innerWidth;
     const y = sy / window.innerHeight;
     const hits = XR.XrController.hitTest(x, y, ['FEATURE_POINT', 'ESTIMATED_SURFACE', 'DETECTED_SURFACE']);
@@ -107,10 +115,15 @@ const place = (sx: number, sy: number) => {
         const t = -from.y / dir.y;
         p = from.clone().add(dir.mulScalar(t));
     }
-    cube.setPosition(p);
-    cube.enabled = true;
+    // tamaño: 0,8 veces la distancia a la que se coloca (escala relativa: así siempre cabe a la vista)
+    setSize(Math.min(4, Math.max(0.3, p.distance(camera.getPosition()) * 0.8)));
+    anchor.setPosition(p);
+    // de frente a quien la coloca
+    const f = camera.forward;
+    anchor.setEulerAngles(0, (Math.atan2(f.x, f.z) * 180) / Math.PI, 0);
+    anchor.enabled = true;
     report.placed(hits.length ? hits[0].type : 'piso Y=0');
-    hint.textContent = `Cubo colocado. Camina alrededor y agáchate; luego toca «Enviar resultado» arriba a la derecha.`;
+    hint.textContent = 'Maqueta colocada. Camina alrededor y agáchate; luego toca «Enviar resultado» arriba a la derecha.';
 };
 
 let touchStart: { x: number; y: number; t: number } | null = null;
@@ -153,7 +166,13 @@ $('start-btn').addEventListener('click', async () => {
         onCameraStatusChange: (e) => {
             if (e.status === 'failed') fail('no se pudo abrir la cámara');
             if (e.status === 'hasVideo') report.start();
-            if (e.status === 'hasVideo') hint.textContent = 'Mueve el teléfono despacio y toca el piso o una mesa para colocar el cubo.';
+            if (e.status === 'hasVideo') {
+                if (modelReady) hint.textContent = 'Mueve el teléfono despacio y toca una superficie plana para colocar la maqueta.';
+                else {
+                    hint.dataset.waiting = '1';
+                    hint.textContent = 'Cargando la maqueta…';
+                }
+            }
         },
         listeners: [
             {
