@@ -104,7 +104,7 @@ export const createReport = (canvas: HTMLCanvasElement) => {
         const now = performance.now();
         const limited = limitedTotal + (limitedSince !== null ? now - limitedSince : 0);
         return [
-            'Prueba AR (cubo, 8th Wall)',
+            'Prueba AR (cubo)',
             `Teléfono: ${d.model} · ${d.os}`,
             `Navegador: ${d.browser}`,
             `GPU: ${gpu}`,
