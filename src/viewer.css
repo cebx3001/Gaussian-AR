@@ -735,8 +735,20 @@ body.animar #ed-export-box {
     right: 14px;
     height: 26px;
     width: auto;
-    pointer-events: none;
     filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6));
+}
+
+/* el logo abre WhatsApp; área de toque un poco más grande que el dibujo */
+#logo-link {
+    position: fixed;
+    z-index: 6;
+    top: max(4px, env(safe-area-inset-top));
+    right: 6px;
+    padding: 8px;
+}
+
+#logo-link #logo {
+    position: static;
 }
 
 #lang {
@@ -773,8 +785,8 @@ body.animar #ed-export-box {
 
 body.edit #lang,
 body.animar #lang,
-body.edit #logo,
-body.animar #logo {
+body.edit #logo-link,
+body.animar #logo-link {
     display: none;
 }
 

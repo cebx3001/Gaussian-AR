@@ -95,14 +95,46 @@ let errorText = '';
 let lang: Lang = detectLang();
 const t = () => AR_CERO[lang];
 
-const asset = new pc.Asset('scene.sog', 'gsplat', { url: './scene.sog', filename: 'scene.sog' });
-asset.once('load', () => {
-    model.addComponent('gsplat', { asset });
-    modelReady = true;
-    if (phase === 'loading' && cameraOn) setPhase('scan');
-});
-app.assets.add(asset);
-app.assets.load(asset);
+// se descarga con fetch para poder mostrar el porcentaje mientras carga
+function refreshHint() {
+    render();
+}
+let loadPct = 0;
+const loadModel = (url: string) => {
+    const asset = new pc.Asset('scene.sog', 'gsplat', { url, filename: 'scene.sog' });
+    asset.once('load', () => {
+        model.addComponent('gsplat', { asset });
+        modelReady = true;
+        loadPct = 100;
+        if (phase === 'loading' && cameraOn) setPhase('scan');
+    });
+    app.assets.add(asset);
+    app.assets.load(asset);
+};
+(async () => {
+    try {
+        const res = await fetch('./scene.sog');
+        if (!res.ok || !res.body) throw new Error(String(res.status));
+        const total = Number(res.headers.get('content-length')) || 0;
+        const reader = res.body.getReader();
+        const parts: Uint8Array[] = [];
+        let got = 0;
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            parts.push(value);
+            got += value.length;
+            const pct = total ? Math.min(99, Math.floor((got / total) * 100)) : 0;
+            if (pct !== loadPct) {
+                loadPct = pct;
+                if ((phase as Phase) === 'loading') refreshHint();
+            }
+        }
+        loadModel(URL.createObjectURL(new Blob(parts as BlobPart[])));
+    } catch {
+        loadModel('./scene.sog');
+    }
+})();
 
 app.start();
 
@@ -142,7 +174,7 @@ const render = () => {
     again.hidden = phase !== 'placed';
     status.hidden = !DEBUG || phase === 'start';
     const msg: Partial<Record<Phase, string>> = {
-        loading: `<b>${cameraOn ? u.loadingModel : u.openingCamera}</b>`,
+        loading: `<b>${cameraOn ? u.loadingModel : u.openingCamera}</b>${cameraOn && loadPct ? ` ${loadPct} %` : ''}`,
         scan: `<b>${u.scan}</b><br>${u.scanTip}`,
         ready: `<b>${u.ready}</b><br>${u.readyTip}`,
         placed: `<b>${u.placed}</b> ${u.placedTip}`,
@@ -300,18 +332,34 @@ again.addEventListener('click', () => {
 for (const el of [again, $('top')]) el.addEventListener('beforexrselect', (e) => e.preventDefault());
 
 // ---- arranque
+// el motor web solo se descarga si hace falta (iPhone, teléfonos sin ARCore, o si el modo nativo falla):
+// en Android con ARCore no compite con la descarga de la maqueta
+let xr8Requested = false;
+const loadXr8 = () => {
+    if (xr8Requested || xr8()) return;
+    xr8Requested = true;
+    const s = document.createElement('script');
+    s.src = './external/xr/xr.js';
+    s.async = true;
+    s.dataset.preloadChunks = 'slam';
+    document.head.append(s);
+};
 const waitXr8 = () =>
     new Promise<XR8>((resolve) => {
+        loadXr8();
         const x = xr8();
         if (x) resolve(x);
         else window.addEventListener('xrloaded', () => resolve(xr8() as XR8), { once: true });
     });
 
 // ¿hay seguimiento nativo? (se pregunta en silencio al cargar; no muestra nada a la persona)
+// Si el modo nativo falla, se recuerda solo en esta pestaña: la próxima visita se vuelve a intentar
+// (antes se guardaba para siempre y un «Cancelar» dejaba el teléfono en el modo web).
 const NATIVE_FAILED_KEY = 'ar-nativo-fallo';
 const nativeFailedBefore = (() => {
     try {
-        return localStorage.getItem(NATIVE_FAILED_KEY) === '1';
+        localStorage.removeItem(NATIVE_FAILED_KEY);
+        return sessionStorage.getItem(NATIVE_FAILED_KEY) === '1';
     } catch {
         return false;
     }
@@ -326,8 +374,14 @@ if (!isIOS && !nativeFailedBefore && xrApi && app.xr) {
         .then((ok) => {
             nativeSupported = ok;
             if (ok) $('install-note').hidden = false;
+            else loadXr8();
         })
-        .catch(() => (nativeSupported = false));
+        .catch(() => {
+            nativeSupported = false;
+            loadXr8();
+        });
+} else {
+    loadXr8();
 }
 
 // iPhone: el permiso de movimiento debe pedirse desde el toque en «Comenzar»
@@ -383,7 +437,7 @@ const startNative = () => {
     ui.prepend($('masthead')); // el título también queda visible dentro de la AR nativa
     const fallback = (why: string) => {
         try {
-            localStorage.setItem(NATIVE_FAILED_KEY, '1');
+            sessionStorage.setItem(NATIVE_FAILED_KEY, '1');
         } catch {
             // sin almacenamiento: se volverá a intentar la próxima vez
         }
