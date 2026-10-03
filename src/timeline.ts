@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Línea de tiempo de 8 s para crear la animación de entrada (`?animar`).
+// Línea de tiempo de 5 s para crear la animación de entrada (`?animar`).
 // Básica, a la manera del editor de SuperSplat: se coloca el cabezal, se mueve la cámara con los
 // gestos del visor y se añade un keyframe; los keyframes se pueden mover, borrar y reproducir.
 //

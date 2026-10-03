@@ -228,18 +228,16 @@ const buildSettings = (s: Story): ExperienceSettings => {
     } else if (INTRO && first) {
         // entrada hecha con la línea de tiempo (story.json) o, si no hay, la automática
         const custom = (s.intro?.keyframes?.length ?? 0) >= 2;
-        // la entrada gira alrededor del centro de la maqueta: cada cuadro mira a ese punto (se conservan las posiciones)
-        const ks = (custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, MODEL_CENTER, 33)).map((k) => ({
-            ...k,
-            target: MODEL_CENTER
-        }));
+        // la entrada usa sus keyframes tal cual (se crean con la línea de tiempo, ?animar)
+        const ks = custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, MODEL_CENTER, 33);
         const track = trackFromKeyframes(ks);
         settings.animTracks = [track];
         settings.startMode = 'animTrack';
         introActive = true;
         introGoal = lastOf(ks).position;
         introDuration = track.duration;
-        introCenter = MODEL_CENTER;
+        const firstKf = [...ks].sort((a, b) => a.t - b.t)[0];
+        introCenter = anchorOf({ position: firstKf.position, target: firstKf.target, fov: firstKf.fov });
     }
     return settings;
 };
