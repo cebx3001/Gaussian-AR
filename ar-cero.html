@@ -10,7 +10,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
             rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Libre+Franklin:wght@600&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Libre+Franklin:wght@400;600&display=swap"
         />
 
         <!-- This product includes the XR Engine software developed by Niantic Spatial, Inc.
@@ -25,9 +25,9 @@
                 margin: 0;
                 height: 100%;
                 overflow: hidden;
-                background: #141311;
-                font: 15px/1.4 system-ui, sans-serif;
-                color: #fff;
+                background: #3b3a35;
+                font: 15px/1.4 'Libre Franklin', system-ui, sans-serif;
+                color: #e7d8d6;
                 -webkit-tap-highlight-color: transparent;
             }
             #application-canvas {
@@ -82,12 +82,13 @@
             #lang button {
                 background: none;
                 border: 0;
-                color: #9a908e;
-                font: 600 14px system-ui, sans-serif;
+                color: rgba(231, 216, 214, 0.55);
+                font: 600 14px 'Libre Franklin', system-ui, sans-serif;
+                letter-spacing: 0.12em;
                 padding: 6px 4px;
             }
             #lang button.on {
-                color: #fff;
+                color: #e7d8d6;
             }
             #lang span {
                 color: #6b6361;
@@ -99,41 +100,73 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                gap: 16px;
-                padding: 24px;
+                gap: 18px;
+                padding: 24px 28px;
                 text-align: center;
-                background: #111 url('./src/assets/pattern.svg') repeat;
+                background: #3b3a35 url('./src/assets/pattern.svg') repeat;
                 background-size: 52px 90px;
                 z-index: 10;
             }
+            /* filete rojo sobre el título, como en las descripciones del visor */
+            #start h1::before {
+                content: '';
+                display: block;
+                width: 44px;
+                height: 2px;
+                margin: 0 auto 16px;
+                background: #a6473e;
+            }
             #start h1 {
                 margin: 0;
-                font-size: 24px;
+                max-width: 340px;
+                font: 500 2.2rem / 1.05 'Cormorant Garamond', Georgia, serif;
+                color: #e7d8d6;
             }
             #start p,
             #start ol {
                 margin: 0;
                 max-width: 340px;
                 font-size: 16px;
-                color: #ddd;
+                line-height: 1.55;
+                color: rgba(231, 216, 214, 0.8);
             }
             #start ol {
+                list-style: none;
+                counter-reset: paso;
+                padding: 0;
                 text-align: left;
-                padding-left: 22px;
-                line-height: 1.6;
+            }
+            #start li {
+                position: relative;
+                counter-increment: paso;
+                padding: 6px 0 6px 34px;
+            }
+            #start li::before {
+                content: counter(paso);
+                position: absolute;
+                left: 0;
+                top: 0;
+                font: 600 1.7rem / 1.2 'Cormorant Garamond', Georgia, serif;
+                color: #a6473e;
+            }
+            #start b {
+                font-weight: 600;
+                color: #e7d8d6;
             }
             #start .note {
                 font-size: 14px;
-                color: #aaa;
+                color: rgba(231, 216, 214, 0.6);
             }
             #start-btn {
-                margin-top: 6px;
-                padding: 8px 2px 6px;
-                font: 600 24px system-ui, sans-serif;
-                color: #fff;
+                margin-top: 8px;
+                padding: 6px 2px 4px;
+                font: 500 1.9rem / 1 'Cormorant Garamond', Georgia, serif;
+                color: #e7d8d6;
                 background: none;
                 border: 0;
                 border-bottom: 2px solid #a6473e;
+                border-radius: 0;
+                cursor: pointer;
             }
             #ui {
                 position: fixed;
