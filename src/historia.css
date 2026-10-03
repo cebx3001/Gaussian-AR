@@ -191,6 +191,24 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
 }
 
 /* ---------- final ---------- */
+.end .how {
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+    font-size: var(--fs-text);
+    line-height: 1.55;
+    color: #f7f0ee;
+}
+
+.end .how li {
+    margin-bottom: 0.4em;
+}
+
+.end .how strong {
+    font-weight: 700;
+    color: #fff;
+}
+
 .end {
     min-height: 70vh;
     min-height: 70dvh;
