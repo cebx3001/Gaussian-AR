@@ -162,16 +162,36 @@ const bodyOf = (c: Chapter): string => {
 };
 
 /**
- * Origen de las ondas del efecto en la entrada. Se conserva tal como se aprobó: el punto del suelo al que
- * mira el primer cuadro, pasado al espacio local del splat (con la rotación de 180° del visor queda
- * espejado respecto al mundo, por debajo del suelo). Es el aspecto que se ve y se aprobó; el efecto en
- * realidad aumentada, en cambio, nace exactamente del punto donde se coloca la maqueta.
+ * Origen de las ondas del efecto en la entrada: la superficie de la maqueta que se ve en el centro de la pantalla en
+ * el primer cuadro (el splat más cercano a la cámara sobre su línea de mirada), en coordenadas del MUNDO, que es como
+ * trabaja el modificador del work buffer. Antes se pasaba al espacio local del splat y, con la rotación de 180° del
+ * visor, quedaba espejado unos 60 por debajo del suelo: las ondas tardaban segundos en llegar a la maqueta y casi toda
+ * la entrada se veía vacía. Si no hay splats en esa línea, se usa el punto de mira.
  */
-const revealOrigin = (v: ViewerHandle, world: Pose['target']): Pose['target'] => {
+const revealOrigin = (v: ViewerHandle, from: Pose['position'], to: Pose['target']): Pose['target'] => {
     const gs = (v.app.root.findComponents('gsplat') as GSplatComponent[])[0];
-    if (!gs) return world;
-    const p = gs.entity.getWorldTransform().clone().invert().transformPoint(new Vec3(...world));
-    return [p.x, p.y, p.z];
+    const centers = (gs?.resource as { centers?: Float32Array } | undefined)?.centers;
+    if (!gs || !centers) return to;
+    const m = gs.entity.getWorldTransform();
+    const o = new Vec3(...from);
+    const d = new Vec3(...to).sub(o).normalize();
+    const p = new Vec3();
+    const w = new Vec3();
+    let best = Infinity;
+    let hit: Pose['target'] | null = null;
+    for (let i = 0; i + 2 < centers.length; i += 3) {
+        m.transformPoint(p.set(centers[i], centers[i + 1], centers[i + 2]), w);
+        const ax = w.x - o.x, ay = w.y - o.y, az = w.z - o.z;
+        const along = ax * d.x + ay * d.y + az * d.z;
+        if (along <= 0.5 || along >= best) continue;
+        const perp2 = ax * ax + ay * ay + az * az - along * along;
+        const tol = Math.max(0.8, along * 0.02);
+        if (perp2 <= tol * tol) {
+            best = along;
+            hit = [w.x, w.y, w.z];
+        }
+    }
+    return hit ?? to;
 };
 
 /** Índice de anotación de SuperSplat para cada lugar (solo los que tienen pose). */
@@ -186,8 +206,8 @@ let introDuration = INTRO_SECONDS;
 let introCenter: Pose['target'] | null = null;
 /** Segundos que la cámara espera en el primer cuadro de la entrada mientras la escena empieza a aparecer. */
 const INTRO_HOLD = 1.5;
-/** Hasta dónde llegan las ondas del Radial Reveal de la entrada (unidades de la escena). */
-let introRadius = 117;
+/** Primer cuadro de la entrada: el Radial Reveal nace en lo que se ve en el centro de la pantalla en ese cuadro. */
+let introFirst: Keyframe | null = null;
 
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
@@ -243,12 +263,10 @@ const buildSettings = (s: Story): ExperienceSettings => {
         introActive = true;
         introGoal = lastOf(ks).position;
         introDuration = track.duration;
-        // El Radial Reveal nace donde mira el primer cuadro (lo que se ve al empezar) y sus ondas crecen hasta cubrir
-        // toda la maqueta (a lo sumo ~100 del centro) justo al terminar la entrada. Antes el radio era fijo (117 desde el centro): si el primer
-        // cuadro miraba a un borde, casi toda la maqueta aparecía de golpe al final.
-        const firstKf = [...ks].sort((a, b) => a.t - b.t)[0];
-        introCenter = custom ? firstKf.target : MODEL_CENTER;
-        introRadius = Math.hypot(introCenter[0] - MODEL_CENTER[0], introCenter[1] - MODEL_CENTER[1], introCenter[2] - MODEL_CENTER[2]) + 100;
+        // El Radial Reveal nace en lo que se ve en el centro de la pantalla en el primer cuadro (ver revealOrigin) y
+        // sus ondas crecen hasta cubrir toda la maqueta (a lo sumo ~100 del centro) justo al terminar la entrada.
+        introFirst = ks[0];
+        introCenter = MODEL_CENTER;
     }
     return settings;
 };
@@ -299,7 +317,9 @@ const mountViewer = async () => {
                 // animación entera: así se ve el encuadre inicial. El reveal arranca rápido cerca de donde mira la
                 // cámara y llega a toda la maqueta al terminar la animación.
                 v.state.animationPaused = true;
-                startReveal(v.app, { center: revealOrigin(v, center), ...revealFor(introRadius, INTRO_HOLD + introDuration, 15, 0.7) });
+                const origin = introFirst ? revealOrigin(v, introFirst.position, introFirst.target) : center;
+                const radius = Math.hypot(origin[0] - MODEL_CENTER[0], origin[1] - MODEL_CENTER[1], origin[2] - MODEL_CENTER[2]) + 100;
+                startReveal(v.app, { center: origin, ...revealFor(radius, INTRO_HOLD + introDuration, 15, 0.7) });
                 window.setTimeout(() => {
                     if (v === viewer && introActive) v.state.animationPaused = false;
                 }, INTRO_HOLD * 1000);
