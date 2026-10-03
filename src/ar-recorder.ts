@@ -16,8 +16,17 @@
 //   - evento 'reality.trackingstatus' → {status, reason}
 // Cada fila es un cuadro DIBUJADO por PlayCanvas (evento 'frameend'), con los datos del último cuadro del
 // motor y su antigüedad. Aparte se guardan todos los cuadros del motor, los eventos y muestras de worldPoints.
+//
+// PRUEBA DE CONTROL (protocolo «control-v1»): además de lo anterior, esta versión registra
+//   E) las matrices de vista/proyección que usa realmente la cámara (vm*, pm*, vm_err, pm_err) y su coherencia
+//      con el transform del nodo; cuándo se escribe la pose respecto al render (upd_to_pre_dpos, pre_to_end_dpos)
+//   F) el transform mundial de `model` (el GSplat) y de un OBJETO DE CONTROL (malla simple colgada del MISMO
+//      anchorRoot): ctrl_*, model_*; la proyección del control y una lectura de píxel real (ctrl_px_*)
+//   G) los world points: puntos dibujados sobre la imagen (PTS), un punto «pinchado» en coordenadas del mundo
+//      (PIN: pin_*) y su estabilidad por id a lo largo del tiempo (wp_stability en el JSON)
+// Y botones GS / CTRL / PTS / PIN para ver cada cosa por separado durante UNA sesión.
 // ---------------------------------------------------------------------------
-import { Quat, Vec3 } from 'playcanvas';
+import { Mat4, Quat, Vec3 } from 'playcanvas';
 import type { AppBase, CameraComponent, Entity } from 'playcanvas';
 
 type V3 = [number, number, number];
@@ -58,10 +67,18 @@ export type RecorderDeps = {
     camera: Entity;
     anchorRoot: Entity;
     reticle: Entity;
+    /** El GSplat (entidad `model`, hija de anchorRoot) y el objeto de control (hijo del mismo anchorRoot; null si no existe). */
+    model: Entity;
+    control: Entity | null;
+    /** Posición de la cámara de PlayCanvas justo antes de `runXr` (la que 8th Wall toma como origen). */
+    cameraStart: () => V3 | null;
     phase: () => string;
     /** Origen del plano de la retícula y respuesta cruda de hitTest (antes de colocar). */
     placementInfo: () => { source: string | null; planeY: number | null; hits: { type: string; position: { x: number; y: number; z: number } }[] };
 };
+
+/** Altura (en el espacio local del objeto de control, de diámetro 1) del cubo magenta de su cima: el que se busca en los píxeles. */
+export const CONTROL_TOP_Y = 0.535;
 
 const r4 = (n: number) => Math.round(n * 1e4) / 1e4;
 const v3 = (p: { x: number; y: number; z: number }): V3 => [r4(p.x), r4(p.y), r4(p.z)];
@@ -85,7 +102,7 @@ const angleDeg = (a: Q4, b: Q4) => {
 };
 
 export const createRecorder = (deps: RecorderDeps) => {
-    const { app, camera, anchorRoot, reticle, phase, placementInfo } = deps;
+    const { app, camera, anchorRoot, reticle, model, control, phase, placementInfo } = deps;
     let startEpoch = 0;
     let recording = false;
     let engineIndex = -1;
@@ -102,6 +119,82 @@ export const createRecorder = (deps: RecorderDeps) => {
     const events: Record<string, unknown>[] = [];
     const wpSnapshots: Record<string, unknown>[] = [];
     const MAX_ROWS = 120000;
+
+    // ---- world points: último conjunto completo, estabilidad por id y punto «pinchado»
+    type WP = { id: number; confidence: number; position: { x: number; y: number; z: number } };
+    let allWp: WP[] = [];
+    let topWp: WP[] = [];
+    const wpFirst = new Map<number, V3>(); // posición de cada id la primera vez que se vio
+    const wpAtPlace = new Map<number, V3>(); // posición de cada id en el momento de colocar
+    let wpPrevIds = new Set<number>();
+    let lastStabMs = -1e9;
+    const wpStability: Record<string, unknown>[] = [];
+    const quantile = (a: number[], q: number) => (a.length ? [...a].sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * q))] : null);
+    const dist3 = (a: V3, b: V3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    const updateStability = (wp: WP[], tMs: number, engineI: number) => {
+        const ids = new Set<number>();
+        const dFirst: number[] = [];
+        const dPlace: number[] = [];
+        for (const p of wp) {
+            ids.add(p.id);
+            const cur: V3 = [p.position.x, p.position.y, p.position.z];
+            const f0 = wpFirst.get(p.id);
+            if (f0) dFirst.push(dist3(f0, cur));
+            else wpFirst.set(p.id, cur);
+            const f1 = wpAtPlace.get(p.id);
+            if (f1) dPlace.push(dist3(f1, cur));
+        }
+        if (tMs - lastStabMs >= 1000) {
+            lastStabMs = tMs;
+            let nNew = 0;
+            let nLost = 0;
+            ids.forEach((id) => !wpPrevIds.has(id) && nNew++);
+            wpPrevIds.forEach((id) => !ids.has(id) && nLost++);
+            const m = (a: number[], q: number) => {
+                const v = quantile(a, q);
+                return v === null ? null : r4(v);
+            };
+            wpStability.push({
+                t_ms: tMs,
+                engine_i: engineI,
+                n_points: wp.length,
+                new_ids: nNew,
+                lost_ids: nLost,
+                n_vs_first: dFirst.length,
+                disp_first_med: m(dFirst, 0.5),
+                disp_first_p95: m(dFirst, 0.95),
+                disp_first_max: m(dFirst, 1),
+                n_vs_place: dPlace.length,
+                disp_place_med: m(dPlace, 0.5),
+                disp_place_p95: m(dPlace, 0.95),
+                disp_place_max: m(dPlace, 1)
+            });
+            wpPrevIds = ids;
+        }
+    };
+    let pin: { id: number; pos: V3; conf: number } | null = null;
+    let ptsOn = true;
+    const PTS_MAX = 80;
+    const pinPoint = () => {
+        const cp = camera.getPosition();
+        const fwd = camera.forward;
+        const cosMin = Math.cos((10 * Math.PI) / 180);
+        let best: WP | null = null;
+        for (const p of allWp) {
+            const dx = p.position.x - cp.x, dy = p.position.y - cp.y, dz = p.position.z - cp.z;
+            const d = Math.hypot(dx, dy, dz);
+            if (d < 0.3 || d > 8) continue;
+            if ((dx * fwd.x + dy * fwd.y + dz * fwd.z) / d < cosMin) continue;
+            if (!best || p.confidence > best.confidence) best = p;
+        }
+        if (!best) {
+            addEvent('PIN: sin world points a <10° del centro', { n_points: allWp.length });
+            return false;
+        }
+        pin = { id: best.id, pos: v3(best.position), conf: r4(best.confidence) };
+        addEvent('PIN', { ...pin, camera: v3(cp) });
+        return true;
+    };
 
     const t = () => Math.round((epochNow() - startEpoch) * 10) / 10;
     const addEvent = (kind: string, detail: unknown = null) => {
@@ -152,6 +245,9 @@ export const createRecorder = (deps: RecorderDeps) => {
                 wp_c_y: wpC.length ? r4(med(wpC.map((p) => p.y)) as number) : null
             };
             lastEngine = f;
+            allWp = wp;
+            topWp = wp.length > PTS_MAX ? [...wp].sort((a, b) => b.confidence - a.confidence).slice(0, PTS_MAX) : wp;
+            updateStability(wp, f.t_ms, f.i);
             lastStatus = f.track_status;
             lastReason = f.track_reason;
             if (engineFrames.length < MAX_ROWS) engineFrames.push(f);
@@ -169,6 +265,61 @@ export const createRecorder = (deps: RecorderDeps) => {
             }
         ]
     };
+
+    // ---- cuándo se escribe la pose respecto al render: este oyente de 'update' se registra ANTES de que 8th Wall
+    // conecte el suyo (runXr), así que ve la pose del cuadro anterior; 'prerender' la ve ya escrita para este cuadro
+    const updPos = new Vec3();
+    const prePos = new Vec3();
+    let updToPre: number | null = null;
+    let frameDtMs: number | null = null;
+    app.on('update', (dt: number) => {
+        updPos.copy(camera.getPosition());
+        frameDtMs = Math.round(dt * 1e4) / 10;
+    });
+    app.on('prerender', () => {
+        prePos.copy(camera.getPosition());
+        updToPre = r4(prePos.distance(updPos));
+    });
+
+    const invWorld = new Mat4();
+    const matErr = (a: ArrayLike<number>, b: ArrayLike<number>) => {
+        let m = 0;
+        for (let i = 0; i < 16; i++) m = Math.max(m, Math.abs(a[i] - b[i]));
+        return m;
+    };
+    /** Lee un parche de píxeles del framebuffer por defecto alrededor de (sx, sy) en px CSS y cuenta los magenta (el cubo de control). */
+    const probeMagenta = (sx: number, sy: number): { n: number; rgb: string } | null => {
+        try {
+            const dev = app.graphicsDevice as unknown as { gl: WebGL2RenderingContext; canvas: HTMLCanvasElement };
+            const gl = dev.gl;
+            const cv = dev.canvas;
+            const rect = cv.getBoundingClientRect();
+            const k = cv.width / rect.width;
+            const R = 4;
+            const x = Math.round(sx * k);
+            const y = cv.height - Math.round(sy * k);
+            if (!isFinite(x) || !isFinite(y) || x < R || y < R || x > cv.width - R - 1 || y > cv.height - R - 1) return null;
+            const side = 2 * R + 1;
+            const buf = new Uint8Array(side * side * 4);
+            const prev = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.readPixels(x - R, y - R, side, side, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, prev);
+            let n = 0;
+            for (let i = 0; i < buf.length; i += 4) if (buf[i] > 170 && buf[i + 2] > 170 && buf[i + 1] < 110) n++;
+            const c = (R * side + R) * 4;
+            return { n, rgb: `${buf[c]}/${buf[c + 1]}/${buf[c + 2]}` };
+        } catch {
+            return null;
+        }
+    };
+    const ctrlTop = new Vec3();
+    const ctrlTopScr = new Vec3();
+    const modelScale = new Vec3();
+    const tmp = new Vec3();
+    const pinScreen = new Vec3();
+    const ptScreen = new Vec3();
+    let frameNo = 0;
 
     // ---- cada cuadro dibujado por PlayCanvas
     const camPos = new Vec3();
@@ -192,6 +343,42 @@ export const createRecorder = (deps: RecorderDeps) => {
         if (placed) {
             cc.worldToScreen(anchorRoot.getPosition(), anchorScreen);
             scr = [Math.round(anchorScreen.x * 10) / 10, Math.round(anchorScreen.y * 10) / 10];
+        }
+        frameNo++;
+        const fwd = camera.forward;
+        // matrices que la cámara de PlayCanvas usa de verdad (las mismas que leen worldToScreen y el renderer de GSplat)
+        const cam = cc.camera;
+        const vm = cam.viewMatrix.data;
+        const pm = cam.projectionMatrix.data;
+        invWorld.copy(camera.getWorldTransform()).invert();
+        const vmErr = r4(matErr(vm, invWorld.data));
+        const fy = 1 / Math.tan((cc.fov * Math.PI) / 360);
+        const pmErr = r4(Math.max(Math.abs(pm[5] - fy), Math.abs(pm[0] - fy / cc.aspectRatio)));
+        // GSplat (entidad `model`) y objeto de control, ambos colgados del mismo anchorRoot
+        const mp = model.getPosition();
+        const mlp = model.getLocalPosition();
+        model.getWorldTransform().getScale(modelScale);
+        const ctrlOn = !!control && control.enabled;
+        let ctrlWp: V3 | null = null;
+        let ctrlScr: [number, number] | null = null;
+        let ctrlDepth: number | null = null;
+        let probe: { n: number; rgb: string } | null = null;
+        if (control && ctrlOn) {
+            ctrlWp = v3(control.getPosition());
+            control.getWorldTransform().transformPoint(tmp.set(0, CONTROL_TOP_Y, 0), ctrlTop);
+            cc.worldToScreen(ctrlTop, ctrlTopScr);
+            ctrlScr = [Math.round(ctrlTopScr.x * 10) / 10, Math.round(ctrlTopScr.y * 10) / 10];
+            ctrlDepth = r4((ctrlTop.x - camPos.x) * fwd.x + (ctrlTop.y - camPos.y) * fwd.y + (ctrlTop.z - camPos.z) * fwd.z);
+            // lectura de píxel real (cada 5 cuadros, para no frenar el teléfono): ¿hay magenta donde la proyección dice que está el cubo?
+            if (frameNo % 5 === 0 && ctrlDepth > 0.05) probe = probeMagenta(ctrlTopScr.x, ctrlTopScr.y);
+        }
+        // punto del mundo «pinchado»: posición fija vs posición actual del MISMO id en el mapa del motor
+        const pinCurWp = pin ? allWp.find((p) => p.id === pin!.id) : undefined;
+        const pinCur: V3 | null = pinCurWp ? v3(pinCurWp.position) : null;
+        let pinScr: [number, number] | null = null;
+        if (pin) {
+            cc.worldToScreen(tmp.set(pin.pos[0], pin.pos[1], pin.pos[2]), pinScreen);
+            pinScr = [Math.round(pinScreen.x * 10) / 10, Math.round(pinScreen.y * 10) / 10];
         }
         const e = lastEngine;
         const pinfo = placementInfo();
@@ -256,11 +443,63 @@ export const createRecorder = (deps: RecorderDeps) => {
             hit0_py: pinfo.source && pinfo.hits[0] ? r4(pinfo.hits[0].position.y) : null,
             hit0_pz: pinfo.source && pinfo.hits[0] ? r4(pinfo.hits[0].position.z) : null,
             fps: r4(fps),
+            frame_dt_ms: frameDtMs,
+            upd_to_pre_dpos: updToPre,
+            pre_to_end_dpos: r4(camPos.distance(prePos)),
+            cam_aspect: r4(cc.aspectRatio),
+            cam_aspect_mode: cc.aspectRatioMode,
+            cam_hfov: cc.horizontalFov ? 1 : 0,
+            cam_near: r4(cc.nearClip),
+            cam_far: r4(cc.farClip),
+            vm_err: vmErr,
+            pm_err: pmErr,
+            pm0: r4(pm[0]),
+            pm5: r4(pm[5]),
+            pm8: r4(pm[8]),
+            pm9: r4(pm[9]),
+            pm10: r4(pm[10]),
+            pm14: r4(pm[14]),
+            ...Object.fromEntries(Array.from({ length: 16 }, (_, i) => [`vm${i}`, Math.round(vm[i] * 1e5) / 1e5])),
+            anchor_lpx: r4(anchorRoot.getLocalPosition().x),
+            anchor_lpy: r4(anchorRoot.getLocalPosition().y),
+            anchor_lpz: r4(anchorRoot.getLocalPosition().z),
+            model_on: model.enabled,
+            model_gs_on: !!model.gsplat?.enabled,
+            model_wpx: r4(mp.x),
+            model_wpy: r4(mp.y),
+            model_wpz: r4(mp.z),
+            model_wscale: r4(modelScale.x),
+            model_lpx: r4(mlp.x),
+            model_lpy: r4(mlp.y),
+            model_lpz: r4(mlp.z),
+            model_lscale: r4(model.getLocalScale().x),
+            ctrl_on: ctrlOn,
+            ctrl_wpx: ctrlWp?.[0] ?? null,
+            ctrl_wpy: ctrlWp?.[1] ?? null,
+            ctrl_wpz: ctrlWp?.[2] ?? null,
+            ctrl_wscale: control && ctrlOn ? r4(control.getLocalScale().x) : null,
+            ctrl_top_scr_x: ctrlScr?.[0] ?? null,
+            ctrl_top_scr_y: ctrlScr?.[1] ?? null,
+            ctrl_depth: ctrlDepth,
+            ctrl_px_n: probe?.n ?? null,
+            ctrl_px_rgb: probe?.rgb ?? null,
+            pts_on: ptsOn,
+            pin_id: pin?.id ?? null,
+            pin_x: pin?.pos[0] ?? null,
+            pin_y: pin?.pos[1] ?? null,
+            pin_z: pin?.pos[2] ?? null,
+            pin_cur_x: pinCur?.[0] ?? null,
+            pin_cur_y: pinCur?.[1] ?? null,
+            pin_cur_z: pinCur?.[2] ?? null,
+            pin_drift: pin && pinCur ? r4(dist3(pin.pos, pinCur)) : null,
+            pin_scr_x: pinScr?.[0] ?? null,
+            pin_scr_y: pinScr?.[1] ?? null,
             mark: lastMark
         };
         lastMark = '';
         if (rows.length < MAX_ROWS) rows.push(row);
         renderOverlay(row, cPos, cRot, aPos, aRot);
+        drawPoints(cc);
     });
 
     // ---- overlay en vivo + botones
@@ -275,7 +514,11 @@ export const createRecorder = (deps: RecorderDeps) => {
 #rec-bar{position:fixed;left:6px;right:6px;bottom:calc(max(8px, env(safe-area-inset-bottom)) + 64px);z-index:52;display:flex;gap:6px;justify-content:center}
 #rec-bar button{height:40px;padding:0 12px;font:600 13px/1 ui-monospace,monospace;color:#e7d8d6;background:rgba(20,19,17,.85);
  border:1px solid rgba(166,71,62,.8);border-radius:999px}
-#rec-bar button.mark{background:#a6473e;color:#fff}`;
+#rec-bar button.mark{background:#a6473e;color:#fff}
+#rec-bar2{position:fixed;left:6px;right:6px;bottom:calc(max(8px, env(safe-area-inset-bottom)) + 112px);z-index:52;display:flex;gap:6px;justify-content:center}
+#rec-bar2 button{height:40px;padding:0 12px;font:600 13px/1 ui-monospace,monospace;color:#e7d8d6;background:rgba(20,19,17,.85);
+ border:1px solid rgba(80,200,200,.8);border-radius:999px}
+#rec-ov{position:fixed;left:0;top:0;width:100%;height:100%;z-index:40;pointer-events:none}`;
     document.head.append(style);
     const box = document.createElement('pre');
     box.id = 'rec-box';
@@ -297,10 +540,111 @@ export const createRecorder = (deps: RecorderDeps) => {
     const jsonBtn = mkBtn('JSON');
     const csvBtn = mkBtn('CSV');
     const shareBtn = mkBtn('Compartir');
-    document.body.append(box, banner, bar);
+    // segunda fila: qué se ve (para aislar la causa) y el punto del mundo fijado
+    const bar2 = document.createElement('div');
+    bar2.id = 'rec-bar2';
+    const mkBtn2 = (label: string) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        bar2.append(b);
+        return b;
+    };
+    const gsBtn = mkBtn2('GS');
+    const ctrlBtn = mkBtn2('CTRL');
+    const ptsBtn = mkBtn2('PTS');
+    const pinBtn = mkBtn2('PIN');
+    const ov = document.createElement('canvas');
+    ov.id = 'rec-ov';
+    document.body.append(ov, box, banner, bar, bar2);
+    const octx = ov.getContext('2d');
+
+    let lastLabels = '';
+    const refreshLabels = () => {
+        const l = [`GS ${model.enabled ? 'sí' : 'no'}`, control ? `CTRL ${control.enabled ? 'sí' : 'no'}` : 'CTRL —', `PTS ${ptsOn ? 'sí' : 'no'}`, pin ? `PIN #${pin.id}` : 'PIN'];
+        const key = l.join('|');
+        if (key === lastLabels) return;
+        lastLabels = key;
+        [gsBtn.textContent, ctrlBtn.textContent, ptsBtn.textContent, pinBtn.textContent] = l;
+    };
+    gsBtn.addEventListener('click', () => {
+        if (phase() !== 'placed') return addEvent('GS: botón ignorado (solo con el reveal ya terminado)', { phase: phase() });
+        model.enabled = !model.enabled;
+        addEvent(model.enabled ? 'GS visible' : 'GS oculto');
+        refreshLabels();
+    });
+    ctrlBtn.addEventListener('click', () => {
+        if (!control) return addEvent('CTRL: no existe');
+        if (phase() !== 'placed' && phase() !== 'revealing') return addEvent('CTRL: botón ignorado (aún no colocado)', { phase: phase() });
+        control.enabled = !control.enabled;
+        addEvent(control.enabled ? 'CTRL visible' : 'CTRL oculto');
+        refreshLabels();
+    });
+    ptsBtn.addEventListener('click', () => {
+        ptsOn = !ptsOn;
+        addEvent(ptsOn ? 'PTS visibles' : 'PTS ocultos');
+        refreshLabels();
+    });
+    pinBtn.addEventListener('click', () => {
+        pinPoint();
+        refreshLabels();
+    });
+
+    /** Dibuja sobre la imagen (con la MISMA cámara de PlayCanvas) los world points de mayor confianza y el punto fijado. */
+    const drawPoints = (cc: CameraComponent) => {
+        if (!octx) return;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        if (ov.width !== Math.round(w * dpr) || ov.height !== Math.round(h * dpr)) {
+            ov.width = Math.round(w * dpr);
+            ov.height = Math.round(h * dpr);
+        }
+        octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        octx.clearRect(0, 0, w, h);
+        const cp = camera.getPosition();
+        const fwd = camera.forward;
+        const inFront = (x: number, y: number, z: number) => (x - cp.x) * fwd.x + (y - cp.y) * fwd.y + (z - cp.z) * fwd.z > 0.05;
+        if (ptsOn) {
+            octx.fillStyle = 'rgba(120,255,120,0.9)';
+            for (const p of topWp) {
+                const { x, y, z } = p.position;
+                if (!inFront(x, y, z)) continue;
+                cc.worldToScreen(tmp.set(x, y, z), ptScreen);
+                if (ptScreen.x < 0 || ptScreen.y < 0 || ptScreen.x > w || ptScreen.y > h) continue;
+                octx.beginPath();
+                octx.arc(ptScreen.x, ptScreen.y, 2.5, 0, Math.PI * 2);
+                octx.fill();
+            }
+        }
+        if (pin) {
+            const cur = allWp.find((p) => p.id === pin!.id);
+            const mark = (x: number, y: number, z: number, color: string, r: number, label: string) => {
+                if (!inFront(x, y, z)) return;
+                cc.worldToScreen(tmp.set(x, y, z), ptScreen);
+                octx.strokeStyle = color;
+                octx.fillStyle = color;
+                octx.lineWidth = 2;
+                octx.beginPath();
+                octx.arc(ptScreen.x, ptScreen.y, r, 0, Math.PI * 2);
+                octx.moveTo(ptScreen.x - r - 6, ptScreen.y);
+                octx.lineTo(ptScreen.x + r + 6, ptScreen.y);
+                octx.moveTo(ptScreen.x, ptScreen.y - r - 6);
+                octx.lineTo(ptScreen.x, ptScreen.y + r + 6);
+                octx.stroke();
+                octx.font = '11px ui-monospace,monospace';
+                octx.fillText(label, ptScreen.x + r + 8, ptScreen.y - r);
+            };
+            mark(pin.pos[0], pin.pos[1], pin.pos[2], '#ff2bd6', 14, `PIN #${pin.id} fijo`);
+            if (cur && dist3(pin.pos, [cur.position.x, cur.position.y, cur.position.z]) > 0.005) {
+                mark(cur.position.x, cur.position.y, cur.position.z, '#35e0ff', 10, 'mismo id ahora');
+            }
+        }
+    };
 
     let overlayTick = 0;
     const renderOverlay = (row: RenderRow, cPos: V3, cRot: Q4, aPos: V3, aRot: Q4) => {
+        refreshLabels();
         if (overlayTick++ % 3) return; // ~10 veces por segundo: suficiente para la grabación de pantalla
         const e = lastEngine;
         const pl = placement as { t_ms: number; clock: string } | null;
@@ -314,6 +658,7 @@ export const createRecorder = (deps: RecorderDeps) => {
             `       en pantalla ${row.anchor_scr_x ?? '—'}, ${row.anchor_scr_y ?? '—'} px\n` +
             `RETÍC  ${row.reticle_on ? fmt([Number(row.reticle_px), Number(row.reticle_py), Number(row.reticle_pz)]) : '—'}   fase ${row.phase}\n` +
             `PLANO  ${row.plane_source ?? '—'} y=${row.plane_y ?? '—'}  hit ${row.hit_types || '—'}   prof. retíc ${row.reticle_depth ?? '—'} / mapa ${row.wp_c_depth ?? '—'} (y ${row.wp_c_y ?? '—'})\n` +
+            `CTRL ${row.ctrl_on ? 'sí' : 'no'} px ${row.ctrl_px_n ?? '—'}   GS ${row.model_on ? 'sí' : 'no'}   vm_err ${row.vm_err}   PIN ${row.pin_id ?? '—'} deriva ${row.pin_drift ?? '—'}\n` +
             (pl ? `<b>ANCLA COLOCADA en t=${(pl.t_ms / 1000).toFixed(3)} s (${pl.clock})</b>` : 'ancla aún no colocada') +
             (markCount ? `   marcas ${markCount}` : '');
     };
@@ -322,6 +667,8 @@ export const createRecorder = (deps: RecorderDeps) => {
     const stamp = () => new Date(startEpoch || Date.now()).toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const meta = () => ({
         recorder: 'AR Tracking Recorder (San Sebastián)',
+        protocol: 'control-v1',
+        camera_start_before_runXr: deps.cameraStart(),
         started_at: new Date(startEpoch).toISOString(),
         started_epoch_ms: Math.round(startEpoch),
         user_agent: navigator.userAgent,
@@ -334,11 +681,16 @@ export const createRecorder = (deps: RecorderDeps) => {
             d_pos_m_d_ang_deg: 'diferencia PlayCanvas vs 8th Wall (último cuadro del motor)',
             anchor_scr: 'proyección del ancla en pantalla (px CSS) con la cámara de PlayCanvas',
             world_points: 'cada 10 cuadros del motor, los 60 puntos de mayor confianza: [id, confidence, x, y, z]',
+            control: 'ctrl_* = malla de control (aro, poste y cubos) colgada del MISMO anchorRoot que el GSplat; ctrl_top_scr = proyección de su cubo magenta; ctrl_px_n = píxeles magenta (de 81) leídos en esa posición (0 = el cubo no se ve donde la proyección dice)',
+            model: 'model_* = entidad del GSplat: model_on/model_gs_on = visible, model_wp* = posición mundial, model_wscale = escala mundial',
+            matrices: 'vm0..vm15 = viewMatrix real de la cámara en frameend; vm_err = máx|viewMatrix − inversa(transform del nodo)|; pm_err = error de la proyección frente a fov+aspect; upd_to_pre_dpos = cuánto se movió la cámara entre update y prerender (pose escrita en el mismo cuadro); pre_to_end_dpos debe ser 0',
+            pin: 'pin_x/y/z = world point fijado al pulsar PIN (coordenadas del mundo, fijas); pin_cur_* = posición ACTUAL del mismo id en el mapa del motor; pin_drift = distancia entre ambas (el mapa se movió si crece); pin_scr = su proyección',
+            wp_stability: 'en el JSON: cada ~1 s, desplazamiento por id respecto a la primera vez que se vio (disp_first_*) y respecto al momento de colocar (disp_place_*)',
             plane: 'plane_source = de dónde sale el plano del círculo (surface: superficie de hitTest, ground: piso del motor Y=0); hit_* = respuesta cruda de hitTest(0.5,0.5); wp_c_* = puntos del mapa a <4° del centro de la pantalla; reticle_depth vs wp_c_depth compara la profundidad del círculo con la del mapa'
         }
     });
     const toJSON = () =>
-        JSON.stringify({ meta: meta(), placement, events, rows, engine_frames: engineFrames, world_points: wpSnapshots });
+        JSON.stringify({ meta: meta(), placement, events, rows, engine_frames: engineFrames, world_points: wpSnapshots, wp_stability: wpStability });
     const toCSV = () => {
         if (!rows.length) return '';
         const cols = Object.keys(rows[0]);
@@ -376,6 +728,9 @@ export const createRecorder = (deps: RecorderDeps) => {
         addEvent('marca', { n: markCount });
     });
 
+    // gancho para pruebas automáticas (navegador sin cabeza): exportar sin tocar los botones
+    (window as unknown as { __arRecorder?: unknown }).__arRecorder = { toCSV, toJSON, pinPoint };
+
     return {
         module,
         /** Empieza a registrar (al iniciar el seguimiento). */
@@ -384,6 +739,8 @@ export const createRecorder = (deps: RecorderDeps) => {
             startEpoch = epochNow();
             recording = true;
             addEvent('inicio del seguimiento');
+            addEvent('cámara de PlayCanvas justo antes de runXr', deps.cameraStart());
+            refreshLabels();
         },
         /** Momento exacto de la colocación del ancla. */
         markPlacement: (reticlePos: Vec3) => {
@@ -404,6 +761,9 @@ export const createRecorder = (deps: RecorderDeps) => {
                 map_center_depth: lastEngine?.wp_c_depth ?? null,
                 map_center_y: lastEngine?.wp_c_y ?? null
             };
+            wpAtPlace.clear();
+            allWp.forEach((p) => wpAtPlace.set(p.id, v3(p.position)));
+            (placement as Record<string, unknown>).wp_at_place = allWp.length;
             lastMark = 'COLOCACIÓN';
             addEvent('ancla colocada', placement);
             banner.textContent = `ANCLA COLOCADA  ${clock(now)}`;
