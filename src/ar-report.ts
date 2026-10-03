@@ -104,14 +104,14 @@ export const createReport = (canvas: HTMLCanvasElement) => {
         const now = performance.now();
         const limited = limitedTotal + (limitedSince !== null ? now - limitedSince : 0);
         return [
-            'Prueba AR (cubo)',
+            'Prueba AR (maqueta)',
             `Teléfono: ${d.model} · ${d.os}`,
             `Navegador: ${d.browser}`,
             `GPU: ${gpu}`,
             `Pantalla: ${innerWidth}×${innerHeight} @${devicePixelRatio}`,
             `FPS: promedio ${avg.toFixed(0)} · mínimo ${s.length ? s[0].toFixed(0) : '—'} · p10 ${p10.toFixed(0)} (${s.length} s medidos)`,
             `Seguimiento: NORMAL a los ${firstNormal !== null ? secs(firstNormal) + ' s' : '— (nunca)'} · LIMITED ${limitedCount} veces (${(limited / 1000).toFixed(1)} s) · ahora ${lastStatus || '—'}`,
-            `Cubo: colocado ${placements} veces, el último sobre ${placedOn || '—'} hace ${placedAt !== null ? ((now - placedAt) / 1000).toFixed(0) : '—'} s`,
+            `Maqueta: colocada ${placements} veces, el último sobre ${placedOn || '—'} hace ${placedAt !== null ? ((now - placedAt) / 1000).toFixed(0) : '—'} s`,
             `Opinión: ${opinion}`,
             `Duración de la prueba: ${secs(now)} s`
         ].join('\n');
@@ -152,13 +152,13 @@ export const createReport = (canvas: HTMLCanvasElement) => {
     sheet.id = 'report-sheet';
     sheet.hidden = true;
     sheet.innerHTML =
-        '<p>Mientras caminabas alrededor, el cubo…</p>' +
-        '<button type="button" class="ok">Se quedó fijo</button>' +
+        '<p>Mientras caminabas alrededor, la maqueta…</p>' +
+        '<button type="button" class="ok">Se quedó fija</button>' +
         '<button type="button" class="bad">Se movió</button>' +
         '<button type="button" class="skip">Enviar sin opinar</button>';
     document.body.append(button, sheet);
     button.addEventListener('click', () => (sheet.hidden = false));
-    sheet.querySelector('.ok')!.addEventListener('click', () => void send('se quedó FIJO'));
+    sheet.querySelector('.ok')!.addEventListener('click', () => void send('se quedó FIJA'));
     sheet.querySelector('.bad')!.addEventListener('click', () => void send('se MOVIÓ'));
     sheet.querySelector('.skip')!.addEventListener('click', () => void send('— (no opinó)'));
 
