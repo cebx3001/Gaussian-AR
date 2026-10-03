@@ -54,14 +54,14 @@ const pauseScreens = (i: number) => SPIN[chapters[i]?.id]?.pause ?? PAUSE_SCREEN
 // ---- textos de esta página
 const TEXT: Record<Lang, { cue: string; endKicker: string; endTitle: string; explore: string; back: string }> = {
     es: {
-        cue: 'Desliza hacia arriba para recorrer la plaza',
+        cue: 'Desliza',
         endKicker: 'Fin del recorrido',
         endTitle: 'Ahora, explórala a tu manera',
         explore: 'Explorar libremente',
         back: '← Volver a la historia'
     },
     en: {
-        cue: 'Scroll up to walk through the square',
+        cue: 'Scroll down',
         endKicker: 'End of the tour',
         endTitle: 'Now explore it your own way',
         explore: 'Explore freely',
@@ -212,7 +212,7 @@ const renderStory = () => {
     storyEl.replaceChildren();
     blocks = [];
     pauses = [];
-    chapters.forEach((c, i) => {
+    chapters.forEach((c) => {
         const t = textOf(c);
         const art = document.createElement('article');
         art.className = 'block';
@@ -222,8 +222,7 @@ const renderStory = () => {
             `<div class="text">${body
                 .split(/\n\n+/)
                 .map((p) => `<p>${esc(p)}</p>`)
-                .join('')}</div>` +
-            (i === 0 ? `<p class="cue">${esc(tx.cue)} <span aria-hidden="true">↑</span></p>` : '');
+                .join('')}</div>`;
         const pause = document.createElement('div');
         pause.className = 'pause';
         storyEl.append(art, pause);
@@ -236,6 +235,7 @@ const renderStory = () => {
     end.querySelector('button')!.addEventListener('click', explore);
     storyEl.append(end);
     backStory.textContent = tx.back;
+    $<HTMLElement>('scroll-cue-text').textContent = tx.cue;
 };
 
 const renderIndex = () => {
@@ -448,6 +448,8 @@ const tick = () => {
         cover = Math.max(cover, Math.min(1, Math.max(0, vis) / (vh * 0.35)));
     }
     veil.style.opacity = String(cover);
+    // el aviso de scroll se va en cuanto se empieza a bajar
+    document.body.classList.toggle('scrolled', s > 40);
     // lugar activo en la barra
     const i = chapterAt(s);
     if (i !== activeChapter) {

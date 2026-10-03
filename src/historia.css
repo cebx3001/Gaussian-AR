@@ -114,31 +114,75 @@ body.exploring #veil {
     color: var(--accent);
 }
 
-/* aviso de la Vista general: cómo se avanza */
-.block .cue {
-    margin: 18px 0 0;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(var(--ink-rgb), 0.8);
+/* aviso de scroll: abajo al centro, encima de la barra de lugares */
+#scroll-cue {
+    position: fixed;
+    z-index: 5;
+    left: 50%;
+    bottom: calc(var(--index-h) + 16px);
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    color: var(--ink);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.7));
 }
 
-.block .cue span {
-    display: inline-block;
-    margin-left: 6px;
-    color: var(--accent);
-    animation: sube 1.6s ease-in-out infinite;
+body.ready:not(.scrolled):not(.exploring) #scroll-cue {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    transition-delay: 1.2s;
 }
 
-@keyframes sube {
-    0%,
+#scroll-cue .wheel {
+    animation: rueda 1.6s ease-in-out infinite;
+}
+
+@keyframes rueda {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    70% {
+        transform: translateY(9px);
+        opacity: 0;
+    }
     100% {
         transform: translateY(0);
+        opacity: 0;
+    }
+}
+
+/* flecha hacia abajo que baja y se desvanece */
+#scroll-cue .chev {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    transform: rotate(45deg);
+    animation: baja 1.6s ease-in-out infinite;
+}
+
+@keyframes baja {
+    0%,
+    100% {
+        transform: translateY(-3px) rotate(45deg);
+        opacity: 0.4;
     }
     50% {
-        transform: translateY(-5px);
+        transform: translateY(3px) rotate(45deg);
+        opacity: 1;
     }
+}
+
+#scroll-cue-text {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
 }
 
 /* respiro sin texto: la altura la pone el código (más de una pantalla) */

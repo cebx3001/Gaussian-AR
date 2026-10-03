@@ -38,6 +38,15 @@
             <div id="story"></div>
         </main>
 
+        <!-- aviso de scroll: aparece al terminar la entrada y se va al empezar a bajar -->
+        <div id="scroll-cue" aria-hidden="true">
+            <svg viewBox="0 0 24 36" width="22" height="33">
+                <rect x="1.5" y="1.5" width="21" height="33" rx="10.5" fill="none" stroke="currentColor" stroke-width="2" />
+                <circle class="wheel" cx="12" cy="10" r="2.6" fill="currentColor" />
+            </svg>
+            <span class="chev"></span>
+            <span id="scroll-cue-text"></span>
+        </div>
         <button type="button" id="back-story" hidden></button>
 
         <nav id="index" aria-label="Lugares"></nav>
