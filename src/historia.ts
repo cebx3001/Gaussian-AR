@@ -79,7 +79,7 @@ const TEXT: Record<Lang, PageText> = {
             title: 'Patrimonio que se recorre',
             text:
                 'Frente a ti está el espacio tal como existe, capturado en tres dimensiones a partir de fotografías del lugar. Cada fachada, cada árbol y cada camino ocupan su sitio real, listos para recorrerse como si estuvieras allí.\n\n' +
-                'Esta historia te lleva por sus rincones, uno a uno, y por lo que guardan. Avanza a tu ritmo: la cámara te acompaña. Al final, podrás explorarlo libremente.'
+                'Esta historia te lleva por sus rincones, uno a uno, y por lo que guardan. Avanza a tu ritmo: la cámara te acompaña.'
         },
         endKicker: 'Fin del recorrido',
         endTitle: 'Ahora, explórala a tu manera',
@@ -93,7 +93,7 @@ const TEXT: Record<Lang, PageText> = {
             title: 'Heritage you can walk through',
             text:
                 'Before you is the space as it exists, captured in three dimensions from photographs of the place. Every façade, every tree and every path sits where it really is, ready to be explored as if you were there.\n\n' +
-                'This story takes you through its corners, one by one, and through what they hold. Move at your own pace: the camera comes with you. At the end, you can explore it freely.'
+                'This story takes you through its corners, one by one, and through what they hold. Move at your own pace: the camera comes with you.'
         },
         endKicker: 'End of the tour',
         endTitle: 'Now explore it your own way',
@@ -105,6 +105,7 @@ const TEXT: Record<Lang, PageText> = {
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const stage = $<HTMLElement>('stage');
 const veil = $<HTMLElement>('veil');
+const howEl = $<HTMLElement>('how');
 const scroller = $<HTMLElement>('scroller');
 const storyEl = $<HTMLElement>('story');
 const indexEl = $<HTMLElement>('index');
@@ -269,10 +270,11 @@ const renderStory = () => {
     const end = document.createElement('section');
     end.className = 'end';
     // las instrucciones de uso van aquí, cuando de verdad se usan
-    const how = (coarsePointer ? u.howTouch : u.howMouse).map((h) => `<li>${bold(esc(h))}</li>`).join('');
     end.innerHTML =
         `<p class="kicker">${esc(tx.endKicker)}</p><h2 class="title">${esc(tx.endTitle)}</h2>` +
-        `<ul class="how">${how}</ul><button type="button" class="explore">${esc(tx.explore)}</button>`;
+        `<button type="button" class="explore">${esc(tx.explore)}</button>`;
+    // instrucciones de uso: salen al entrar en «Explorar libremente» y se van con el primer toque
+    howEl.innerHTML = (coarsePointer ? u.howTouch : u.howMouse).map((h) => `<p>${bold(esc(h))}</p>`).join('');
     end.querySelector('button')!.addEventListener('click', explore);
     storyEl.append(end);
     backStory.textContent = tx.back;
@@ -516,10 +518,20 @@ function explore() {
     backStory.hidden = false;
     veil.style.opacity = '0';
     v.selectAnnotation(0);
+    // instrucciones: se van con el primer toque o clic (que ya mueve la maqueta)
+    howEl.hidden = false;
+    requestAnimationFrame(() => howEl.classList.add('shown'));
+    const hide = (e: PointerEvent) => {
+        if ((e.target as HTMLElement).closest('#back-story, #index, #lang, #top-links, #logo-link')) return;
+        howEl.classList.remove('shown');
+        window.removeEventListener('pointerdown', hide, true);
+    };
+    window.addEventListener('pointerdown', hide, true);
 }
 
 function backToStory() {
     const v = viewer;
+    howEl.classList.remove('shown');
     exploring = false;
     document.body.classList.remove('exploring');
     backStory.hidden = true;

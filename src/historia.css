@@ -191,20 +191,34 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
 }
 
 /* ---------- final ---------- */
-.end .how {
-    margin: 0 0 22px;
-    padding: 0;
-    list-style: none;
+/* instrucciones de «Explorar libremente»: en el centro, sin recuadro; se van con el primer toque */
+#how {
+    position: fixed;
+    z-index: 5;
+    left: 24px;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+#how.shown {
+    opacity: 1;
+    transition: opacity 0.6s ease 0.4s;
+}
+
+#how p {
+    margin: 0 0 6px;
     font-size: var(--fs-text);
-    line-height: 1.55;
+    line-height: 1.45;
     color: #f7f0ee;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.95), 0 1px 14px rgba(0, 0, 0, 0.9);
 }
 
-.end .how li {
-    margin-bottom: 0.4em;
-}
-
-.end .how strong {
+#how strong {
     font-weight: 700;
     color: #fff;
 }
