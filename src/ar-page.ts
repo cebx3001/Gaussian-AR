@@ -18,9 +18,11 @@ import {
     Asset,
     BLEND_NORMAL,
     BinaryHandler,
+    BoxGeometry,
     CameraComponentSystem,
     Color,
     ContainerHandler,
+    CylinderGeometry,
     Entity,
     FILLMODE_FILL_WINDOW,
     GSplatComponentSystem,
@@ -38,7 +40,7 @@ import {
     createGraphicsDevice
 } from 'playcanvas';
 
-import { createRecorder } from './ar-recorder';
+import { CONTROL_TOP_Y, createRecorder } from './ar-recorder';
 import type { Recorder } from './ar-recorder';
 import { AR_UI, LANG_KEY, detectLang } from './i18n';
 import type { Lang } from './i18n';
@@ -176,6 +178,10 @@ let camera: Entity;
 let reticle: Entity;
 let anchorRoot: Entity;
 let model: Entity;
+/** Objeto 3D de control (solo con ?rec o ?control): malla simple, hija del MISMO anchorRoot que el GSplat. */
+let control: Entity | null = null;
+/** Posición de la cámara de PlayCanvas justo antes de runXr (la que 8th Wall toma como origen de coordenadas). */
+let cameraStartPos: [number, number, number] | null = null;
 let stopReveal: (() => void) | null = null;
 
 const buildReticle = (): Entity => {
@@ -204,6 +210,45 @@ const buildReticle = (): Entity => {
     e.enabled = false;
     app.root.addChild(e);
     return e;
+};
+
+/**
+ * Objeto de control para el diagnóstico de anclaje: una malla estándar de PlayCanvas (no GSplat), creada por
+ * código, con diámetro local 1 (se escala al diámetro de la maqueta al colocar) y colgada de `anchorRoot`, o sea
+ * del mismo padre que el GSplat. Si algo del ancla (transform, cámara, proyección) fallara, le pasaría a los dos;
+ * si solo falla el GSplat, el control se queda quieto. Partes (todas sin luz, colores puros):
+ *   aro amarillo en el piso, poste naranja, cubo magenta en la cima (ctrl_px lo busca en los píxeles) y cuatro
+ *   cubos en el aro: +X rojo, −X verde, +Z azul, −Z cian (para ver también el giro).
+ */
+const buildControl = (): Entity => {
+    const device = app.graphicsDevice;
+    const mat = (r: number, g: number, b: number) => {
+        const m = new StandardMaterial();
+        m.useLighting = false;
+        m.diffuse = new Color(0, 0, 0);
+        m.emissive = new Color(r, g, b);
+        m.update();
+        return m;
+    };
+    const root = new Entity('control');
+    const part = (name: string, mesh: Mesh, color: Color, x: number, y: number, z: number) => {
+        const e = new Entity(name);
+        e.addComponent('render', { meshInstances: [new MeshInstance(mesh, mat(color.r, color.g, color.b))] });
+        e.setLocalPosition(x, y, z);
+        root.addChild(e);
+    };
+    const R = 0.35;
+    part('ring', Mesh.fromGeometry(device, new TorusGeometry({ ringRadius: R, tubeRadius: 0.012, segments: 64, sides: 8 })), new Color(1, 0.9, 0.1), 0, 0, 0);
+    part('pole', Mesh.fromGeometry(device, new CylinderGeometry({ radius: 0.012, height: 0.5, heightSegments: 1, capSegments: 12 })), new Color(1, 0.5, 0), 0, 0.25, 0);
+    const cube = (half: number) => Mesh.fromGeometry(device, new BoxGeometry({ halfExtents: new Vec3(half, half, half) }));
+    part('top', cube(0.035), new Color(1, 0, 1), 0, CONTROL_TOP_Y, 0);
+    part('px', cube(0.025), new Color(1, 0, 0), R, 0.025, 0);
+    part('nx', cube(0.025), new Color(0, 1, 0), -R, 0.025, 0);
+    part('pz', cube(0.025), new Color(0, 0.3, 1), 0, 0.025, R);
+    part('nz', cube(0.025), new Color(0, 1, 1), 0, 0.025, -R);
+    root.enabled = false;
+    anchorRoot.addChild(root);
+    return root;
 };
 
 /** Escala del modelo; su centro (el de la plaza, en coordenadas del visor) queda justo en el ancla. */
@@ -251,6 +296,7 @@ const initScene = async () => {
     applyModelScale(1 / SCENE_DIAMETER); // provisional; el tamaño real se fija al colocar
     model.enabled = false;
     anchorRoot.addChild(model);
+    if (REC || params.has('control')) control = buildControl();
 
     await new Promise<void>((resolve, reject) => {
         const asset = new Asset('scene.sog', 'gsplat', { url: './scene.sog', filename: 'scene.sog' });
@@ -271,6 +317,9 @@ const initScene = async () => {
             camera,
             anchorRoot,
             reticle,
+            model,
+            control,
+            cameraStart: () => cameraStartPos,
             phase: () => phase,
             // de dónde sale el plano del círculo: superficie del motor (con su altura) o el piso del motor (Y = 0)
             placementInfo: () => ({
@@ -281,7 +330,7 @@ const initScene = async () => {
         });
         // el panel del grabador va arriba: la instrucción baja para no quedar tapada
         const s = document.createElement('style');
-        s.textContent = '#ar-hint{top:auto!important;bottom:calc(max(8px, env(safe-area-inset-bottom)) + 116px)!important}';
+        s.textContent = '#ar-hint{top:auto!important;bottom:calc(max(8px, env(safe-area-inset-bottom)) + 164px)!important}';
         document.head.append(s);
     }
 };
@@ -483,6 +532,11 @@ const place = () => {
     const yaw = (Math.atan2(f.x, f.z) * 180) / Math.PI;
     anchorRoot.setPosition(base);
     anchorRoot.setEulerAngles(0, yaw, 0);
+    if (control) {
+        // el control mide lo mismo que la maqueta y está en el origen del ancla (el punto del piso)
+        control.setLocalScale(diameter, diameter, diameter);
+        control.enabled = true;
+    }
     recorder?.markPlacement(base);
     reticle.enabled = false;
     setPhase('revealing');
@@ -500,6 +554,7 @@ const again = () => {
     stopReveal?.();
     stopReveal = null;
     model.enabled = false;
+    if (control) control.enabled = false;
     pinchFactor = 1;
     anchorRoot.setLocalScale(1, 1, 1);
     floorSamples.length = 0;
@@ -584,8 +639,20 @@ const startTracking = async () => {
     if (DEMO) {
         camera.setPosition(0, 1.3, 0);
         camera.lookAt(0, 0.4, -1.4);
+        cameraStartPos = [0, 1.3, 0];
+        // `?demo&wobble`: la cámara se mueve por código (sin 8th Wall) escribiendo su pose en 'update', igual que lo
+        // hace 8th Wall. Sirve para comprobar PlayCanvas + GSplat + control + grabador sin ningún seguimiento.
+        if (params.has('wobble')) {
+            let wt = 0;
+            app.on('update', (dt: number) => {
+                wt += dt;
+                camera.setPosition(0.7 * Math.sin(wt * 0.9), 1.3 + 0.35 * Math.sin(wt * 0.6), 0.4 * Math.sin(wt * 0.5));
+                camera.lookAt(0, 0.4, -1.4);
+            });
+        }
         foundFrames = 0;
         setPhase('scanning');
+        recorder?.start();
         return;
     }
 
@@ -616,6 +683,8 @@ const startTracking = async () => {
         // La integración de 8th Wall toma la posición inicial de la cámara como referencia espacial.
         // Arrancamos en la altura documentada de 2 m antes de conectar el tracking.
         camera.setPosition(0, 2, 0);
+        const cs = camera.getPosition();
+        cameraStartPos = [cs.x, cs.y, cs.z];
         // la integración con PlayCanvas espera la ENTIDAD de la cámara (llama a getPosition y a camera.nearClip),
         // aunque su documentación diga «componente»
         xr.PlayCanvas.runXr({ pcCamera: camera, pcApp: app }, modules, {
