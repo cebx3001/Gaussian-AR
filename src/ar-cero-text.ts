@@ -27,13 +27,12 @@ export type ArCeroText = {
 export const AR_CERO: Record<Lang, ArCeroText> = {
     es: {
         back: '← Volver al visor',
-        kicker: 'Realidad aumentada',
-        intro: 'Vas a ver la maqueta de la plaza de San Sebastián sobre una superficie plana, a través de la cámara.',
+        kicker: 'Maqueta en realidad aumentada',
+        intro: 'Vas a ver la maqueta sobre una superficie plana, a través de la cámara.',
         steps: [
             'Toca <b>Comenzar</b> y permite el uso de la cámara.',
             'Apunta a una superficie plana y mueve el teléfono despacio.',
-            'Cuando aparezca un círculo, toca la pantalla.',
-            'Pellizca con dos dedos para hacerla más grande o más pequeña.'
+            'Cuando aparezca un círculo, toca la pantalla.'
         ],
         installNote: 'Si aparece un aviso para instalar o actualizar algo, puedes tocar <b>Cancelar</b>: igual va a funcionar.',
         start: 'Comenzar',
@@ -54,13 +53,12 @@ export const AR_CERO: Record<Lang, ArCeroText> = {
     },
     en: {
         back: '← Back to the viewer',
-        kicker: 'Augmented reality',
-        intro: 'You will see the model of San Sebastián Square on a flat surface, through your camera.',
+        kicker: 'Model in augmented reality',
+        intro: 'You will see the model on a flat surface, through your camera.',
         steps: [
             'Tap <b>Start</b> and allow camera access.',
             'Point at a flat surface and move your phone slowly.',
-            'When a circle appears, tap the screen.',
-            'Pinch with two fingers to make it bigger or smaller.'
+            'When a circle appears, tap the screen.'
         ],
         installNote: 'If a prompt asks you to install or update something, you can tap <b>Cancel</b>: it will still work.',
         start: 'Start',
