@@ -22,7 +22,7 @@ import type { CameraComponent, Entity } from 'playcanvas';
 
 import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
 import { REVEAL_SECONDS, revealFor, startReveal } from './reveal';
-import { AR_UI, LANG_KEY, UI, detectLang } from './i18n';
+import { AR_UI, LANG_KEY, MODES, UI, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
 import { setupTimeline, timelineAfterMount, timelineKeyframes } from './timeline';
@@ -560,6 +560,7 @@ const applyLang = () => {
     arLink.textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer || AUTHORING;
+    $<HTMLAnchorElement>('mode-link').textContent = MODES[lang].story;
 };
 
 langEl.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
@@ -589,7 +590,7 @@ window.addEventListener(
         if (touches.size === 2) gesture = touchSpan();
         const target = e.target as HTMLElement;
         // los controles de arriba (idioma, «Ver en AR», logo) no ocultan el texto: el idioma cambia a la vista
-        if (target.closest('#index, #chapter-nav, #lang, #ar-link, #logo-link')) return;
+        if (target.closest('#index, #chapter-nav, #lang, #top-links, #logo-link')) return;
         // texto largo (se desplaza): un toque lo oculta al soltar; arrastrar lo desplaza
         if (target.closest('#chapter.scroll')) {
             textTap = { x: e.clientX, y: e.clientY, t: performance.now() };

@@ -22,7 +22,7 @@ import { defaultSettings } from '@playcanvas/supersplat-viewer/settings';
 
 import { trackFromKeyframes } from './intro';
 import { REVEAL_SECONDS, revealFor, startReveal } from './reveal';
-import { AR_UI, LANG_KEY, UI, detectLang } from './i18n';
+import { AR_UI, LANG_KEY, MODES, UI, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
 import type { Chapter, Keyframe, Pose, Vec3Tuple } from './story';
@@ -69,7 +69,7 @@ const TEXT: Record<Lang, PageText> = {
             title: 'Patrimonio que se recorre',
             text:
                 'Frente a ti está el espacio tal como existe, capturado en tres dimensiones a partir de fotografías del lugar. Cada fachada, cada árbol y cada camino ocupan su sitio real, listos para recorrerse como si estuvieras allí.\n\n' +
-                'Este recorrido te lleva por sus rincones, uno a uno, y por las historias que guardan. Avanza a tu ritmo: la cámara te acompaña.'
+                'Esta historia te lleva por sus rincones, uno a uno, y por lo que guardan. Avanza a tu ritmo: la cámara te acompaña. Si prefieres moverte por tu cuenta, el modo recorrido te deja explorarlo libremente.'
         },
         endKicker: 'Fin del recorrido',
         endTitle: 'Ahora, explórala a tu manera',
@@ -83,7 +83,7 @@ const TEXT: Record<Lang, PageText> = {
             title: 'Heritage you can walk through',
             text:
                 'Before you is the space as it exists, captured in three dimensions from photographs of the place. Every façade, every tree and every path sits where it really is, ready to be explored as if you were there.\n\n' +
-                'This tour takes you through its corners, one by one, and through the stories they hold. Move at your own pace: the camera comes with you.'
+                'This story takes you through its corners, one by one, and through what they hold. Move at your own pace: the camera comes with you. If you would rather find your own way, tour mode lets you explore it freely.'
         },
         endKicker: 'End of the tour',
         endTitle: 'Now explore it your own way',
@@ -304,6 +304,7 @@ const applyLang = () => {
     arLink.textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer;
+    $<HTMLAnchorElement>('mode-link').textContent = MODES[lang].tour;
     layout();
 };
 
