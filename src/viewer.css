@@ -67,10 +67,6 @@ button {
     transition: opacity 0.5s ease;
 }
 
-/* mientras se lee el texto, la cabecera se aparta para dejarle todo el alto */
-body.reading #masthead {
-    opacity: 0;
-}
 
 #masthead-kicker {
     margin: 0 0 2px;
@@ -102,17 +98,17 @@ body.edit #masthead {
     right: 0;
     bottom: var(--index-h);
     /* nunca sube hasta la cabecera; si el texto es largo, el panel se desplaza */
-    max-height: calc(100vh - var(--index-h) - 14px);
-    max-height: calc(100dvh - var(--index-h) - 14px);
+    max-height: calc(100vh - var(--index-h) - 110px);
+    max-height: calc(100dvh - var(--index-h) - 110px);
     overflow: hidden;
     padding: 30px 22px 6px;
-    background: linear-gradient(to top, rgba(var(--bg-rgb), 0.5) 72%, rgba(var(--bg-rgb), 0.26) 90%, rgba(var(--bg-rgb), 0));
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
     /* oculto mientras la cámara vuela; aparece con un fundido al llegar */
     opacity: 0;
     visibility: hidden;
     pointer-events: none; /* el toque pasa a la escena: gira la cámara y oculta el texto */
-    transition: opacity 0.7s ease, visibility 0s linear 0.7s;
+    /* al tocar se oculta al instante */
+    transition: opacity 0.12s ease, visibility 0s linear 0.12s;
 }
 
 #chapter.shown {
@@ -129,7 +125,6 @@ body.edit #masthead {
         width: min(31rem, 42vw);
         max-height: none;
         padding: calc(max(18px, env(safe-area-inset-top)) + 96px) 44px 110px;
-        background: linear-gradient(to right, rgba(var(--bg-rgb), 0.52) 70%, rgba(var(--bg-rgb), 0));
         display: flex;
         flex-direction: column;
     }
@@ -264,7 +259,6 @@ body.edit #masthead {
     justify-content: center;
     gap: 6px;
     padding: 0 12px max(12px, env(safe-area-inset-bottom));
-    background: linear-gradient(to top, rgba(var(--bg-rgb), 0.6), rgba(var(--bg-rgb), 0.5));
 }
 
 .chapter-link {
@@ -322,7 +316,6 @@ body.edit #masthead {
         width: min(36rem, 62vw);
         max-height: none;
         padding: 18px 24px 8px 28px;
-        background: linear-gradient(to right, rgba(var(--bg-rgb), 0.52) 78%, rgba(var(--bg-rgb), 0));
         display: flex;
         flex-direction: column;
     }
@@ -361,7 +354,6 @@ body.edit #masthead {
         justify-content: center;
         gap: 22px;
         padding: 0 16px max(6px, env(safe-area-inset-bottom));
-        background: linear-gradient(to top, rgba(var(--bg-rgb), 0.55), rgba(var(--bg-rgb), 0));
     }
     .chapter-link {
         flex: 0 1 auto;
@@ -791,16 +783,14 @@ body.animar #logo {
     z-index: 6;
     top: calc(max(12px, env(safe-area-inset-top)) + 56px);
     right: 14px;
-    padding: 9px 16px;
-    font-family: var(--text);
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
+    padding: 6px 2px 4px;
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 500;
     color: var(--ink);
     text-decoration: none;
-    background: var(--accent);
-    border-radius: 999px;
-    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+    border-bottom: 2px solid var(--accent);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 10px rgba(0, 0, 0, 0.85);
 }
 
 body.edit #ar-link,

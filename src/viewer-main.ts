@@ -540,7 +540,12 @@ window.addEventListener(
         if (e.pointerType === 'touch') touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (touches.size === 2) gesture = touchSpan();
         const target = e.target as HTMLElement;
-        if (target.closest('#index, #chapter-nav, #chapter.scroll')) return;
+        if (target.closest('#index, #chapter-nav')) return;
+        // texto largo (se desplaza): un toque lo oculta al soltar; arrastrar lo desplaza
+        if (target.closest('#chapter.scroll')) {
+            textTap = { x: e.clientX, y: e.clientY, t: performance.now() };
+            return;
+        }
         const flying = cancelArrival !== null;
         cancelArrival?.();
         cancelArrival = null;
@@ -548,6 +553,19 @@ window.addEventListener(
         chapterEl.classList.remove('shown');
         document.body.classList.remove('reading');
         if (flying && viewer?.state.loaded) enterFly(viewer);
+    },
+    true
+);
+
+let textTap: { x: number; y: number; t: number } | null = null;
+window.addEventListener(
+    'pointerup',
+    (e) => {
+        const tap = textTap;
+        textTap = null;
+        if (!tap || performance.now() - tap.t > 400 || Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10) return;
+        chapterEl.classList.remove('shown');
+        document.body.classList.remove('reading');
     },
     true
 );
