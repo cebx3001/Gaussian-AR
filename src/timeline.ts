@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Línea de tiempo de 5 s para crear la animación de entrada (`?animar`).
+// Línea de tiempo de 8 s para crear la animación de entrada (`?animar`).
 // Básica, a la manera del editor de SuperSplat: se coloca el cabezal, se mueve la cámara con los
 // gestos del visor y se añade un keyframe; los keyframes se pueden mover, borrar y reproducir.
 //
@@ -22,7 +22,8 @@ export type TimelineHost = {
     seed: () => Keyframe[];
 };
 
-const STORAGE_KEY = 'san-sebastian:intro-keyframes';
+// se guarda con la duración: si la duración cambia, los keyframes guardados se estiran en proporción
+const STORAGE_KEY = 'san-sebastian:intro-keyframes-v2';
 const D = INTRO_SECONDS;
 /** Distancia (m) a la que se coloca el punto de mira de cada keyframe. */
 const LOOK_DISTANCE = 50;
@@ -47,7 +48,7 @@ const pct = (t: number) => `${(clamp(t, 0, D) / D) * 100}%`;
 
 const persist = () => {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(kfs));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ duration: D, keyframes: kfs }));
     } catch {
         // sin almacenamiento
     }
@@ -55,8 +56,10 @@ const persist = () => {
 
 const loadSaved = (): Keyframe[] | null => {
     try {
-        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as Keyframe[] | null;
-        return Array.isArray(raw) ? raw : null;
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as { duration?: number; keyframes?: Keyframe[] } | null;
+        if (!raw || !Array.isArray(raw.keyframes)) return null;
+        const k = raw.duration && raw.duration > 0 ? D / raw.duration : 1;
+        return raw.keyframes.map((f) => ({ ...f, t: Math.round(f.t * k * 100) / 100 }));
     } catch {
         return null;
     }

@@ -5,7 +5,7 @@ import { Vec3 } from 'playcanvas';
 import { round } from './story';
 import type { Keyframe, Pose, Vec3Tuple } from './story';
 
-export const INTRO_SECONDS = 5;
+export const INTRO_SECONDS = 8;
 /** Cuadros por segundo de la pista: SuperSplat expresa los tiempos de los keyframes en cuadros. */
 export const INTRO_FPS = 30;
 
