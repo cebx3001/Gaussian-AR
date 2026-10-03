@@ -24,7 +24,7 @@ body.exploring #stage {
     z-index: 3;
     left: 0;
     right: 0;
-    top: calc(max(18px, env(safe-area-inset-top)) + 126px);
+    top: calc(max(18px, env(safe-area-inset-top)) + 100px);
     bottom: var(--index-h);
     overflow-y: auto;
     overscroll-behavior: contain;

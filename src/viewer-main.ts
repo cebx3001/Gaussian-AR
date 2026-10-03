@@ -22,7 +22,7 @@ import type { CameraComponent, Entity } from 'playcanvas';
 
 import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
 import { REVEAL_SECONDS, revealFor, startReveal } from './reveal';
-import { AR_UI, LANG_KEY, MODES, UI, detectLang } from './i18n';
+import { AR_UI, LANG_KEY, UI, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
 import { setupTimeline, timelineAfterMount, timelineKeyframes } from './timeline';
@@ -561,7 +561,6 @@ const applyLang = () => {
     arLink.textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer || AUTHORING;
-    $<HTMLAnchorElement>('mode-link').textContent = MODES[lang].story;
 };
 
 langEl.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
