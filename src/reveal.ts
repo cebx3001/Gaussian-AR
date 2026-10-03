@@ -45,17 +45,17 @@ export type RevealOptions = {
 };
 
 /**
- * Parámetros del efecto en este proyecto, iguales en el visor y en la realidad aumentada. Duran 5 s:
+ * Parámetros del efecto en este proyecto, iguales en el visor y en la realidad aumentada. Duran 8 s:
  * los splats llegan hasta 116 m del centro (la mitad está a menos de 53 m), así que `radius` cubre toda
  * la escena y las ondas empiezan despacio en el centro y aceleran hacia afuera; la onda de elevación
- * (colores) sale `delay` s detrás de la de puntos y llega a `radius` justo a los 5 s, cuando el efecto
+ * (colores) sale `delay` s detrás de la de puntos y llega a `radius` justo a los 8 s, cuando el efecto
  * se retira solo. Las distancias están en unidades de la escena (no cambian con la escala del modelo).
  * `dotScale` agranda los puntos del efecto original para esta escena.
  */
-export const REVEAL_SECONDS = 5;
+export const REVEAL_SECONDS = 8;
 export const REVEAL = (() => {
     const radius = 117;
-    const delay = 1;
+    const delay = 1.5;
     const speed = 5; // al arrancar
     const travel = REVEAL_SECONDS - delay; // lo que tarda la onda de colores en recorrer `radius`
     const acceleration = (2 * (radius - speed * travel)) / (travel * travel);
