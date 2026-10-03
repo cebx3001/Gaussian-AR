@@ -14,6 +14,14 @@
         <title>San Sebastián · Cuenca</title>
     </head>
     <body>
+        <script>
+            // Esta página ya no se muestra a los visitantes: solo guarda las herramientas para capturar poses (?editar)
+            // y crear la animación de entrada (?animar). Sin ellas, lleva a la historia.
+            (function () {
+                var q = new URLSearchParams(location.search);
+                if (!q.has('editar') && !q.has('animar')) location.replace('./' + location.hash);
+            })();
+        </script>
         <div id="stage"></div>
         <!-- velo oscuro detrás de la descripción: aparece con el texto y se va con él al tocar -->
         <div id="veil"></div>
@@ -26,10 +34,9 @@
             <button type="button" data-lang="es">ES</button>
         </div>
 
-        <!-- debajo del título: realidad aumentada y el otro modo (historia ↔ recorrido) -->
+        <!-- debajo del título: realidad aumentada (solo en teléfonos) -->
         <nav id="top-links">
             <a id="ar-link" href="ar-cero.html" hidden></a>
-            <a id="mode-link" href="./"></a>
         </nav>
 
         <header id="masthead">

@@ -22,7 +22,7 @@ import { defaultSettings } from '@playcanvas/supersplat-viewer/settings';
 
 import { trackFromKeyframes } from './intro';
 import { REVEAL_SECONDS, revealFor, startReveal } from './reveal';
-import { AR_UI, LANG_KEY, MODES, UI, detectLang } from './i18n';
+import { AR_UI, LANG_KEY, UI, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
 import type { Chapter, Keyframe, Pose, Vec3Tuple } from './story';
@@ -30,7 +30,7 @@ import { revealOrigin, waitUntilDrawn } from './splat-util';
 
 const MODEL_CENTER: Vec3Tuple = [-1.5, 23, 8.4];
 
-// Límites que lee el parche de SuperSplat (vite.config.ts), como en el modo recorrido: al explorar no se puede mirar
+// Límites que lee el parche de SuperSplat (vite.config.ts), como en las herramientas de edición: al explorar no se puede mirar
 // por debajo de la maqueta, el vuelo no baja del suelo y un toque no cambia el centro de giro.
 {
     const g = globalThis as unknown as Record<string, number>;
@@ -79,7 +79,7 @@ const TEXT: Record<Lang, PageText> = {
             title: 'Patrimonio que se recorre',
             text:
                 'Frente a ti está el espacio tal como existe, capturado en tres dimensiones a partir de fotografías del lugar. Cada fachada, cada árbol y cada camino ocupan su sitio real, listos para recorrerse como si estuvieras allí.\n\n' +
-                'Esta historia te lleva por sus rincones, uno a uno, y por lo que guardan. Avanza a tu ritmo: la cámara te acompaña. Si prefieres moverte por tu cuenta, el modo recorrido te deja explorarlo libremente.'
+                'Esta historia te lleva por sus rincones, uno a uno, y por lo que guardan. Avanza a tu ritmo: la cámara te acompaña. Al final, podrás explorarlo libremente.'
         },
         endKicker: 'Fin del recorrido',
         endTitle: 'Ahora, explórala a tu manera',
@@ -93,7 +93,7 @@ const TEXT: Record<Lang, PageText> = {
             title: 'Heritage you can walk through',
             text:
                 'Before you is the space as it exists, captured in three dimensions from photographs of the place. Every façade, every tree and every path sits where it really is, ready to be explored as if you were there.\n\n' +
-                'This story takes you through its corners, one by one, and through what they hold. Move at your own pace: the camera comes with you. If you would rather find your own way, tour mode lets you explore it freely.'
+                'This story takes you through its corners, one by one, and through what they hold. Move at your own pace: the camera comes with you. At the end, you can explore it freely.'
         },
         endKicker: 'End of the tour',
         endTitle: 'Now explore it your own way',
@@ -314,7 +314,6 @@ const applyLang = () => {
     arLink.textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer;
-    $<HTMLAnchorElement>('mode-link').textContent = MODES[lang].tour;
     layout();
 };
 
