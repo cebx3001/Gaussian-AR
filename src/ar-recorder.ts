@@ -25,8 +25,19 @@
 //   G) los world points: puntos dibujados sobre la imagen (PTS), un punto «pinchado» en coordenadas del mundo
 //      (PIN: pin_*) y su estabilidad por id a lo largo del tiempo (wp_stability en el JSON)
 // Y botones GS / CTRL / PTS / PIN para ver cada cosa por separado durante UNA sesión.
+//
+// PRUEBA DEL RENDER DEL GSPLAT (protocolo «control-v2»): la sesión control-v1 mostró el control fijo y el GSplat
+// siguiendo al teléfono con ancla, cámara y matrices correctas. Esta versión añade:
+//   G1) botón UNI: cambia el GSplat entre el render «unified» (por defecto) y el normal, en la misma sesión
+//       (gs_unified en cada fila). Aísla el renderer unified (work buffer, director por cámara, orden en CPU).
+//   G2) lo que el GSplat recibe DE VERDAD al dibujarse: en cada draw de su shader se leen matrix_view,
+//       matrix_projection y matrix_model del scope del dispositivo y se comparan con la cámara de PlayCanvas en ese
+//       instante (gs_vm_err, gs_pm_err, gs_mm_*); y del director de GSplat, con qué cámara trabaja su manager
+//       (gs_mgr_cam_ok) y cuánto atrasa su último orden (gs_sort_lag). Aísla «el GSplat se dibuja con otra cámara o
+//       con matrices atrasadas». Igual para los draws que no son del GSplat (otro_vp_err, el control).
 // ---------------------------------------------------------------------------
 import { Mat4, Quat, Vec3 } from 'playcanvas';
+import type { Camera } from 'playcanvas';
 import type { AppBase, CameraComponent, Entity } from 'playcanvas';
 
 type V3 = [number, number, number];
@@ -313,6 +324,99 @@ export const createRecorder = (deps: RecorderDeps) => {
             return null;
         }
     };
+    // ---- G2: matrices que recibe cada draw (se envuelve device.draw; solo lee el scope, no cambia nada)
+    type ScopeVal = { value: ArrayLike<number> | null };
+    type Dev = {
+        draw: (...a: unknown[]) => unknown;
+        shader: { name?: string; definition?: { vshader?: string } } | null;
+        renderTarget: { name?: string } | null;
+        scope: { resolve: (n: string) => ScopeVal };
+    };
+    const dev = app.graphicsDevice as unknown as Dev;
+    const sc = {
+        view: dev.scope.resolve('matrix_view'),
+        proj: dev.scope.resolve('matrix_projection'),
+        model: dev.scope.resolve('matrix_model'),
+        vp: dev.scope.resolve('matrix_viewProjection')
+    };
+    /** Por shader: 'gs' = dibujo del GSplat en pantalla (su vertex shader calcula las esquinas), 'vp' = usa matrix_viewProjection. */
+    const shaderKind = new WeakMap<object, 'gs' | 'vp' | 'other'>();
+    const shadersSeen = new Set<string>();
+    const IDENTITY = new Mat4().data;
+    const vpExpected = new Mat4();
+    type GsDraw = { vmErr: number; pmErr: number; mmIdErr: number; mmModelErr: number; mmT: V3; vmT: V3; rt: string };
+    let gsDrawsFrame = 0;
+    let gsLast: GsDraw | null = null;
+    let otherDrawsFrame = 0;
+    let otherVpErr: number | null = null;
+    const inspectDraw = () => {
+        const sh = dev.shader;
+        if (!sh) return;
+        let kind = shaderKind.get(sh);
+        if (!kind) {
+            const vs = sh.definition?.vshader ?? '';
+            kind = vs.includes('initCorner(') ? 'gs' : vs.includes('matrix_viewProjection') ? 'vp' : 'other';
+            shaderKind.set(sh, kind);
+            const name = `${sh.name ?? '?'} → ${dev.renderTarget?.name ?? 'pantalla'}`;
+            if (!shadersSeen.has(name) && shadersSeen.size < 40) {
+                shadersSeen.add(name);
+                addEvent('shader dibujado', { name: sh.name ?? null, kind, target: dev.renderTarget?.name ?? null });
+            }
+        }
+        const cam = (camera.camera as CameraComponent).camera as Camera;
+        if (kind === 'gs') {
+            const vm = sc.view.value;
+            const pm = sc.proj.value;
+            const mm = sc.model.value;
+            if (!vm || !pm || !mm) return;
+            gsDrawsFrame++;
+            const mw = model.getWorldTransform().data;
+            gsLast = {
+                vmErr: r4(matErr(vm, cam.viewMatrix.data)),
+                pmErr: r4(matErr(pm, cam.projectionMatrix.data)),
+                mmIdErr: r4(matErr(mm, IDENTITY)),
+                mmModelErr: r4(matErr(mm, mw)),
+                mmT: [r4(mm[12]), r4(mm[13]), r4(mm[14])],
+                vmT: [r4(vm[12]), r4(vm[13]), r4(vm[14])],
+                rt: dev.renderTarget?.name ?? 'pantalla'
+            };
+        } else if (kind === 'vp') {
+            const vp = sc.vp.value;
+            if (!vp) return;
+            otherDrawsFrame++;
+            vpExpected.mul2(cam.projectionMatrix, cam.viewMatrix);
+            otherVpErr = r4(matErr(vp, vpExpected.data));
+        }
+    };
+    const origDraw = dev.draw;
+    dev.draw = function (this: Dev, ...args: unknown[]) {
+        if (recording) {
+            try {
+                inspectDraw();
+            } catch {
+                // diagnóstico: nunca debe romper el dibujo
+            }
+        }
+        return origDraw.apply(this, args);
+    };
+    /** Director de GSplat (render unified): cuántas cámaras tiene, si su manager usa NUESTRA cámara y el atraso de su último orden. */
+    type Mgr = { cameraNode?: Entity; lastSortCameraPos?: Vec3 };
+    const directorInfo = (camPos: Vec3) => {
+        const dir = (app as unknown as { renderer?: { gsplatDirector?: { camerasMap?: Map<unknown, { layersMap?: Map<unknown, { gsplatManager?: Mgr | null }> }> } } }).renderer
+            ?.gsplatDirector;
+        const cams = dir?.camerasMap;
+        if (!cams) return { n: null, ok: null, lag: null };
+        let mgr: Mgr | null = null;
+        cams.forEach((cd) => cd.layersMap?.forEach((ld) => (mgr ??= ld.gsplatManager ?? null)));
+        const m = mgr as Mgr | null;
+        const lp = m?.lastSortCameraPos;
+        return {
+            n: cams.size,
+            ok: m ? m.cameraNode === camera : null,
+            lag: lp && Number.isFinite(lp.x) ? r4(lp.distance(camPos)) : null
+        };
+    };
+
     const ctrlTop = new Vec3();
     const ctrlTopScr = new Vec3();
     const modelScale = new Vec3();
@@ -382,6 +486,7 @@ export const createRecorder = (deps: RecorderDeps) => {
         }
         const e = lastEngine;
         const pinfo = placementInfo();
+        const dirInfo = directorInfo(camPos);
         const dPos = e?.r_pos ? r4(Math.hypot(cPos[0] - e.r_pos[0], cPos[1] - e.r_pos[1], cPos[2] - e.r_pos[2])) : null;
         const dAng = e?.r_rot ? r4(angleDeg(cRot, e.r_rot)) : null;
         const row: RenderRow = {
@@ -494,9 +599,29 @@ export const createRecorder = (deps: RecorderDeps) => {
             pin_drift: pin && pinCur ? r4(dist3(pin.pos, pinCur)) : null,
             pin_scr_x: pinScr?.[0] ?? null,
             pin_scr_y: pinScr?.[1] ?? null,
+            gs_unified: !!model.gsplat?.unified,
+            gs_draws: gsDrawsFrame,
+            gs_vm_err: gsDrawsFrame ? gsLast!.vmErr : null,
+            gs_pm_err: gsDrawsFrame ? gsLast!.pmErr : null,
+            gs_mm_id_err: gsDrawsFrame ? gsLast!.mmIdErr : null,
+            gs_mm_model_err: gsDrawsFrame ? gsLast!.mmModelErr : null,
+            gs_mm_tx: gsDrawsFrame ? gsLast!.mmT[0] : null,
+            gs_mm_ty: gsDrawsFrame ? gsLast!.mmT[1] : null,
+            gs_mm_tz: gsDrawsFrame ? gsLast!.mmT[2] : null,
+            gs_vm_tx: gsDrawsFrame ? gsLast!.vmT[0] : null,
+            gs_vm_ty: gsDrawsFrame ? gsLast!.vmT[1] : null,
+            gs_vm_tz: gsDrawsFrame ? gsLast!.vmT[2] : null,
+            gs_target: gsDrawsFrame ? gsLast!.rt : null,
+            otro_draws: otherDrawsFrame,
+            otro_vp_err: otherDrawsFrame ? otherVpErr : null,
+            gs_dir_cams: dirInfo.n,
+            gs_mgr_cam_ok: dirInfo.ok,
+            gs_sort_lag: dirInfo.lag,
             mark: lastMark
         };
         lastMark = '';
+        gsDrawsFrame = 0;
+        otherDrawsFrame = 0;
         if (rows.length < MAX_ROWS) rows.push(row);
         renderOverlay(row, cPos, cRot, aPos, aRot);
         drawPoints(cc);
@@ -554,6 +679,7 @@ export const createRecorder = (deps: RecorderDeps) => {
     const ctrlBtn = mkBtn2('CTRL');
     const ptsBtn = mkBtn2('PTS');
     const pinBtn = mkBtn2('PIN');
+    const uniBtn = mkBtn2('UNI');
     const ov = document.createElement('canvas');
     ov.id = 'rec-ov';
     document.body.append(ov, box, banner, bar, bar2);
@@ -561,11 +687,17 @@ export const createRecorder = (deps: RecorderDeps) => {
 
     let lastLabels = '';
     const refreshLabels = () => {
-        const l = [`GS ${model.enabled ? 'sí' : 'no'}`, control ? `CTRL ${control.enabled ? 'sí' : 'no'}` : 'CTRL —', `PTS ${ptsOn ? 'sí' : 'no'}`, pin ? `PIN #${pin.id}` : 'PIN'];
+        const l = [
+            `GS ${model.enabled ? 'sí' : 'no'}`,
+            control ? `CTRL ${control.enabled ? 'sí' : 'no'}` : 'CTRL —',
+            `PTS ${ptsOn ? 'sí' : 'no'}`,
+            pin ? `PIN #${pin.id}` : 'PIN',
+            `UNI ${model.gsplat?.unified ? 'sí' : 'no'}`
+        ];
         const key = l.join('|');
         if (key === lastLabels) return;
         lastLabels = key;
-        [gsBtn.textContent, ctrlBtn.textContent, ptsBtn.textContent, pinBtn.textContent] = l;
+        [gsBtn.textContent, ctrlBtn.textContent, ptsBtn.textContent, pinBtn.textContent, uniBtn.textContent] = l;
     };
     gsBtn.addEventListener('click', () => {
         if (phase() !== 'placed') return addEvent('GS: botón ignorado (solo con el reveal ya terminado)', { phase: phase() });
@@ -583,6 +715,14 @@ export const createRecorder = (deps: RecorderDeps) => {
     ptsBtn.addEventListener('click', () => {
         ptsOn = !ptsOn;
         addEvent(ptsOn ? 'PTS visibles' : 'PTS ocultos');
+        refreshLabels();
+    });
+    uniBtn.addEventListener('click', () => {
+        const gs = model.gsplat;
+        if (!gs) return addEvent('UNI: no hay GSplat');
+        if (phase() !== 'placed') return addEvent('UNI: botón ignorado (solo con el reveal ya terminado)', { phase: phase() });
+        gs.unified = !gs.unified;
+        addEvent(gs.unified ? 'UNI: GSplat unified' : 'UNI: GSplat normal (no unified)');
         refreshLabels();
     });
     pinBtn.addEventListener('click', () => {
@@ -659,6 +799,7 @@ export const createRecorder = (deps: RecorderDeps) => {
             `RETÍC  ${row.reticle_on ? fmt([Number(row.reticle_px), Number(row.reticle_py), Number(row.reticle_pz)]) : '—'}   fase ${row.phase}\n` +
             `PLANO  ${row.plane_source ?? '—'} y=${row.plane_y ?? '—'}  hit ${row.hit_types || '—'}   prof. retíc ${row.reticle_depth ?? '—'} / mapa ${row.wp_c_depth ?? '—'} (y ${row.wp_c_y ?? '—'})\n` +
             `CTRL ${row.ctrl_on ? 'sí' : 'no'} px ${row.ctrl_px_n ?? '—'}   GS ${row.model_on ? 'sí' : 'no'}   vm_err ${row.vm_err}   PIN ${row.pin_id ?? '—'} deriva ${row.pin_drift ?? '—'}\n` +
+            `GS-DRAW ${row.gs_unified ? 'unified' : 'normal'} n ${row.gs_draws}  vm ${row.gs_vm_err ?? '—'} pm ${row.gs_pm_err ?? '—'}  model id ${row.gs_mm_id_err ?? '—'} / ent ${row.gs_mm_model_err ?? '—'}  cam ${row.gs_mgr_cam_ok ?? '—'} orden ${row.gs_sort_lag ?? '—'}  ctrl vp ${row.otro_vp_err ?? '—'}\n` +
             (pl ? `<b>ANCLA COLOCADA en t=${(pl.t_ms / 1000).toFixed(3)} s (${pl.clock})</b>` : 'ancla aún no colocada') +
             (markCount ? `   marcas ${markCount}` : '');
     };
@@ -667,7 +808,7 @@ export const createRecorder = (deps: RecorderDeps) => {
     const stamp = () => new Date(startEpoch || Date.now()).toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const meta = () => ({
         recorder: 'AR Tracking Recorder (San Sebastián)',
-        protocol: 'control-v1',
+        protocol: 'control-v2',
         camera_start_before_runXr: deps.cameraStart(),
         started_at: new Date(startEpoch).toISOString(),
         started_epoch_ms: Math.round(startEpoch),
@@ -685,6 +826,8 @@ export const createRecorder = (deps: RecorderDeps) => {
             model: 'model_* = entidad del GSplat: model_on/model_gs_on = visible, model_wp* = posición mundial, model_wscale = escala mundial',
             matrices: 'vm0..vm15 = viewMatrix real de la cámara en frameend; vm_err = máx|viewMatrix − inversa(transform del nodo)|; pm_err = error de la proyección frente a fov+aspect; upd_to_pre_dpos = cuánto se movió la cámara entre update y prerender (pose escrita en el mismo cuadro); pre_to_end_dpos debe ser 0',
             pin: 'pin_x/y/z = world point fijado al pulsar PIN (coordenadas del mundo, fijas); pin_cur_* = posición ACTUAL del mismo id en el mapa del motor; pin_drift = distancia entre ambas (el mapa se movió si crece); pin_scr = su proyección',
+            gs_draw:
+                'G2: en cada draw del shader del GSplat (el que calcula las esquinas) se leen matrix_view/matrix_projection/matrix_model del scope; gs_vm_err/gs_pm_err = máx|uniform − matriz de la cámara de PlayCanvas en ese instante|; gs_mm_id_err = distancia a la identidad (unified: el work buffer ya está en el mundo), gs_mm_model_err = distancia al transform mundial de la entidad (no unified); gs_mm_t*/gs_vm_t* = traslaciones; gs_draws = draws del GSplat en el cuadro; otro_vp_err = lo mismo para matrix_viewProjection de los demás draws (el control); gs_dir_cams = cámaras en el director de GSplat; gs_mgr_cam_ok = su manager usa la entidad cámara de la AR; gs_sort_lag = distancia entre la cámara y donde estaba en el último orden de splats; gs_unified = modo del GSplat (botón UNI, G1)',
             wp_stability: 'en el JSON: cada ~1 s, desplazamiento por id respecto a la primera vez que se vio (disp_first_*) y respecto al momento de colocar (disp_place_*)',
             plane: 'plane_source = de dónde sale el plano del círculo (surface: superficie de hitTest, ground: piso del motor Y=0); hit_* = respuesta cruda de hitTest(0.5,0.5); wp_c_* = puntos del mapa a <4° del centro de la pantalla; reticle_depth vs wp_c_depth compara la profundidad del círculo con la del mapa'
         }
