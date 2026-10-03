@@ -3,6 +3,12 @@ export type Lang = 'es' | 'en';
 
 export const LANG_KEY = 'san-sebastian:lang';
 
+/** Nombres de los dos modos: la historia con scroll (historia.html) y el recorrido libre (index.html). */
+export const MODES: Record<Lang, { story: string; tour: string }> = {
+    es: { story: 'Modo historia', tour: 'Modo recorrido' },
+    en: { story: 'Story mode', tour: 'Tour mode' }
+};
+
 /** Idioma: `?lang=`, el último elegido o el del navegador (español si empieza por «es»). */
 export const detectLang = (): Lang => {
     const q = new URLSearchParams(location.search).get('lang');
