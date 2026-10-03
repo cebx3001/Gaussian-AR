@@ -53,11 +53,12 @@ export type RevealOptions = {
  * `dotScale` agranda los puntos del efecto original para esta escena.
  */
 export const REVEAL_SECONDS = 8;
-/** Parámetros para que las ondas lleguen a `radius` (unidades de la escena) justo a los REVEAL_SECONDS. */
-export const revealFor = (radius: number) => {
-    const delay = 1.5;
-    const speed = 5; // al arrancar
-    const travel = REVEAL_SECONDS - delay; // lo que tarda la onda de colores en recorrer `radius`
+/**
+ * Parámetros para que las ondas lleguen a `radius` (unidades de la escena) justo a los `seconds`.
+ * `speed` es la velocidad al arrancar y `delay` lo que la onda de colores va detrás de la de puntos.
+ */
+export const revealFor = (radius: number, seconds = REVEAL_SECONDS, speed = 5, delay = 1.5) => {
+    const travel = seconds - delay; // lo que tarda la onda de colores en recorrer `radius`
     const acceleration = (2 * (radius - speed * travel)) / (travel * travel);
     return { radius, delay, speed, acceleration, lift: 3, band: 6, dotScale: 60 };
 };

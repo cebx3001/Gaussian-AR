@@ -184,6 +184,8 @@ let introGoal: Pose['position'] | null = null;
 let introDuration = INTRO_SECONDS;
 /** Dónde nace el efecto Radial Reveal: el punto del suelo al que mira el primer cuadro de la entrada. */
 let introCenter: Pose['target'] | null = null;
+/** Segundos que la cámara espera en el primer cuadro de la entrada mientras la escena empieza a aparecer. */
+const INTRO_HOLD = 1.5;
 /** Hasta dónde llegan las ondas del Radial Reveal de la entrada (unidades de la escena). */
 let introRadius = 117;
 
@@ -230,8 +232,11 @@ const buildSettings = (s: Story): ExperienceSettings => {
     } else if (INTRO && first) {
         // entrada hecha con la línea de tiempo (story.json) o, si no hay, la automática
         const custom = (s.intro?.keyframes?.length ?? 0) >= 2;
-        // la entrada usa sus keyframes tal cual (se crean con la línea de tiempo, ?animar)
-        const ks = custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, MODEL_CENTER, 33);
+        // la entrada usa sus keyframes (se crean con la línea de tiempo, ?animar), pero su último cuadro es siempre
+        // la Vista general: al terminar no hay salto de cámara
+        const ks = [...(custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, MODEL_CENTER, 33))].sort((a, b) => a.t - b.t);
+        const lastKf = ks[ks.length - 1];
+        ks[ks.length - 1] = { t: lastKf.t, position: [...first.position], target: [...first.target], fov: first.fov };
         const track = trackFromKeyframes(ks);
         settings.animTracks = [track];
         settings.startMode = 'animTrack';
@@ -279,6 +284,8 @@ const mountViewer = async () => {
             lang: 'es'
         });
         viewer = v;
+        (window as unknown as { __v: unknown }).__v = v;
+        (window as unknown as { __v: unknown }).__v = v;
         v.state.showAnnotations = false;
         // SuperSplat guarda esta opción en el navegador: una visita anterior pudo dejarla activada
         v.state.gamingControls = false;
@@ -290,7 +297,14 @@ const mountViewer = async () => {
             } else if (introActive) {
                 // el efecto se pone antes de mostrar la escena: nace de la oscuridad desde el primer cuadro
                 const center = introCenter ?? ([SCENE_CENTER[0], GROUND_Y, SCENE_CENTER[1]] as Pose['target']);
-                startReveal(v.app, { center: revealOrigin(v, center), ...revealFor(introRadius) });
+                // La cámara espera quieta en el primer cuadro mientras la escena empieza a aparecer y luego corre la
+                // animación entera: así se ve el encuadre inicial. El reveal arranca rápido cerca de donde mira la
+                // cámara y llega a toda la maqueta al terminar la animación.
+                v.state.animationPaused = true;
+                startReveal(v.app, { center: revealOrigin(v, center), ...revealFor(introRadius, INTRO_HOLD + introDuration, 15, 0.7) });
+                window.setTimeout(() => {
+                    if (v === viewer && introActive) v.state.animationPaused = false;
+                }, INTRO_HOLD * 1000);
                 playIntro(v);
             } else {
                 goTo(active);
