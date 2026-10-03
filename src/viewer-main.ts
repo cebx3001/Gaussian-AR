@@ -39,7 +39,10 @@ const AUTHORING = EDIT_MODE || ANIMAR;
 const INTRO = !AUTHORING && !new URLSearchParams(location.search).has('sinintro');
 /** Altura (m) del suelo de la maqueta y zona (centro y radio, en planta) donde está el modelo. */
 const GROUND_Y = 23;
-const SCENE_CENTER: [number, number] = [15.8, 4.6];
+// centro real de la maqueta (centro del recuadro de los splats, medido en scene.sog): la Vista general gira alrededor
+// de este punto, a ras del suelo
+const SCENE_CENTER: [number, number] = [-1.5, 8.4];
+const MODEL_CENTER: Pose['target'] = [SCENE_CENTER[0], 23, SCENE_CENTER[1]];
 const SCENE_RADIUS = 75;
 /** La órbita no baja de la horizontal del ancla (0°): no se ve la maqueta desde abajo. */
 const ORBIT_MAX_PITCH = 0;
@@ -71,6 +74,8 @@ const indexEl = $<HTMLElement>('index');
 // Datos
 // ---------------------------------------------------------------------------
 let story: Story = defaultStory();
+/** La Vista general salió del último cuadro de la entrada (sin pose capturada): entonces gira alrededor del centro. */
+let generalFromIntro = false;
 
 /** La Vista general es donde termina la animación de entrada, salvo que se le haya capturado otra pose. */
 {
@@ -79,6 +84,7 @@ let story: Story = defaultStory();
     const general = story.chapters[0];
     if (general && !general.pose && ks.length >= 2 && end) {
         general.pose = { position: end.position, target: end.target, fov: end.fov };
+        generalFromIntro = true;
     }
 }
 if (EDIT_MODE) {
@@ -88,7 +94,10 @@ if (EDIT_MODE) {
         const saved = JSON.parse(localStorage.getItem(EDIT_KEY) ?? 'null') as Story | null;
         for (const c of story.chapters) {
             const old = saved?.chapters?.find((s) => s.id === c.id);
-            if (old?.pose) c.pose = old.pose;
+            if (old?.pose) {
+                c.pose = old.pose;
+                if (c === story.chapters[0]) generalFromIntro = false;
+            }
         }
     } catch {
         // sin almacenamiento: se usa story.json
@@ -179,15 +188,20 @@ let introCenter: Pose['target'] | null = null;
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
     const settings = defaultSettings();
-    settings.background = { color: [59 / 255, 58 / 255, 53 / 255] }; // piedra oscura #3b3a35
-    const withAnchor = (p: Pose): Pose => ({ ...p, target: anchorOf(p) });
+    // fondo transparente: se ve el fondo de la página (piedra oscura con el patrón de hexágonos, viewer.css)
+    settings.background = { color: [0, 0, 0, 0] as unknown as [number, number, number] }; // transparente (alfa premultiplicado: el color debe ser 0)
+    // Centro de giro de cada vista: la Vista general gira alrededor del centro de la maqueta; cada lugar, alrededor
+    // del punto al que se apuntó al capturar su vista (la plaza, la iglesia, el museo, la fuente).
+    // Si la Vista general tiene una pose capturada, gira alrededor de lo que se encuadró.
+    const pivotOf = (i: number, p: Pose): Pose['target'] => (i === 0 && generalFromIntro ? MODEL_CENTER : p.target);
+    const withAnchor = (p: Pose, i: number): Pose => ({ ...p, target: pivotOf(i, p) });
     const first = s.chapters[0]?.pose;
-    if (first) settings.cameras = [{ initial: withAnchor(first) }];
+    if (first) settings.cameras = [{ initial: withAnchor(first, 0) }];
     annotationOf = [];
     settings.annotations = [];
     s.chapters.forEach((c, i) => {
         if (!c.pose) return;
-        const cam = withAnchor(c.pose);
+        const cam = withAnchor(c.pose, i);
         annotationOf[i] = settings.annotations.length;
         settings.annotations.push({
             position: cam.target,
@@ -214,15 +228,18 @@ const buildSettings = (s: Story): ExperienceSettings => {
     } else if (INTRO && first) {
         // entrada hecha con la línea de tiempo (story.json) o, si no hay, la automática
         const custom = (s.intro?.keyframes?.length ?? 0) >= 2;
-        const ks = custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, anchorOf(first), 33);
+        // la entrada gira alrededor del centro de la maqueta: cada cuadro mira a ese punto (se conservan las posiciones)
+        const ks = (custom ? (s.intro as NonNullable<Story['intro']>).keyframes : autoKeyframes(first, MODEL_CENTER, 33)).map((k) => ({
+            ...k,
+            target: MODEL_CENTER
+        }));
         const track = trackFromKeyframes(ks);
         settings.animTracks = [track];
         settings.startMode = 'animTrack';
         introActive = true;
         introGoal = lastOf(ks).position;
         introDuration = track.duration;
-        const firstKf = [...ks].sort((a, b) => a.t - b.t)[0];
-        introCenter = anchorOf({ position: firstKf.position, target: firstKf.target, fov: firstKf.fov });
+        introCenter = MODEL_CENTER;
     }
     return settings;
 };
@@ -716,6 +733,7 @@ const setupEditor = () => {
             return;
         }
         story.chapters[editIndex].pose = pose;
+        if (editIndex === 0) generalFromIntro = false;
         posesDirty = true;
         persist();
         renderEditorSelect();

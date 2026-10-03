@@ -66,10 +66,10 @@ camera.setPosition(0, 1.5, 0);
 app.root.addChild(camera);
 
 // ---- la maqueta: el mismo scene.sog del visor. Con la rotación de 180° del visor, el centro de la plaza (a ras de
-// su suelo) está en PLAZA_CENTER; se lleva al punto tocado. El 95 % de los splats está a menos de 93,5 del centro:
-// ese diámetro (187) es el «tamaño» de la maqueta.
-const PLAZA_CENTER = new pc.Vec3(15.8, 23, 4.6);
-const SCENE_DIAMETER = 187;
+// suelo) está en MODEL_CENTER (centro del recuadro de los splats, medido en scene.sog); se lleva al punto tocado.
+// El 95 % de los splats está a menos de 86,7 de ese centro: ese diámetro (173) es el «tamaño» de la maqueta.
+const PLAZA_CENTER = new pc.Vec3(-1.5, 23, 8.4);
+const SCENE_DIAMETER = 173;
 /** Tamaño al colocarla: 1 m (en el modo nativo las unidades son metros; en el web, aproximadamente). */
 const SIZE_M = 1;
 const anchor = new pc.Entity('anchor'); // posición y giro; su escala es el pellizco
@@ -126,6 +126,8 @@ const render = () => {
     document.documentElement.lang = lang;
     document.title = `San Sebastián · ${u.kicker}`;
     $('back').textContent = u.back;
+    $('mast-kicker').textContent = u.mastKicker;
+    $('mast-title').textContent = u.mastTitle;
     $('kicker').textContent = u.kicker;
     $('intro').textContent = u.intro;
     $('steps').innerHTML = u.steps.map((s) => `<li>${s}</li>`).join('');
@@ -378,6 +380,7 @@ const startNative = () => {
     mode = 'nativo';
     const xr = app.xr!;
     xr.domOverlay.root = ui; // instrucciones y botones encima de la cámara
+    ui.prepend($('masthead')); // el título también queda visible dentro de la AR nativa
     const fallback = (why: string) => {
         try {
             localStorage.setItem(NATIVE_FAILED_KEY, '1');
@@ -409,6 +412,7 @@ const startNative = () => {
         anchor.enabled = false;
         reticle.enabled = false;
         cameraOn = false;
+        document.body.insertBefore($('masthead'), $('start'));
         setPhase('start');
     });
     camera.camera!.startXr(pc.XRTYPE_AR, pc.XRSPACE_LOCALFLOOR, {

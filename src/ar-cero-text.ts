@@ -2,6 +2,8 @@
 import type { Lang } from './i18n';
 
 export type ArCeroText = {
+    mastKicker: string;
+    mastTitle: string;
     back: string;
     kicker: string;
     intro: string;
@@ -26,6 +28,8 @@ export type ArCeroText = {
 
 export const AR_CERO: Record<Lang, ArCeroText> = {
     es: {
+        mastKicker: 'Cuenca · Patrimonio',
+        mastTitle: 'San Sebastián',
         back: '← Volver al visor',
         kicker: 'Maqueta en realidad aumentada',
         intro: 'Vas a ver la maqueta sobre una superficie plana, a través de la cámara.',
@@ -52,6 +56,8 @@ export const AR_CERO: Record<Lang, ArCeroText> = {
         errGeneric: 'Algo falló al iniciar. Recarga la página e inténtalo de nuevo.'
     },
     en: {
+        mastKicker: 'Cuenca · Heritage',
+        mastTitle: 'San Sebastián',
         back: '← Back to the viewer',
         kicker: 'Model in augmented reality',
         intro: 'You will see the model on a flat surface, through your camera.',
