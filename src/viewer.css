@@ -12,7 +12,7 @@
     --muted: rgba(var(--ink-rgb), 0.8);
     --paper: rgba(var(--bg-rgb), 0.78);
     --line: rgba(var(--accent-rgb), 0.6);
-    --display: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    --display: 'Bricolage Grotesque', 'Libre Franklin', -apple-system, 'Segoe UI', Roboto, sans-serif;
     --text: 'Libre Franklin', -apple-system, 'Segoe UI', Roboto, sans-serif;
     /* un solo tamaño para el texto de todas las descripciones */
     --fs-text: 17px;
@@ -104,9 +104,9 @@ body.animar #veil {
     margin: 0;
     color: var(--ink);
     font-family: var(--display);
-    font-weight: 500;
-    font-size: clamp(1.7rem, 7vw, 2.6rem);
-    letter-spacing: 0.01em;
+    font-weight: 600;
+    font-size: clamp(1.45rem, 6vw, 2.2rem);
+    letter-spacing: -0.02em;
     line-height: 1;
 }
 
@@ -215,10 +215,10 @@ body.edit #masthead {
     margin: 0 0 14px;
     color: #f7f0ee;
     font-family: var(--display);
-    font-weight: 500;
-    font-size: clamp(1.9rem, 8vw, 3rem);
-    line-height: 0.98;
-    letter-spacing: -0.005em;
+    font-weight: 600;
+    font-size: clamp(1.6rem, 6.6vw, 2.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
     text-wrap: balance;
 }
 
@@ -237,8 +237,8 @@ body.edit #masthead {
     float: left;
     margin: 0.06em 0.1em 0 0;
     font-family: var(--display);
-    font-weight: 500;
-    font-size: 3.4em;
+    font-weight: 700;
+    font-size: 3.1em;
     line-height: 0.8;
     color: var(--accent);
 }
@@ -400,8 +400,9 @@ body.edit #masthead {
     margin: 0 0 8px;
     color: var(--ink);
     font-family: var(--display);
-    font-weight: 500;
-    font-size: 2.6rem;
+    font-weight: 600;
+    font-size: 2.2rem;
+    letter-spacing: -0.02em;
 }
 
 #loader-bar {
@@ -805,8 +806,8 @@ body.animar #logo-link {
     left: 22px;
     padding: 6px 2px 4px;
     font-family: var(--display);
-    font-size: 1.25rem;
-    font-weight: 500;
+    font-size: 1.1rem;
+    font-weight: 600;
     color: var(--ink);
     text-decoration: none;
     border-bottom: 2px solid var(--accent);
