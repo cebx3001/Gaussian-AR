@@ -21,7 +21,7 @@ import { Vec3 } from 'playcanvas';
 import type { CameraComponent, Entity, GSplatComponent } from 'playcanvas';
 
 import { INTRO_SECONDS, autoKeyframes, trackFromKeyframes } from './intro';
-import { revealFor, startReveal } from './reveal';
+import { REVEAL_SECONDS, revealFor, startReveal } from './reveal';
 import { AR_UI, LANG_KEY, UI, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
@@ -241,8 +241,12 @@ let introGoal: Pose['position'] | null = null;
 let introDuration = INTRO_SECONDS;
 /** Dónde nace el efecto Radial Reveal: el punto del suelo al que mira el primer cuadro de la entrada. */
 let introCenter: Pose['target'] | null = null;
-/** Segundos que la cámara espera en el primer cuadro de la entrada mientras la escena empieza a aparecer. */
-const INTRO_HOLD = 1.5;
+/**
+ * La entrada: el Radial Reveal dura REVEAL_SECONDS (8 s) y la animación de cámara (INTRO_SECONDS, 6 s) va centrada
+ * dentro: la cámara espera INTRO_HOLD (1 s) en el primer cuadro mientras empieza a aparecer la escena, recorre la
+ * animación y el reveal termina 1 s después de que la cámara llega a la Vista general.
+ */
+const INTRO_HOLD = (REVEAL_SECONDS - INTRO_SECONDS) / 2;
 /** Primer cuadro de la entrada: el Radial Reveal nace en lo que se ve en el centro de la pantalla en ese cuadro. */
 let introFirst: Keyframe | null = null;
 
@@ -356,7 +360,7 @@ const mountViewer = async () => {
                 v.state.animationPaused = true;
                 const origin = introFirst ? revealOrigin(v, introFirst.position, introFirst.target) : center;
                 const radius = Math.hypot(origin[0] - MODEL_CENTER[0], origin[1] - MODEL_CENTER[1], origin[2] - MODEL_CENTER[2]) + 100;
-                const opts = { center: origin, ...revealFor(radius, INTRO_HOLD + introDuration, 15, 0.7) };
+                const opts = { center: origin, ...revealFor(radius, REVEAL_SECONDS, 15, 0.7) };
                 // El efecto se pone ya para que sus shaders empiecen a compilarse; mientras no estén listos el
                 // Gaussian no se dibuja (en un teléfono puede tardar segundos). Cuando de verdad se dibuja, el efecto
                 // se reinicia desde cero, se quita la pantalla de carga y empieza el reloj de la entrada.
