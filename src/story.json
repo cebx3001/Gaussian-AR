@@ -75,7 +75,19 @@
       "kicker": "Maqueta completa",
       "title": "Vista general",
       "text": "Este es un modelo 3D navegable de la plaza de San Sebastián, en Cuenca. Muévete por él y {tap} los nombres de abajo para conocer la historia de cada lugar.",
-      "pose": null,
+      "pose": {
+        "position": [
+          60.421,
+          68.229,
+          -87.478
+        ],
+        "target": [
+          0.557,
+          23,
+          1.712
+        ],
+        "fov": 60
+      },
       "en": {
         "nav": "Overview",
         "kicker": "Complete model",
@@ -118,14 +130,14 @@
       "text": "San Sebastián se encontraba en el extremo occidental de la ciudad colonial. En 1578 ya existía aquí una ermita dedicada a San Sebastián y San Fabián, levantada junto a una cruz y un humilladero que señalaban una de las salidas de la ciudad.\n\nLa cruz que todavía acompaña a la iglesia conserva esa memoria urbana. No era solamente un elemento religioso: marcaba el límite de la ciudad y orientaba a quienes salían de Cuenca hacia el occidente. Con el tiempo, San Sebastián pasó de ser un espacio periférico a convertirse en uno de los barrios históricos más reconocibles de Cuenca.",
       "pose": {
         "position": [
-          -70.057,
-          63.287,
-          1.504
+          -58.692,
+          51.532,
+          -11.733
         ],
         "target": [
-          -16.167,
-          34.027,
-          47.324
+          -36.545,
+          44.843,
+          20.899
         ],
         "fov": 60
       },
@@ -144,14 +156,14 @@
       "text": "El edificio que hoy alberga el Museo Municipal de Arte Moderno tiene una historia muy diferente a su función actual. Fue construido en 1876 como la Casa de la Temperancia, una institución destinada a atender a personas con problemas de alcoholismo.\n\nDurante el siglo XX el edificio tuvo distintos usos sociales, entre ellos cárcel de varones, asilo y otras funciones asistenciales. Después de un proceso de recuperación y restauración, abrió sus puertas como Museo Municipal de Arte Moderno en 1981.\n\nHoy el edificio conecta dos momentos de la historia de Cuenca: la arquitectura y vida social del siglo XIX con la producción artística moderna y contemporánea de la ciudad. El antiguo espacio asistencial se convirtió así en uno de los principales lugares culturales de San Sebastián.",
       "pose": {
         "position": [
-          4.649,
-          36.797,
-          -12.524
+          2.704,
+          50.464,
+          -5.607
         ],
         "target": [
-          20.665,
-          33.544,
-          -31.443
+          35.693,
+          23,
+          -49.715
         ],
         "fov": 60
       },
@@ -170,14 +182,14 @@
       "text": "Junto a la iglesia se encuentra una fuente de planta cruciforme, con un surtidor en el centro. Es uno de los elementos que forman parte de la composición del Parque de San Sebastián y acompaña el trazado geométrico que adquirió la plaza durante su transformación a comienzos del siglo XX.\n\nLa fuente permanece como parte del paisaje urbano de este espacio histórico de Cuenca.",
       "pose": {
         "position": [
-          -2.097,
-          58.958,
-          9.551
+          -4.405,
+          63.357,
+          13.491
         ],
         "target": [
-          -3.369,
+          -4.309,
           23,
-          11.296
+          13.347
         ],
         "fov": 60
       },
