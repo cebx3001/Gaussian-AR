@@ -60,7 +60,7 @@
       "nav": "Vista general",
       "kicker": "Maqueta completa",
       "title": "Vista general",
-      "text": "Este es un modelo 3D navegable de la plaza de San Sebastián, en Cuenca, uno de los barrios históricos más reconocibles de la ciudad.\n\nMuévete por él y {tap} los nombres de abajo para recorrer sus lugares: la plaza, la iglesia y su cruz, el Museo Municipal de Arte Moderno y la fuente. Cada uno guarda una parte de la historia del barrio, desde la ermita que ya existía aquí en 1578 hasta el parque que conocemos hoy.",
+      "text": "Este es un modelo 3D navegable de la plaza de San Sebastián, en Cuenca, uno de los barrios históricos más reconocibles de la ciudad. Aquí se reúnen varios siglos de historia en pocos pasos: una ermita que ya existía en 1578, la cruz que marcaba la salida occidental de la ciudad colonial, un edificio de 1876 convertido hoy en museo y una plaza que pasó de las corridas de toros y el mercado de ganado a ser el parque que conocemos.\n\nMuévete por el modelo y {tap} los nombres de abajo para recorrer cada lugar: la plaza, la iglesia y su cruz, el Museo Municipal de Arte Moderno y la fuente. En cada parada encontrarás la historia que guarda ese rincón del barrio.",
       "pose": {
         "position": [
           60.421,
@@ -78,7 +78,7 @@
         "nav": "Overview",
         "kicker": "Complete model",
         "title": "Overview",
-        "text": "This is a navigable 3D model of San Sebastián Square in Cuenca, one of the city's most recognizable historic neighborhoods.\n\nMove around it and {tap} the names below to visit its places: the square, the church and its cross, the Municipal Museum of Modern Art and the fountain. Each one holds part of the neighborhood's history, from the hermitage that already stood here in 1578 to the park we know today."
+        "text": "This is a navigable 3D model of San Sebastián Square in Cuenca, one of the city's most recognizable historic neighborhoods. Several centuries of history come together here within a few steps: a hermitage that already stood in 1578, the cross that marked the western exit of the colonial city, an 1876 building that is now a museum, and a square that went from bullfights and a cattle market to the park we know today.\n\nMove around the model and {tap} the names below to visit each place: the square, the church and its cross, the Municipal Museum of Modern Art and the fountain. At each stop you will find the story that corner of the neighborhood holds."
       },
       "howto": true
     },
@@ -165,7 +165,7 @@
       "nav": "La fuente",
       "kicker": "Planta cruciforme",
       "title": "La fuente de San Sebastián",
-      "text": "Junto a la iglesia se encuentra una fuente de planta cruciforme, con un surtidor en el centro. Es uno de los elementos que forman parte de la composición del Parque de San Sebastián y acompaña el trazado geométrico que adquirió la plaza durante su transformación a comienzos del siglo XX.\n\nSu forma de cruz se integra en ese diseño ordenado de caminos y jardines que convirtió la antigua plaza abierta, escenario de corridas de toros, fiestas y mercado de ganado, en un parque.\n\nLa fuente permanece como parte del paisaje urbano de este espacio histórico de Cuenca, a pocos pasos de la iglesia y de la cruz que durante siglos marcaron el límite occidental de la ciudad.",
+      "text": "Junto a la iglesia se encuentra una fuente de planta cruciforme, con un surtidor en el centro. Es uno de los elementos que forman parte de la composición del Parque de San Sebastián y acompaña el trazado geométrico que adquirió la plaza durante su transformación a comienzos del siglo XX.\n\nSu forma de cruz se integra en el diseño ordenado de caminos y jardines que convirtió la antigua plaza abierta, escenario de corridas de toros, fiestas populares y mercado de ganado, en un parque. El surtidor ocupa el centro de esa cruz, como un punto de encuentro en medio del recorrido.\n\nLa fuente permanece como parte del paisaje urbano de este espacio histórico de Cuenca. A pocos pasos de la iglesia y de la cruz que durante siglos marcaron el límite occidental de la ciudad, resume en pequeño la historia de la plaza: un lugar que cambió de función muchas veces sin dejar de ser un espacio central para la vida del barrio.",
       "pose": {
         "position": [
           -4.309,
@@ -183,7 +183,7 @@
         "nav": "The Fountain",
         "kicker": "Cruciform plan",
         "title": "The San Sebastián Fountain",
-        "text": "Next to the church stands a cross-shaped fountain with a jet in its center. It is one of the elements that make up the composition of San Sebastián Park and echoes the geometric layout the square acquired during its transformation in the early 20th century.\n\nIts cross shape fits into that orderly design of paths and gardens that turned the old open square, once the setting for bullfights, celebrations and a cattle market, into a park.\n\nThe fountain remains part of the urban landscape of this historic space in Cuenca, a few steps from the church and the cross that for centuries marked the western edge of the city."
+        "text": "Next to the church stands a cross-shaped fountain with a jet in its center. It is one of the elements that make up the composition of San Sebastián Park and echoes the geometric layout the square acquired during its transformation in the early 20th century.\n\nIts cross shape fits into the orderly design of paths and gardens that turned the old open square, once the setting for bullfights, popular celebrations and a cattle market, into a park. The jet sits at the center of that cross, like a meeting point in the middle of the walk.\n\nThe fountain remains part of the urban landscape of this historic space in Cuenca. A few steps from the church and the cross that for centuries marked the western edge of the city, it sums up the history of the square in miniature: a place that changed its function many times without ceasing to be central to the life of the neighborhood."
       }
     }
   ]

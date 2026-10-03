@@ -63,7 +63,7 @@ button {
 #veil {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.3);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.12s ease;
@@ -213,7 +213,7 @@ body.edit #masthead {
 
 #chapter-title {
     margin: 0 0 14px;
-    color: var(--ink);
+    color: #f7f0ee;
     font-family: var(--display);
     font-weight: 500;
     font-size: clamp(1.9rem, 8vw, 3rem);
@@ -227,7 +227,8 @@ body.edit #masthead {
     font-size: var(--fs-text);
     font-weight: 400;
     line-height: 1.55;
-    color: var(--ink);
+    /* más claro que el resto para que se lea sobre la escena */
+    color: #f7f0ee;
     text-wrap: pretty;
 }
 
