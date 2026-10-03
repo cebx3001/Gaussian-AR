@@ -5,7 +5,8 @@ import { Vec3 } from 'playcanvas';
 import { round } from './story';
 import type { Keyframe, Pose, Vec3Tuple } from './story';
 
-export const INTRO_SECONDS = 8;
+/** Duración de la animación de cámara de la entrada; el Radial Reveal dura más (REVEAL_SECONDS) y la envuelve. */
+export const INTRO_SECONDS = 6;
 /** Cuadros por segundo de la pista: SuperSplat expresa los tiempos de los keyframes en cuadros. */
 export const INTRO_FPS = 30;
 
