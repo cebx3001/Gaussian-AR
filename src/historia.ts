@@ -68,7 +68,7 @@ const TEXT: Record<Lang, PageText> = {
             kicker: 'Recorrido en tres dimensiones',
             title: 'Patrimonio que se recorre',
             text:
-                'Lo que tienes enfrente no es una ilustración ni una maqueta dibujada: es el espacio tal como existe, capturado en tres dimensiones a partir de fotografías del lugar. Cada fachada, cada árbol y cada camino ocupan su sitio real.\n\n' +
+                'Frente a ti está el espacio tal como existe, capturado en tres dimensiones a partir de fotografías del lugar. Cada fachada, cada árbol y cada camino ocupan su sitio real, listos para recorrerse como si estuvieras allí.\n\n' +
                 'Este recorrido te lleva por sus rincones, uno a uno, y por las historias que guardan. Avanza a tu ritmo: la cámara te acompaña.'
         },
         endKicker: 'Fin del recorrido',
@@ -82,7 +82,7 @@ const TEXT: Record<Lang, PageText> = {
             kicker: 'A three-dimensional tour',
             title: 'Heritage you can walk through',
             text:
-                'What you see is not an illustration or a drawn model: it is the space as it exists, captured in three dimensions from photographs of the place. Every façade, every tree and every path sits where it really is.\n\n' +
+                'Before you is the space as it exists, captured in three dimensions from photographs of the place. Every façade, every tree and every path sits where it really is, ready to be explored as if you were there.\n\n' +
                 'This tour takes you through its corners, one by one, and through the stories they hold. Move at your own pace: the camera comes with you.'
         },
         endKicker: 'End of the tour',
@@ -276,7 +276,11 @@ const renderIndex = () => {
         b.type = 'button';
         b.className = 'chapter-link';
         b.textContent = textOf(c).nav;
-        b.addEventListener('click', () => goTo(i));
+        b.addEventListener('click', () => {
+            // desde «Explorar libremente» también: se vuelve a la historia, en ese lugar
+            if (exploring) backToStory();
+            goTo(i);
+        });
         indexEl.append(b);
     });
     indexEl.setAttribute('aria-label', UI[lang].places);
@@ -504,7 +508,7 @@ function explore() {
     v.selectAnnotation(0);
 }
 
-backStory.addEventListener('click', () => {
+function backToStory() {
     const v = viewer;
     exploring = false;
     document.body.classList.remove('exploring');
@@ -515,7 +519,8 @@ backStory.addEventListener('click', () => {
         tNow = timeAt(scroller.scrollTop);
         v.seek(tNow);
     }
-});
+}
+backStory.addEventListener('click', backToStory);
 
 window.addEventListener('resize', () => layout());
 document.fonts?.ready.then(() => layout());
