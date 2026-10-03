@@ -1,12 +1,13 @@
 // ---------------------------------------------------------------------------
-// AR desde cero — paso 1.
+// AR desde cero.
 //
 // Solo lo que pide el ejemplo oficial de 8th Wall para PlayCanvas
 // (github.com/8thwall/web/blob/master/gettingstarted/playcanvas/scripts/xrcontroller.js):
 //   XR8.XrController.configure(...) + XR8.PlayCanvas.run({pcCamera, pcApp}, [XR8.XrController.pipelineModule()], {canvas})
 // con una aplicación estándar de PlayCanvas y la maqueta (scene.sog) que se coloca tocando la pantalla.
 // Nada del código de ar.html: ni escala calculada, ni grabador, ni detección propia de superficies.
-// Paso 2: el cubo del paso 1 se cambió por el Gaussian, sin reveal, pellizco ni nada más.
+// Paso 2: el cubo del paso 1 se cambió por el Gaussian. Con instrucciones por fase y un círculo que marca dónde se
+// coloca (hitTest de 8th Wall en el centro de la pantalla). Sin reveal ni pellizco.
 // ---------------------------------------------------------------------------
 import * as pc from 'playcanvas';
 
@@ -70,14 +71,18 @@ const setSize = (diameter: number) => {
     model.setLocalPosition(-s * PLAZA_CENTER.x, -s * PLAZA_CENTER.y, -s * PLAZA_CENTER.z);
 };
 let modelReady = false;
+// fases: start (pantalla de inicio) → loading (cámara o maqueta cargando) → scan (buscando superficie) →
+// ready (círculo sobre una superficie: tocar coloca) → placed
+type Phase = 'start' | 'loading' | 'scan' | 'ready' | 'placed';
+let phase: Phase = 'start';
+let cameraOn = false;
+// eslint-disable-next-line prefer-const
+let setPhase: (p: Phase) => void = () => {};
 const asset = new pc.Asset('scene.sog', 'gsplat', { url: './scene.sog', filename: 'scene.sog' });
 asset.once('load', () => {
     model.addComponent('gsplat', { asset });
     modelReady = true;
-    if (hint.dataset.waiting) {
-        delete hint.dataset.waiting;
-        hint.textContent = 'Mueve el teléfono despacio y toca una superficie plana para colocar la maqueta.';
-    }
+    if (phase === 'loading') setPhase('scan');
 });
 app.assets.add(asset);
 app.assets.load(asset);
@@ -98,23 +103,89 @@ setInterval(() => {
     status.textContent = `${tracking} · ${fps.toFixed(0)} fps`;
 }, 500);
 
-// ---- tocar para colocar: lo que 8th Wall tiene en ese punto de la pantalla; si no devuelve nada, su piso (Y = 0)
-const place = (sx: number, sy: number) => {
+// ---- círculo que indica dónde va a quedar la maqueta: sigue lo que 8th Wall tiene en el centro de la pantalla
+const reticle = new pc.Entity('reticle');
+const ringMat = new pc.StandardMaterial();
+ringMat.useLighting = false;
+ringMat.emissive = new pc.Color(1, 1, 1);
+ringMat.diffuse = new pc.Color(0, 0, 0);
+ringMat.opacity = 0.9;
+ringMat.blendType = pc.BLEND_NORMAL;
+ringMat.update();
+const ring = new pc.Entity('ring');
+ring.addComponent('render', { type: 'torus', material: ringMat });
+ring.setLocalScale(1, 0.02, 1);
+reticle.addChild(ring);
+const dotMat = ringMat.clone();
+dotMat.emissive = new pc.Color(0.15, 0.85, 0.45);
+dotMat.update();
+const dot = new pc.Entity('dot');
+dot.addComponent('render', { type: 'cylinder', material: dotMat });
+dot.setLocalScale(0.25, 0.005, 0.25);
+reticle.addChild(dot);
+reticle.enabled = false;
+app.root.addChild(reticle);
+
+const TYPES = ['DETECTED_SURFACE', 'ESTIMATED_SURFACE', 'FEATURE_POINT'];
+const target = new pc.Vec3();
+let lastHitType = '';
+let hitFrames = 0;
+let missFrames = 0;
+let pulse = 0;
+app.on('update', (dt: number) => {
+    if (phase !== 'scan' && phase !== 'ready') return;
     const XR = xr8();
-    if (!XR || !modelReady) return;
-    const x = sx / window.innerWidth;
-    const y = sy / window.innerHeight;
-    const hits = XR.XrController.hitTest(x, y, ['FEATURE_POINT', 'ESTIMATED_SURFACE', 'DETECTED_SURFACE']);
-    let p: pc.Vec3 | null = hits.length ? new pc.Vec3(hits[0].position.x, hits[0].position.y, hits[0].position.z) : null;
-    if (!p) {
-        const cam = camera.camera as pc.CameraComponent;
-        const from = cam.screenToWorld(sx, sy, cam.nearClip);
-        const to = cam.screenToWorld(sx, sy, cam.farClip);
-        const dir = to.clone().sub(from);
-        if (dir.y >= 0) return; // el toque no apunta al piso
-        const t = -from.y / dir.y;
-        p = from.clone().add(dir.mulScalar(t));
+    if (!XR) return;
+    let hits: Hit[] = [];
+    try {
+        hits = XR.XrController.hitTest(0.5, 0.5, TYPES);
+    } catch {
+        hits = [];
     }
+    if (hits.length) {
+        missFrames = 0;
+        hitFrames++;
+        const h = hits[0];
+        lastHitType = h.type;
+        target.set(h.position.x, h.position.y, h.position.z);
+        if (!reticle.enabled) reticle.setPosition(target);
+        else reticle.setPosition(new pc.Vec3().lerp(reticle.getPosition(), target, 0.35));
+        // tamaño del círculo: proporcional a la distancia, como la maqueta
+        const d = reticle.getPosition().distance(camera.getPosition());
+        pulse += dt * 3;
+        const k = Math.max(0.1, d * 0.12) * (1 + Math.sin(pulse) * 0.06);
+        reticle.setLocalScale(k, k, k);
+        reticle.enabled = true;
+        if (phase === 'scan' && hitFrames > 5) setPhase('ready');
+    } else {
+        hitFrames = 0;
+        if (++missFrames > 20) {
+            reticle.enabled = false;
+            if (phase === 'ready') setPhase('scan');
+        }
+    }
+});
+
+// ---- textos de cada fase
+const again = $('again');
+setPhase = (p: Phase) => {
+    phase = p;
+    hint.hidden = p === 'start';
+    again.hidden = p !== 'placed';
+    if (p === 'loading') hint.innerHTML = cameraOn ? '<b>Cargando la maqueta…</b>' : '<b>Abriendo la cámara…</b>';
+    if (p === 'scan')
+        hint.innerHTML =
+            '<b>Apunta a una mesa o al piso</b><br>Mueve el teléfono despacio de lado a lado hasta que aparezca un círculo.';
+    if (p === 'ready') hint.innerHTML = '<b>Toca la pantalla</b><br>La maqueta aparecerá donde está el círculo.';
+    if (p === 'placed')
+        hint.innerHTML =
+            '<b>¡Listo!</b> Camina alrededor y agáchate para verla.<br>Luego toca <b>Enviar resultado</b> (arriba a la derecha).';
+};
+
+// ---- tocar para colocar la maqueta donde está el círculo
+const place = () => {
+    if (phase !== 'ready' || !modelReady || !reticle.enabled) return;
+    const p = reticle.getPosition().clone();
     // tamaño: 0,8 veces la distancia a la que se coloca (escala relativa: así siempre cabe a la vista)
     setSize(Math.min(4, Math.max(0.3, p.distance(camera.getPosition()) * 0.8)));
     anchor.setPosition(p);
@@ -122,23 +193,16 @@ const place = (sx: number, sy: number) => {
     const f = camera.forward;
     anchor.setEulerAngles(0, (Math.atan2(f.x, f.z) * 180) / Math.PI, 0);
     anchor.enabled = true;
-    report.placed(hits.length ? hits[0].type : 'piso Y=0');
-    hint.textContent = 'Maqueta colocada. Camina alrededor y agáchate; luego toca «Enviar resultado» arriba a la derecha.';
+    reticle.enabled = false;
+    report.placed(lastHitType || '?');
+    setPhase('placed');
 };
-
-let touchStart: { x: number; y: number; t: number } | null = null;
-canvas.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: performance.now() };
-    else touchStart = null;
+canvas.addEventListener('click', place);
+again.addEventListener('click', () => {
+    anchor.enabled = false;
+    hitFrames = 0;
+    setPhase('scan');
 });
-canvas.addEventListener('touchend', (e) => {
-    const s = touchStart;
-    touchStart = null;
-    const t = e.changedTouches[0];
-    if (!s || !t || performance.now() - s.t > 500 || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 20) return;
-    place(t.clientX, t.clientY);
-});
-canvas.addEventListener('click', (e) => place(e.clientX, e.clientY));
 
 // ---- arranque de 8th Wall, como en el ejemplo oficial
 const waitXr8 = () =>
@@ -150,28 +214,24 @@ const waitXr8 = () =>
 
 const fail = (msg: string) => {
     hint.hidden = false;
-    hint.textContent = `Error: ${msg}`;
+    hint.innerHTML = `<b>No se pudo iniciar</b><br>${msg}`;
 };
 
 $('start-btn').addEventListener('click', async () => {
     $('start').hidden = true;
-    hint.hidden = false;
     status.hidden = false;
-    hint.textContent = 'Cargando el motor de AR…';
+    setPhase('loading');
     const XR = await waitXr8();
     const errors: Module = {
         name: 'ar-cero',
         onException: (e) => fail(String((e as Error)?.message ?? e)),
-        onDeviceIncompatible: () => fail('dispositivo o navegador no compatible'),
+        onDeviceIncompatible: () => fail('Este teléfono o navegador no es compatible. Prueba abrir el enlace en Chrome (Android) o Safari (iPhone).'),
         onCameraStatusChange: (e) => {
-            if (e.status === 'failed') fail('no se pudo abrir la cámara');
-            if (e.status === 'hasVideo') report.start();
+            if (e.status === 'failed') fail('No se pudo abrir la cámara. Revisa que hayas dado permiso a la cámara.');
             if (e.status === 'hasVideo') {
-                if (modelReady) hint.textContent = 'Mueve el teléfono despacio y toca una superficie plana para colocar la maqueta.';
-                else {
-                    hint.dataset.waiting = '1';
-                    hint.textContent = 'Cargando la maqueta…';
-                }
+                cameraOn = true;
+                report.start();
+                setPhase(modelReady ? 'scan' : 'loading');
             }
         },
         listeners: [
