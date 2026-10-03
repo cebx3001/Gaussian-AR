@@ -151,6 +151,7 @@ void modifySplatColor(vec3 center, inout vec4 color) {
             return;
         }
         setUniforms(time);
+        app.renderNextFrame = true; // el visor dibuja a demanda: el efecto necesita cuadros aunque la cámara esté quieta
     };
 
     setUniforms(0);
