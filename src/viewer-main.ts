@@ -111,6 +111,7 @@ if (EDIT_MODE) {
     g.__ORBIT_PITCH_MIN = -90;
     g.__ORBIT_PITCH_MAX = AUTHORING ? 90 : ORBIT_MAX_PITCH;
     g.__FLY_MIN_Y = AUTHORING ? -Infinity : FLY_MIN_Y;
+    g.__NO_PICK = AUTHORING ? 0 : 1; // un toque no cambia el centro de giro
 }
 
 const persist = () => {

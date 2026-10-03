@@ -13,9 +13,9 @@
         />
         <title>San Sebastián · Cuenca</title>
     </head>
-    <body>
+    <body class="locked">
         <div id="stage"></div>
-        <!-- velo oscuro detrás de la descripción: aparece con el texto y se va con él al tocar -->
+        <!-- velo oscuro detrás del texto: su opacidad sigue al texto que está en pantalla -->
         <div id="veil"></div>
 
         <a id="logo-link" href="https://wa.me/593992730095" target="_blank" rel="noopener" aria-label="WhatsApp"><img id="logo" src="./logo.png" alt="" /></a>
@@ -29,7 +29,7 @@
         <!-- debajo del título: realidad aumentada y el otro modo (historia ↔ recorrido) -->
         <nav id="top-links">
             <a id="ar-link" href="ar-cero.html" hidden></a>
-            <a id="mode-link" href="historia.html"></a>
+            <a id="mode-link" href="recorrido.html"></a>
         </nav>
 
         <header id="masthead">
@@ -37,33 +37,23 @@
             <h1 id="masthead-title"></h1>
         </header>
 
-        <article id="chapter" hidden>
-            <div id="chapter-head"><span id="chapter-rule"></span></div>
-            <p id="chapter-kicker"></p>
-            <h2 id="chapter-title"></h2>
-            <div id="chapter-text"></div>
-            <div id="chapter-nav">
-                <button type="button" id="prev" aria-label="Anterior">&larr;</button>
-                <button type="button" id="next" aria-label="Siguiente">&rarr;</button>
-            </div>
-        </article>
+        <!-- la historia: el scroll de esta capa mueve la cámara (src/historia.ts) -->
+        <main id="scroller">
+            <div id="story"></div>
+        </main>
 
+        <!-- aviso de scroll: aparece al terminar la entrada y se va al empezar a bajar -->
+        <div id="scroll-cue" aria-hidden="true">
+            <svg viewBox="0 0 24 36" width="22" height="33">
+                <rect x="1.5" y="1.5" width="21" height="33" rx="10.5" fill="none" stroke="currentColor" stroke-width="2" />
+                <circle class="wheel" cx="12" cy="10" r="2.6" fill="currentColor" />
+            </svg>
+            <span class="chev"></span>
+            <span id="scroll-cue-text"></span>
+        </div>
+        <button type="button" id="back-story" hidden></button>
 
         <nav id="index" aria-label="Lugares"></nav>
-
-        <div id="timeline" hidden></div>
-
-        <div id="editor" hidden>
-            <select id="ed-select" aria-label="Lugar"></select>
-            <button type="button" id="ed-mode">Órbita</button>
-            <button type="button" id="ed-capture">Capturar</button>
-            <button type="button" id="ed-copy">Copiar</button>
-        </div>
-        <p id="ed-status" hidden></p>
-        <div id="ed-export-box" hidden>
-            <textarea id="ed-export" readonly></textarea>
-            <button type="button" id="ed-export-close">Cerrar</button>
-        </div>
 
         <div id="loader" role="status" aria-live="polite">
             <p id="loader-kicker"></p>
@@ -84,6 +74,6 @@
                 document.getElementById('loader-message').textContent = t[1];
             })();
         </script>
-        <script type="module" src="/src/viewer-main.ts"></script>
+        <script type="module" src="/src/historia.ts"></script>
     </body>
 </html>

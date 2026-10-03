@@ -35,6 +35,11 @@ const patchSuperSplat = (): Plugin => ({
             'this._step(move);$1this._position.y = Math.max(this._position.y, globalThis.__FLY_MIN_Y ?? -Infinity);$1camera.position.copy(this._position);'
         );
 
+        // Sin «tocar para enfocar»: un toque o doble clic sobre la escena no cambia el centro de giro
+        const pick = 'async _pickSceneTarget(offsetX, offsetY) {';
+        if (!code.includes(pick)) throw new Error('patch-supersplat-viewer: no se encontró _pickSceneTarget');
+        code = code.replace(pick, pick + '\n        if (globalThis.__NO_PICK) return null;');
+
         return { code, map: null };
     }
 });
@@ -85,7 +90,7 @@ export default defineConfig({
                 main: fileURLToPath(new URL('./index.html', import.meta.url)),
                 ar: fileURLToPath(new URL('./ar.html', import.meta.url)),
                 arCero: fileURLToPath(new URL('./ar-cero.html', import.meta.url)),
-                historia: fileURLToPath(new URL('./historia.html', import.meta.url))
+                recorrido: fileURLToPath(new URL('./recorrido.html', import.meta.url))
             }
         }
     }
