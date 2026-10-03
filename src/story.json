@@ -104,14 +104,14 @@
       "text": "La actual Plaza Miguel de León, conocida tradicionalmente como Parque de San Sebastián, ha sido durante siglos uno de los espacios públicos más importantes del barrio. En la época colonial fue escenario de corridas de toros y celebraciones populares. Más tarde adquirió funciones comerciales: en el siglo XIX llegó a ser utilizada como mercado de ganado y un plano de 1889 la registra como la “Plaza de la venta de Ganado de Sebastián”.\n\nDurante el siglo XX el espacio también acogió actividades deportivas. Con el tiempo dejó de funcionar como una plaza abierta de usos múltiples y fue transformándose en el parque que conocemos actualmente. Su historia permite entender cómo un mismo espacio urbano puede cambiar de función mientras conserva su importancia para la vida de la ciudad.",
       "pose": {
         "position": [
-          37.318,
-          120.321,
-          -53.607
+          0.349,
+          107.366,
+          -4.811
         ],
         "target": [
-          2.163,
+          0.886,
           23,
-          -3.774
+          -5.612
         ],
         "fov": 60
       },
@@ -182,9 +182,9 @@
       "text": "Junto a la iglesia se encuentra una fuente de planta cruciforme, con un surtidor en el centro. Es uno de los elementos que forman parte de la composición del Parque de San Sebastián y acompaña el trazado geométrico que adquirió la plaza durante su transformación a comienzos del siglo XX.\n\nLa fuente permanece como parte del paisaje urbano de este espacio histórico de Cuenca.",
       "pose": {
         "position": [
-          -4.405,
+          -4.309,
           63.357,
-          13.491
+          13.347
         ],
         "target": [
           -4.309,
