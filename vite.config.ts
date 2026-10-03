@@ -84,7 +84,8 @@ export default defineConfig({
             input: {
                 main: fileURLToPath(new URL('./index.html', import.meta.url)),
                 ar: fileURLToPath(new URL('./ar.html', import.meta.url)),
-                arCero: fileURLToPath(new URL('./ar-cero.html', import.meta.url))
+                arCero: fileURLToPath(new URL('./ar-cero.html', import.meta.url)),
+                historia: fileURLToPath(new URL('./historia.html', import.meta.url))
             }
         }
     }
