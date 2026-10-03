@@ -59,11 +59,11 @@ button {
     background-size: 52px 90px;
 }
 
-/* velo oscuro, sin bordes, detrás de la descripción (body.reading): aparece con un fundido y se va al instante */
+/* velo oscuro (negro al 15 %), sin bordes, detrás de la descripción (body.reading): aparece con un fundido y se va al instante */
 #veil {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(0, 0, 0, 0.15);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.12s ease;
