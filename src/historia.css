@@ -151,7 +151,7 @@ body.exploring #veil { display:none; }
     font-size:9px;
     letter-spacing:.07em;
     color:#fff;
-    pointer-events:none;
+    pointer-events:auto;
 }
 .ar-icon {
     width:18px;
