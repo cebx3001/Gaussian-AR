@@ -826,3 +826,183 @@ body.edit #top-links,
 body.animar #top-links {
     display: none;
 }
+
+
+/* ==========================================================================
+   2026 EDITORIAL SYSTEM
+   Capa exclusivamente visual. No altera comportamiento, estados ni hit areas.
+   ========================================================================== */
+:root {
+    --bg: #11110f;
+    --bg-rgb: 17, 17, 15;
+    --ink: #f1eee7;
+    --ink-rgb: 241, 238, 231;
+    --accent: #bd4b3e;
+    --accent-rgb: 189, 75, 62;
+    --ink-soft: rgba(var(--ink-rgb), 0.82);
+    --muted: rgba(var(--ink-rgb), 0.58);
+    --line: rgba(var(--ink-rgb), 0.22);
+    --display: 'Space Grotesk', Arial, sans-serif;
+    --text: 'Space Grotesk', Arial, sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --fs-text: clamp(15px, 1.25vw, 17px);
+}
+
+#stage {
+    background-color: var(--bg);
+    background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 8.333vw 8.333vw;
+}
+
+#masthead {
+    left: clamp(18px, 3.2vw, 52px);
+    top: max(20px, env(safe-area-inset-top));
+    max-width: min(76vw, 920px);
+}
+
+#masthead-kicker {
+    margin-bottom: 7px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    color: var(--accent);
+}
+
+#masthead-kicker::before {
+    content: 'EC.01  /  ';
+    color: var(--muted);
+}
+
+#masthead-title {
+    font-size: clamp(2.7rem, 8vw, 7.5rem);
+    font-weight: 700;
+    line-height: .78;
+    letter-spacing: -.075em;
+    text-transform: uppercase;
+}
+
+#lang {
+    top: max(13px, env(safe-area-inset-top));
+    right: 62px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .08em;
+}
+
+#lang button {
+    padding: 8px 5px 6px;
+    border-bottom-width: 1px;
+}
+
+#logo-link {
+    top: max(8px, env(safe-area-inset-top));
+    right: 10px;
+}
+
+#logo {
+    height: 22px;
+}
+
+#top-links {
+    top: calc(max(20px, env(safe-area-inset-top)) + clamp(72px, 10vw, 132px));
+    left: clamp(18px, 3.2vw, 52px);
+}
+
+#top-links a {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    border-bottom-width: 1px;
+}
+
+#index {
+    justify-content: flex-start;
+    align-content: center;
+    gap: 0;
+    padding-left: clamp(18px, 3.2vw, 52px);
+    padding-right: clamp(18px, 3.2vw, 52px);
+    background: linear-gradient(to top, rgba(10,10,9,.82), rgba(10,10,9,.34) 58%, transparent);
+}
+
+#index::before {
+    content: 'INDEX / 01—05';
+    width: 100%;
+    margin-bottom: 4px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    color: var(--muted);
+}
+
+#index .chapter-link {
+    position: relative;
+    padding: 5px 18px 4px 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .02em;
+    color: rgba(var(--ink-rgb), .52);
+    border: 0;
+}
+
+#index .chapter-link:not(:last-child)::after {
+    content: '/';
+    position: absolute;
+    right: 7px;
+    color: rgba(var(--ink-rgb), .22);
+}
+
+#index .chapter-link.on {
+    color: var(--ink);
+    border: 0;
+}
+
+#index .chapter-link.on::before {
+    content: '●';
+    margin-right: 6px;
+    font-size: 7px;
+    color: var(--accent);
+    vertical-align: 1px;
+}
+
+#loader {
+    background: var(--bg);
+}
+
+#loader-kicker,
+#loader-message {
+    font-family: var(--mono);
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+}
+
+#loader-title {
+    font-size: clamp(3rem, 9vw, 7rem);
+    font-weight: 700;
+    line-height: .85;
+    letter-spacing: -.07em;
+    text-transform: uppercase;
+}
+
+#loader-bar {
+    width: min(280px, 62vw);
+}
+
+@media (min-width: 820px) {
+    #index {
+        justify-content: flex-start;
+        padding: 0 44px 20px;
+        gap: 0;
+    }
+    #index .chapter-link {
+        font-size: 10px;
+    }
+}
