@@ -264,3 +264,121 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
         max-width: min(31rem, 42vw);
     }
 }
+
+
+/* ==========================================================================
+   2026 EDITORIAL STORY LAYER
+   Retícula, jerarquía y microtipografía. Sin cards, paneles ni cajas.
+   ========================================================================== */
+#scroller {
+    top: calc(max(20px, env(safe-area-inset-top)) + clamp(118px, 15vw, 184px));
+}
+
+#story {
+    padding: 0 clamp(18px, 3.2vw, 52px);
+}
+
+.block {
+    position: relative;
+    max-width: min(39rem, 88vw);
+    padding: 8px 0 30px;
+    text-shadow: 0 1px 10px rgba(0,0,0,.92);
+}
+
+.block::before {
+    content: attr(data-index);
+    position: absolute;
+    top: 11px;
+    left: 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .08em;
+    color: var(--muted);
+}
+
+.block .rule {
+    width: min(72px, 18vw);
+    margin: 0 0 18px;
+    background: var(--accent);
+}
+
+.block .kicker,
+.end .kicker {
+    margin-bottom: 9px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    color: var(--accent);
+}
+
+.block .title,
+.end .title {
+    max-width: 10ch;
+    margin-bottom: 18px;
+    font-size: clamp(2.65rem, 10.8vw, 6.6rem);
+    font-weight: 700;
+    line-height: .86;
+    letter-spacing: -.065em;
+    text-transform: uppercase;
+    text-wrap: balance;
+}
+
+.block .text {
+    max-width: 34rem;
+    padding-left: clamp(0px, 5vw, 72px);
+}
+
+.block .text p {
+    font-size: var(--fs-text);
+    line-height: 1.48;
+    color: rgba(var(--ink-rgb), .92);
+}
+
+.block .text p:first-child::first-letter {
+    float: none;
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+
+#scroll-cue-text {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .12em;
+}
+
+.end {
+    max-width: 48rem;
+}
+
+.end .explore,
+#back-story {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    border-bottom-width: 1px;
+}
+
+#how p {
+    font-size: clamp(15px, 1.5vw, 18px);
+}
+
+@media (min-width: 820px) {
+    #story {
+        padding: 0 clamp(44px, 6vw, 92px);
+    }
+    .block,
+    .end {
+        max-width: min(46rem, 52vw);
+    }
+    .block .text {
+        padding-left: clamp(54px, 6vw, 110px);
+    }
+}
