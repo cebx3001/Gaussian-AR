@@ -12,8 +12,8 @@
     --muted: rgba(var(--ink-rgb), 0.8);
     --paper: rgba(var(--bg-rgb), 0.78);
     --line: rgba(var(--accent-rgb), 0.6);
-    --display: 'Bricolage Grotesque', 'Libre Franklin', -apple-system, 'Segoe UI', Roboto, sans-serif;
-    --text: 'Libre Franklin', -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --display: 'Syne', sans-serif;
+    --text: 'Plus Jakarta Sans', sans-serif;
     /* un solo tamaño para el texto de todas las descripciones */
     --fs-text: 17px;
 }
