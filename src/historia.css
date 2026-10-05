@@ -1,425 +1,266 @@
-/* San Sebastián · Archive / spatial editorial UI */
+/* ---------------------------------------------------------------------------
+   Historia con scroll (historia.html): la maqueta fija de fondo y los textos que suben encima.
+   Usa las piezas del visor (viewer.css): cabecera, idioma, logo, «Ver en AR», barra de lugares, carga.
+   --------------------------------------------------------------------------- */
+
+/* el escenario no recibe toques mientras se cuenta la historia: el dedo hace scroll */
 #stage {
     pointer-events: none;
-    background: #0d0d0d !important;
-}
-body.exploring #stage { pointer-events: auto; }
-
-:root {
-    --bg: #0d0d0d;
-    --ink: #fff;
-    --body: #d1cdb8;
-    --accent: #b84335;
-    --line: rgba(255,255,255,.1);
-    --display: 'Syne', sans-serif;
-    --text: 'Plus Jakarta Sans', sans-serif;
-    --mono: 'JetBrains Mono', monospace;
-    --index-h: calc(max(8px, env(safe-area-inset-bottom)) + 58px);
-    --fs-text: 13px;
 }
 
-html, body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--text);
+body.exploring #stage {
+    pointer-events: auto;
 }
 
+/* velo: su opacidad la pone el código según el texto que hay en pantalla */
 #veil {
-    background: radial-gradient(circle at 50% 45%, rgba(0,0,0,.05), rgba(0,0,0,.72));
-    opacity: 0;
-    transition: opacity .25s linear;
-}
-body.reading #veil { opacity: 1; }
-body.exploring #veil { display:none; }
-
-#archive-header {
-    position:fixed;
-    z-index:6;
-    top:max(13px,env(safe-area-inset-top));
-    left:16px;
-    right:16px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-family:var(--mono);
-    font-size:9px;
-    font-weight:500;
-    letter-spacing:.12em;
-    color:rgba(255,255,255,.42);
-    pointer-events:none;
-}
-#archive-header i {
-    display:inline-block;
-    width:5px;
-    height:5px;
-    margin-right:6px;
-    border-radius:50%;
-    background:var(--accent);
+    background: rgba(0, 0, 0, 0.3);
+    transition: opacity 0.25s linear;
 }
 
-#top-nav-icons {
-    position:fixed;
-    z-index:7;
-    top:max(48px,calc(env(safe-area-inset-top) + 42px));
-    left:16px;
-    right:16px;
-    display:flex;
-    justify-content:space-between;
-    font-family:var(--mono);
-    font-size:20px;
-    line-height:1;
-    color:rgba(255,255,255,.75);
-    pointer-events:none;
-}
-
-#section-row {
-    position:fixed;
-    z-index:6;
-    top:max(74px,calc(env(safe-area-inset-top) + 68px));
-    left:16px;
-    right:16px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    pointer-events:none;
-}
-#section-title {
-    font-family:var(--mono);
-    font-size:10px;
-    letter-spacing:.08em;
-    color:var(--accent);
-}
-#lang {
-    display:flex;
-    align-items:center;
-    gap:2px;
-    pointer-events:auto;
-    font-family:var(--mono);
-    font-size:9px;
-    letter-spacing:.08em;
-    color:rgba(255,255,255,.48);
-}
-#lang button {
-    padding:4px 3px;
-    border:0;
-    border-bottom:1px solid transparent;
-    background:none;
-    color:inherit;
-    font:inherit;
-}
-#lang button.on {
-    color:#fff;
-    border-bottom-color:var(--accent);
-}
-
-#logo-link { display:none; }
-
-#masthead {
-    z-index:6;
-    top:max(105px,calc(env(safe-area-inset-top) + 99px));
-    left:16px;
-    right:16px;
-    pointer-events:none;
-    text-shadow:none;
-}
-#masthead-kicker { display:none; }
-#masthead-title {
-    margin:0;
-    max-width:300px;
-    color:#fff;
-    font-family:var(--display);
-    font-size:clamp(2.65rem,13vw,4.4rem);
-    font-weight:800;
-    line-height:.88;
-    letter-spacing:-.055em;
-    text-transform:uppercase;
-    white-space:normal;
-}
-#masthead-title::first-line { }
-
-#ar-meta {
-    position:fixed;
-    z-index:6;
-    top:max(198px,calc(env(safe-area-inset-top) + 192px));
-    left:16px;
-    right:16px;
-    display:flex;
-    align-items:center;
-    gap:9px;
-    min-height:34px;
-    font-family:var(--mono);
-    font-size:9px;
-    letter-spacing:.07em;
-    color:#fff;
-    pointer-events:auto;
-}
-.ar-icon {
-    width:18px;
-    height:18px;
-    border:1px solid var(--accent);
-    border-radius:4px;
-    transform:rotate(45deg);
-    position:relative;
-}
-.ar-icon::after {
-    content:'';
-    position:absolute;
-    inset:4px;
-    border:1px solid rgba(255,255,255,.65);
-    border-radius:2px;
-}
-#ar-label {
-    padding:8px 10px;
-    border-radius:14px;
-    background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.08);
-}
-.ar-id {
-    margin-left:auto;
-    color:rgba(255,255,255,.4);
-}
-
-#top-links { display:none; }
-
-#archive-divider {
-    position:fixed;
-    z-index:5;
-    top:max(247px,calc(env(safe-area-inset-top) + 241px));
-    left:16px;
-    right:16px;
-    height:1px;
-    background:var(--line);
-    pointer-events:none;
-}
-
+/* área de scroll: entre la cabecera y la barra de lugares; los bordes se desvanecen */
 #scroller {
-    position:fixed;
-    z-index:3;
-    left:0;
-    right:0;
-    top:max(263px,calc(env(safe-area-inset-top) + 257px));
-    bottom:var(--index-h);
-    overflow-x:hidden;
-    overflow-y:auto;
-    overscroll-behavior-y:contain;
-    -webkit-overflow-scrolling:touch;
-    touch-action:pan-y;
-    -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);
-    mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);
+    position: fixed;
+    z-index: 3;
+    left: 0;
+    right: 0;
+    top: calc(max(18px, env(safe-area-inset-top)) + 100px);
+    bottom: var(--index-h);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
 }
-#story { padding:0 16px; }
 
+#scroller::-webkit-scrollbar {
+    display: none;
+}
+
+/* mientras corre la entrada no se puede hacer scroll y el texto todavía no aparece */
+body.locked #scroller {
+    overflow: hidden;
+    opacity: 0;
+}
+
+body.ready #scroller {
+    opacity: 1;
+    transition: opacity 0.8s ease;
+}
+
+body.exploring #scroller,
+body.exploring #veil {
+    display: none;
+}
+
+#story {
+    position: relative;
+    padding: 0 22px;
+}
+
+/* ---------- un lugar ---------- */
 .block {
-    position:relative;
-    max-width:none;
-    padding:26px 10px 26px 0;
-    margin:0 0 20px;
-    text-shadow:none;
+    max-width: 34rem;
+    padding: 6px 0 24px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
 }
-.block::after {
-    content:'';
-    position:absolute;
-    top:22px;
-    right:-16px;
-    width:4px;
-    height:calc(100% - 30px);
-    background:var(--accent);
-}
-.block .rule { display:none; }
 
-.block .kicker {
-    display:inline-block;
-    margin:0 0 14px;
-    padding:5px 8px;
-    border:1px solid rgba(184,67,53,.22);
-    border-radius:3px;
-    background:rgba(184,67,53,.14);
-    color:#fff;
-    font-family:var(--mono);
-    font-size:9px;
-    font-weight:700;
-    letter-spacing:.08em;
-    text-transform:uppercase;
+.block .rule {
+    width: 44px;
+    height: 1px;
+    margin-bottom: 18px;
+    background: var(--accent);
 }
-.block .title {
-    margin:0 0 16px;
-    max-width:330px;
-    color:#fff;
-    font-family:var(--display);
-    font-size:clamp(1.55rem,7vw,2.1rem);
-    font-weight:800;
-    line-height:1.03;
-    letter-spacing:-.035em;
-    text-transform:uppercase;
+
+.block .kicker,
+.end .kicker {
+    margin: 0 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
 }
-.block .text {
-    padding:16px;
-    margin-right:10px;
-    background:rgba(15,15,15,.92);
-    border:1px solid #2a2a2a;
-    border-radius:12px;
-    box-shadow:0 10px 30px rgba(0,0,0,.18);
+
+.block .title,
+.end .title {
+    margin: 0 0 14px;
+    color: #f7f0ee;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 6.6vw, 2.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
 }
+
 .block .text p {
-    margin:0 0 12px;
-    color:var(--body);
-    font-family:var(--text);
-    font-size:13px;
-    font-weight:500;
-    line-height:1.55;
-    text-wrap:pretty;
+    margin: 0 0 0.8em;
+    font-size: var(--fs-text);
+    line-height: 1.55;
+    color: #f7f0ee;
+    text-wrap: pretty;
 }
-.block .text p:last-child { margin-bottom:0; }
+
+/* capitular en el primer párrafo */
 .block .text p:first-child::first-letter {
-    float:left;
-    margin:.02em .09em 0 0;
-    color:var(--accent);
-    font-family:var(--display);
-    font-size:40px;
-    font-weight:800;
-    line-height:.8;
+    float: left;
+    margin: 0.06em 0.1em 0 0;
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 3.1em;
+    line-height: 0.8;
+    color: var(--accent);
 }
-.block .text::after {
-    content:'LÍMITE OCCIDENTAL // CUENCA     ARCH-HIST-01';
-    display:block;
-    margin-top:14px;
-    padding-top:10px;
-    border-top:1px solid rgba(255,255,255,.08);
-    color:rgba(255,255,255,.3);
-    font-family:var(--mono);
-    font-size:8px;
-    letter-spacing:.05em;
-    white-space:pre;
-}
-.block:nth-of-type(2) .text::after { content:'PLAZA MIGUEL DE LEÓN // CUENCA     ARCH-HIST-02'; }
-.block:nth-of-type(3) .text::after { content:'ERMITA // LÍMITE OCCIDENTAL     ARCH-HIST-03'; }
-.block:nth-of-type(4) .text::after { content:'CASA DE LA TEMPERANCIA // 1876     ARCH-HIST-04'; }
-.block:nth-of-type(5) .text::after { content:'PARQUE DE SAN SEBASTIÁN // CUENCA     ARCH-HIST-05'; }
 
-.pause { pointer-events:none; }
-
-.end {
-    min-height:70vh;
-    min-height:70dvh;
-    padding-bottom:40px;
-}
-.end .kicker, .end .title { font-family:var(--display); }
-.end .kicker { color:var(--accent); font-family:var(--mono); }
-
+/* aviso de scroll: abajo al centro, encima de la barra de lugares */
 #scroll-cue {
-    z-index:7;
-    bottom:calc(var(--index-h) + 10px);
-    color:#fff;
+    position: fixed;
+    z-index: 5;
+    left: 50%;
+    bottom: calc(var(--index-h) + 16px);
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    color: var(--ink);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.7));
 }
+
+body.ready:not(.scrolled):not(.exploring) #scroll-cue {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    transition-delay: 1.2s;
+}
+
+#scroll-cue .wheel {
+    animation: rueda 1.6s ease-in-out infinite;
+}
+
+@keyframes rueda {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    70% {
+        transform: translateY(9px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+}
+
+/* flecha hacia abajo que baja y se desvanece */
+#scroll-cue .chev {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    transform: rotate(45deg);
+    animation: baja 1.6s ease-in-out infinite;
+}
+
+@keyframes baja {
+    0%,
+    100% {
+        transform: translateY(-3px) rotate(45deg);
+        opacity: 0.4;
+    }
+    50% {
+        transform: translateY(3px) rotate(45deg);
+        opacity: 1;
+    }
+}
+
 #scroll-cue-text {
-    font-family:var(--mono);
-    font-size:9px;
-    letter-spacing:.16em;
-}
-#scroll-cue .chev { border-color:var(--accent); }
-
-#index {
-    z-index:8;
-    min-height:var(--index-h);
-    height:var(--index-h);
-    flex-wrap:nowrap;
-    justify-content:flex-start;
-    align-items:center;
-    gap:18px;
-    overflow-x:auto;
-    overflow-y:hidden;
-    padding:0 16px max(6px,env(safe-area-inset-bottom));
-    background:rgba(13,13,13,.92);
-    border-top:1px solid var(--line);
-    scrollbar-width:none;
-}
-#index::-webkit-scrollbar { display:none; }
-#index .chapter-link {
-    flex:none;
-    min-height:0;
-    padding:5px 0 7px;
-    color:rgba(255,255,255,.42);
-    font-family:var(--mono);
-    font-size:8px;
-    font-weight:500;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    border:0;
-    border-bottom:2px solid transparent;
-    background:none;
-    border-radius:0;
-    text-shadow:none;
-}
-#index .chapter-link.on {
-    color:#fff;
-    font-weight:700;
-    border-bottom-color:var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
 }
 
-#fab-button {
-    position:fixed;
-    z-index:9;
-    right:18px;
-    bottom:calc(var(--index-h) + 14px);
-    width:48px;
-    height:48px;
-    display:grid;
-    place-items:center;
-    border:1px solid #333;
-    border-radius:50%;
-    background:#1a1a1a;
-    box-shadow:0 8px 24px rgba(0,0,0,.35);
-    color:#fff;
-    pointer-events:auto;
-}
-#fab-button span {
-    font-size:24px;
-    line-height:1;
-    background:linear-gradient(135deg,#4285f4 20%,#ea4335 42%,#fbbc05 63%,#34a853 82%);
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
+/* respiro sin texto: la altura la pone el código (más de una pantalla) */
+.pause {
+    pointer-events: none;
 }
 
-#back-story {
-    z-index:10;
-    left:16px;
-    bottom:calc(var(--index-h) + 16px);
-    padding:8px 10px;
-    font-family:var(--mono);
-    font-size:9px;
-    color:#fff;
-    background:rgba(13,13,13,.92);
-    border:1px solid #333;
-    border-radius:4px;
+/* ---------- final ---------- */
+/* instrucciones de «Explorar libremente»: en el centro, sin recuadro; se van con el primer toque */
+#how {
+    position: fixed;
+    z-index: 5;
+    left: 24px;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+#how.shown {
+    opacity: 1;
+    transition: opacity 0.6s ease 0.4s;
 }
 
 #how p {
-    font-family:var(--text);
-    font-size:14px;
+    margin: 0 0 6px;
+    font-size: var(--fs-text);
+    line-height: 1.45;
+    color: #f7f0ee;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.95), 0 1px 14px rgba(0, 0, 0, 0.9);
 }
 
-#loader {
-    z-index:20;
-    background:#0d0d0d;
+#how strong {
+    font-weight: 700;
+    color: #fff;
 }
-#loader-kicker {
-    font-family:var(--mono);
-    color:var(--accent);
-    font-size:9px;
-}
-#loader-title {
-    font-family:var(--display);
-    font-size:2.4rem;
-    font-weight:800;
-}
-#loader-message { font-family:var(--mono); font-size:10px; }
 
-@media (min-width:820px) {
-    #archive-header,#top-nav-icons,#section-row,#masthead,#ar-meta,#archive-divider { left:28px; right:28px; }
-    #masthead-title { max-width:520px; font-size:clamp(3.5rem,7vw,5.5rem); }
-    #scroller { top:290px; }
-    #story { padding:0 28px; }
-    .block { max-width:520px; }
-    #index { justify-content:flex-start; padding-left:28px; gap:28px; }
+.end {
+    min-height: 70vh;
+    min-height: 70dvh;
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    max-width: 34rem;
+    padding-bottom: 40px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+}
+
+.end .explore,
+#back-story {
+    padding: 6px 2px 4px;
+    font-family: var(--display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid var(--accent);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+}
+
+#back-story {
+    position: fixed;
+    z-index: 6;
+    left: 22px;
+    bottom: calc(var(--index-h) + 14px);
+}
+
+/* ---------- computadora: el texto en una columna a la izquierda ---------- */
+@media (min-width: 820px) {
+    #story {
+        padding: 0 44px;
+    }
+    .block,
+    .end {
+        max-width: min(31rem, 42vw);
+    }
 }
