@@ -382,3 +382,46 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
         padding-left: clamp(54px, 6vw, 110px);
     }
 }
+
+
+/* 2026 spatial editorial refinement */
+.block {
+    max-width: min(44rem, 92vw);
+}
+.block .title,
+.end .title {
+    max-width: 11ch;
+    font-family: var(--display);
+    font-size: clamp(2.65rem, 11vw, 7rem);
+    font-weight: 400;
+    line-height: .9;
+    letter-spacing: -.045em;
+}
+.block .text {
+    max-width: 31rem;
+    padding-left: clamp(0px, 4vw, 58px);
+}
+.block .text p {
+    font-family: var(--text);
+    font-size: clamp(15px, 1.2vw, 17px);
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: -.012em;
+    text-shadow: 0 1px 8px rgba(0,0,0,.98), 0 0 18px rgba(0,0,0,.72);
+}
+.block .rule {
+    width: clamp(44px, 8vw, 92px);
+}
+@media (max-width: 819px) {
+    #scroller {
+        top: calc(max(20px, env(safe-area-inset-top)) + 150px);
+    }
+    .block .text {
+        max-width: min(29rem, 88vw);
+    }
+}
+@media (min-width: 820px) {
+    .block, .end {
+        max-width: min(52rem, 58vw);
+    }
+}
