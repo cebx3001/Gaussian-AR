@@ -1006,3 +1006,54 @@ body.animar #top-links {
         font-size: 10px;
     }
 }
+
+
+/* 2026 spatial editorial refinement: Gaussian is the canvas, UI stays transparent */
+:root {
+    --display: 'Archivo Black', 'Arial Black', sans-serif;
+    --text: 'Inter', Arial, sans-serif;
+}
+html, body { background: #11110f; }
+#stage {
+    background-color: #11110f;
+    background-image: none;
+}
+#veil {
+    background: rgba(0,0,0,.18);
+}
+#masthead {
+    max-width: calc(100vw - 36px);
+}
+#masthead-title {
+    max-width: 8.8ch;
+    font-family: var(--display);
+    font-size: clamp(2.75rem, 10.8vw, 7.8rem);
+    font-weight: 400;
+    line-height: .89;
+    letter-spacing: -.045em;
+    text-wrap: balance;
+}
+#masthead-kicker {
+    text-shadow: 0 1px 8px rgba(0,0,0,.95);
+}
+#top-links a {
+    background: none;
+    border: 0;
+    border-left: 2px solid var(--accent);
+    padding: 1px 0 1px 9px;
+}
+#index {
+    background: linear-gradient(to top, rgba(0,0,0,.52), rgba(0,0,0,.12) 55%, transparent);
+    border: 0;
+}
+#index .chapter-link {
+    background: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+#loader-title {
+    font-family: var(--display);
+    font-weight: 400;
+    line-height: .9;
+    letter-spacing: -.045em;
+}
