@@ -114,6 +114,8 @@ const loaderFill = $<HTMLElement>('loader-fill');
 const loaderMessage = $<HTMLElement>('loader-message');
 const backStory = $<HTMLButtonElement>('back-story');
 const arLink = $<HTMLAnchorElement>('ar-link');
+const arMeta = $<HTMLElement>('ar-meta');
+const fabButton = $<HTMLButtonElement>('fab-button');
 
 const story = defaultStory();
 const chapters: (Chapter & { pose: Pose })[] = story.chapters.filter((c): c is Chapter & { pose: Pose } => !!c.pose);
@@ -314,6 +316,8 @@ const applyLang = () => {
     if (loader.dataset.hidden !== 'true') loaderMessage.textContent = UI[lang].loading;
     $<HTMLElement>('lang').querySelectorAll<HTMLElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
     arLink.textContent = AR_UI[lang].button;
+    $<HTMLElement>('section-title').textContent = lang === 'en' ? 'CUENCA · HERITAGE' : 'CUENCA · PATRIMONIO';
+    $<HTMLElement>('ar-label').textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer;
     layout();
@@ -543,6 +547,8 @@ function backToStory() {
     }
 }
 backStory.addEventListener('click', backToStory);
+arMeta.addEventListener('click', () => arLink.click());
+fabButton.addEventListener('click', () => explore());
 
 window.addEventListener('resize', () => layout());
 document.fonts?.ready.then(() => layout());
