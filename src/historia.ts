@@ -7,8 +7,8 @@ import { appendDestinationLabel } from './navigation-labels';
 // está (`seek`). Por cada lugar:
 //
 //   viaje    el texto entra desde abajo y la cámara viaja a la pose del lugar
-//   lectura  el texto sigue subiendo hasta salir; la cámara queda quieta
-//   respiro  pantalla sin texto: la cámara gira despacio ~30° alrededor del lugar
+//   lectura  el texto sigue subiendo; la cámara empieza a girar alrededor del lugar
+//   respiro  pantalla sin texto: el mismo giro continúa hasta la salida del lugar
 //
 // Al abrir, primero la entrada (reveal + animación de 6 s) y luego empieza el scroll en la Vista general.
 // Al final, «Explorar libremente» suelta la cámara (órbita normal del visor).
@@ -44,7 +44,7 @@ const MODEL_CENTER: Vec3Tuple = [-1.5, 23, 8.4];
 // ---- tiempos de la pista (segundos de pista, no de reloj: el scroll los recorre)
 /** Viaje de un lugar al siguiente. */
 const TRAVEL = 4;
-/** Lectura: la cámara queda quieta. */
+/** Lectura: primera mitad del giro, acompañando al texto. */
 const READ = 1;
 /** Respiro sin texto: giro alrededor del lugar. */
 const ORBIT = 3;
@@ -57,8 +57,8 @@ const PAUSE_SCREENS = 0.9;
  * Lugares con giro propio. La fuente es una roseta vista desde arriba: gira 180° y empieza a girar en cuanto la
  * cámara llega (durante la lectura), con un respiro más largo para que el giro sea lento.
  */
-const SPIN: Record<string, { deg: number; fromArrival: boolean; pause: number }> = {
-    fuente: { deg: 180, fromArrival: true, pause: 1.8 }
+const SPIN: Record<string, { deg: number; pause: number }> = {
+    fuente: { deg: 180, pause: 1.8 }
 };
 const pauseScreens = (i: number) => SPIN[chapters[i]?.id]?.pause ?? PAUSE_SCREENS;
 
@@ -218,18 +218,13 @@ const buildTrack = () => {
         // el giro alterna de lado en cada lugar
         const deg = (i % 2 ? -1 : 1) * (spin?.deg ?? ORBIT_DEG);
         const read: Seg = { kind: 'read', i, t0: t, t1: t + READ };
-        if (spin?.fromArrival) {
-            // gira desde que llega: la primera mitad mientras se lee (arranca suave), la otra en el respiro
-            sample(read, (u) => orbitPose(pose, deg * 0.5 * u * u));
-        } else {
-            sample(read, () => pose);
-        }
+        // Como en la fuente: el giro nace con la lectura y continúa sin volver a la pose inicial.
+        sample(read, (u) => orbitPose(pose, deg * 0.5 * u * u));
         segs.push(read);
         t = read.t1;
         const orbitLen = spin ? ORBIT * 2 : ORBIT;
         const orbit: Seg = { kind: 'orbit', i, t0: t, t1: t + orbitLen };
-        if (spin?.fromArrival) sample(orbit, (u) => orbitPose(pose, deg * (0.5 + 0.5 * (1 - (1 - u) * (1 - u)))));
-        else sample(orbit, (u) => orbitPose(pose, deg * easeInOut(u)));
+        sample(orbit, (u) => orbitPose(pose, deg * (0.5 + 0.5 * (1 - (1 - u) * (1 - u)))));
         segs.push(orbit);
         t = orbit.t1;
         from = orbitPose(pose, deg);
@@ -396,8 +391,7 @@ const layout = () => {
             map.push({ s: top - vh, t: tr.t0, i: i - 1 }, { s: top - READ_TOP, t: tr.t1, i });
         }
         const rd = segOf('read', i);
-        if (i === 0) map.push({ s: 0, t: rd.t0, i });
-        map.push({ s: top - READ_TOP, t: rd.t0, i }, { s: bottom, t: rd.t1, i });
+        map.push({ s: i === 0 ? 0 : top - READ_TOP, t: rd.t0, i }, { s: bottom, t: rd.t1, i });
         const ob = segOf('orbit', i);
         map.push({ s: bottom, t: ob.t0, i }, { s: bottom + vh * pauseScreens(i), t: ob.t1, i });
     });

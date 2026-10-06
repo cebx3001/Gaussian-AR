@@ -89,3 +89,10 @@ Local native range checks passed for 0%, 50%, 49%, touch drag, transparent descr
 ## Final contrast selection
 
 The user selected 30%. The Story filter now has fixed CSS opacity 0.3. The temporary panel, range, output, localized tuner labels, CSS custom property and input handlers are removed entirely. The scroll-led opening and transparent descriptions remain. The fixed filter still hides during loading and Tour mode, and never intercepts pointer events. This supersedes the temporary 0% starting value above.
+
+
+## Scroll-driven orbits during reading
+
+The user explicitly requested camera motion during reading and confirmed it must advance with scroll, as at the fountain. All reading segments now use the same early orbit pattern as the fountain: the first half of the existing angle while reading, the remaining half during the following pause. The first opening now also advances that orbit with scroll. The total angle, orbital targets/radii/FOV, segment durations, intro, fountain motion and next-travel endpoints remain unchanged. No real-time auto-rotation is introduced; stopping scroll still pauses the motion by request. This supersedes the static camera hold described above.
+
+Validation compared generated keyframes against the preceding deployed source: intro and every travel segment match exactly (41 samples per travel), the fountain read/orbit match exactly, segment timings match, every reading segment moves at constant radius/target/FOV, and every orbit retains its exact prior exit keyframe. TypeScript and the production build passed.
