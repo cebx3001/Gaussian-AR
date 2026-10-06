@@ -256,11 +256,12 @@ const renderStory = () => {
         art.className = 'block';
         const body = t.text.replace('{tap}', coarsePointer ? u.tapTouch : u.tapMouse);
         art.innerHTML =
-            `<div class="rule"></div><p class="kicker">${esc(t.kicker)}</p><h2 class="title">${esc(t.title)}</h2>` +
+            `<div class="rule" aria-hidden="true"></div><p class="kicker" data-chapter="${String(i + 1).padStart(2, '0')} / ${String(chapters.length).padStart(2, '0')}">${esc(t.kicker)}</p><h2 class="title" id="chapter-${c.id}">${esc(t.title)}</h2>` +
             `<div class="text">${body
                 .split(/\n\n+/)
                 .map((p) => `<p>${esc(p)}</p>`)
                 .join('')}</div>`;
+        art.setAttribute('aria-labelledby', `chapter-${c.id}`);
         const pause = document.createElement('div');
         pause.className = 'pause';
         storyEl.append(art, pause);
@@ -301,7 +302,15 @@ const renderIndex = () => {
 const renderMasthead = () => {
     const p = lang === 'en' && story.place.en ? story.place.en : story.place;
     $<HTMLElement>('masthead-kicker').textContent = p.kicker;
-    $<HTMLElement>('masthead-title').textContent = p.title;
+    const title = $<HTMLElement>('masthead-title');
+    title.replaceChildren();
+    p.title.split(' ').forEach((word, i) => {
+        if (i) title.append(document.createTextNode(' '));
+        const line = document.createElement('span');
+        line.className = 'identity-line';
+        line.textContent = word;
+        title.append(line);
+    });
     $<HTMLElement>('loader-kicker').textContent = p.kicker;
     document.title = `${p.title} · Cuenca`;
 };
@@ -312,11 +321,15 @@ const applyLang = () => {
     renderStory();
     renderIndex();
     if (loader.dataset.hidden !== 'true') loaderMessage.textContent = UI[lang].loading;
-    $<HTMLElement>('lang').querySelectorAll<HTMLElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
+    $<HTMLElement>('lang').querySelectorAll<HTMLElement>('button').forEach((b) => {
+        b.classList.toggle('on', b.dataset.lang === lang);
+        b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
+    });
     arLink.textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer;
     layout();
+    updateIndex();
 };
 
 $<HTMLElement>('lang')
@@ -506,7 +519,12 @@ const tick = () => {
 };
 
 const updateIndex = () => {
-    indexEl.querySelectorAll<HTMLElement>('.chapter-link').forEach((b, k) => b.classList.toggle('on', k === activeChapter));
+    $<HTMLElement>('chapter-position').textContent = `${String(activeChapter + 1).padStart(2, '0')} / ${String(chapters.length).padStart(2, '0')}`;
+    indexEl.querySelectorAll<HTMLElement>('.chapter-link').forEach((b, k) => {
+        b.classList.toggle('on', k === activeChapter);
+        if (k === activeChapter) b.setAttribute('aria-current', 'location');
+        else b.removeAttribute('aria-current');
+    });
 };
 
 // ---- explorar libremente: la cámara se suelta y la historia se esconde

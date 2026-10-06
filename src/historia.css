@@ -1,202 +1,149 @@
-/* ---------------------------------------------------------------------------
-   Historia con scroll (historia.html): la maqueta fija de fondo y los textos que suben encima.
-   Usa las piezas del visor (viewer.css): cabecera, idioma, logo, «Ver en AR», barra de lugares, carga.
-   --------------------------------------------------------------------------- */
+/* Spatial editorial story. All axes and dimensions derive from viewer.css tokens. */
+/* Preserve the two existing input modes: story scroll, then canvas exploration. */
+#stage { pointer-events: none; }
+body.exploring #stage { pointer-events: auto; }
 
-/* el escenario no recibe toques mientras se cuenta la historia: el dedo hace scroll */
-#stage {
-    pointer-events: none;
-}
-
-body.exploring #stage {
-    pointer-events: auto;
-}
-
-/* velo: su opacidad la pone el código según el texto que hay en pantalla */
-#veil {
-    background: rgba(0, 0, 0, 0.3);
-    transition: opacity 0.25s linear;
-}
-
-/* área de scroll: entre la cabecera y la barra de lugares; los bordes se desvanecen */
 #scroller {
     position: fixed;
     z-index: 3;
-    left: 0;
-    right: 0;
-    top: calc(max(18px, env(safe-area-inset-top)) + 100px);
-    bottom: var(--index-h);
+    left: var(--margin);
+    right: var(--margin);
+    top: calc(var(--header-h) + 16px);
+    bottom: calc(var(--index-h) + 16px);
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    /* Only fade the scroll region's edges, never the spatial canvas. */
+    mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 16px), transparent);
 }
-
-#scroller::-webkit-scrollbar {
-    display: none;
-}
-
-/* mientras corre la entrada no se puede hacer scroll y el texto todavía no aparece */
-body.locked #scroller {
-    overflow: hidden;
-    opacity: 0;
-}
-
-body.ready #scroller {
-    opacity: 1;
-    transition: opacity 0.8s ease;
-}
-
-body.exploring #scroller,
-body.exploring #veil {
-    display: none;
-}
+#scroller::-webkit-scrollbar { display: none; }
+#scroller:focus-visible { outline: 1px solid var(--line); outline-offset: 8px; }
+body.locked #scroller { overflow: hidden; opacity: 0; }
+body.ready #scroller { opacity: 1; transition: opacity 0.8s ease; }
+body.exploring #scroller, body.exploring #veil { display: none; }
 
 #story {
     position: relative;
-    padding: 0 22px;
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+    column-gap: var(--gutter);
 }
-
-/* ---------- un lugar ---------- */
+.block, .pause, .end { grid-column: 1 / -1; }
 .block {
-    max-width: 34rem;
-    padding: 6px 0 24px;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
+    display: grid;
+    grid-template-columns: subgrid;
+    position: relative;
+    padding: var(--unit) 0 calc(4 * var(--unit));
+    text-shadow: var(--text-shadow);
 }
-
-.block .rule {
-    width: 44px;
-    height: 1px;
-    margin-bottom: 18px;
-    background: var(--accent);
-}
-
-.block .kicker,
-.end .kicker {
-    margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.18em;
+.block .rule { display: none; }
+.block .kicker, .end .kicker {
+    grid-column: 1 / -1;
+    margin: 0 0 calc(2 * var(--unit));
+    font: var(--weight-technical) var(--fs-micro)/1.6 var(--mono);
+    letter-spacing: var(--tracking-technical);
     text-transform: uppercase;
+    color: var(--muted);
+}
+.block .kicker::before {
+    content: attr(data-chapter);
+    margin-right: 16px;
     color: var(--accent);
+    font-variant-numeric: tabular-nums;
 }
-
-.block .title,
-.end .title {
-    margin: 0 0 14px;
-    color: #f7f0ee;
-    font-family: var(--display);
-    font-weight: 600;
-    font-size: clamp(1.6rem, 6.6vw, 2.5rem);
-    line-height: 1.04;
-    letter-spacing: -0.025em;
+.block .title, .end .title {
+    grid-column: 1 / -1;
+    margin: 0 0 calc(3 * var(--unit));
+    font: var(--weight-heading) clamp(23px, 5.8vw, 28px)/1.12 var(--text);
+    letter-spacing: -0.04em;
     text-wrap: balance;
+    color: var(--ink);
 }
-
+.block .text { grid-column: 1 / -1; }
 .block .text p {
-    margin: 0 0 0.8em;
-    font-size: var(--fs-text);
-    line-height: 1.55;
-    color: #f7f0ee;
+    margin: 0 0 1em;
+    font: var(--weight-reading) var(--fs-text)/var(--leading-reading) var(--text);
+    color: var(--ink);
     text-wrap: pretty;
 }
+.block .text p:last-child { margin-bottom: 0; }
+.pause { pointer-events: none; }
 
-/* capitular en el primer párrafo */
-.block .text p:first-child::first-letter {
-    float: left;
-    margin: 0.06em 0.1em 0 0;
-    font-family: var(--display);
-    font-weight: 700;
-    font-size: 3.1em;
-    line-height: 0.8;
-    color: var(--accent);
-}
-
-/* aviso de scroll: abajo al centro, encima de la barra de lugares */
 #scroll-cue {
     position: fixed;
     z-index: 5;
-    left: 50%;
-    bottom: calc(var(--index-h) + 16px);
-    display: grid;
-    justify-items: center;
-    gap: 6px;
-    color: var(--ink);
+    right: var(--margin);
+    bottom: calc(var(--index-h) + 24px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
     pointer-events: none;
+    color: var(--muted);
+    text-shadow: var(--text-shadow);
     opacity: 0;
-    transform: translate(-50%, 8px);
+    transform: translateY(8px);
     transition: opacity 0.5s ease, transform 0.5s ease;
-    filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.7));
 }
-
 body.ready:not(.scrolled):not(.exploring) #scroll-cue {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
     transition-delay: 1.2s;
 }
-
-#scroll-cue .wheel {
-    animation: rueda 1.6s ease-in-out infinite;
-}
-
-@keyframes rueda {
-    0% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-    70% {
-        transform: translateY(9px);
-        opacity: 0;
-    }
-    100% {
-        transform: translateY(0);
-        opacity: 0;
-    }
-}
-
-/* flecha hacia abajo que baja y se desvanece */
 #scroll-cue .chev {
-    width: 10px;
-    height: 10px;
-    border-right: 2px solid var(--accent);
-    border-bottom: 2px solid var(--accent);
+    width: 8px;
+    height: 8px;
+    border-right: 1px solid var(--accent);
+    border-bottom: 1px solid var(--accent);
     transform: rotate(45deg);
     animation: baja 1.6s ease-in-out infinite;
 }
-
 @keyframes baja {
-    0%,
-    100% {
-        transform: translateY(-3px) rotate(45deg);
-        opacity: 0.4;
-    }
-    50% {
-        transform: translateY(3px) rotate(45deg);
-        opacity: 1;
-    }
+    0%, 100% { transform: translateY(-3px) rotate(45deg); opacity: 0.4; }
+    50% { transform: translateY(3px) rotate(45deg); opacity: 1; }
 }
-
 #scroll-cue-text {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.24em;
+    font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono);
+    letter-spacing: var(--tracking-technical);
     text-transform: uppercase;
 }
 
-/* respiro sin texto: la altura la pone el código (más de una pantalla) */
-.pause {
-    pointer-events: none;
+.end {
+    min-height: 70vh;
+    min-height: 70dvh;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-content: center;
+    justify-items: start;
+    padding-bottom: 40px;
+    text-shadow: var(--text-shadow);
 }
-
-/* ---------- final ---------- */
-/* instrucciones de «Explorar libremente»: en el centro, sin recuadro; se van con el primer toque */
+.end .explore, #back-story {
+    min-height: var(--hit);
+    padding: 12px 0;
+    font: 600 var(--fs-micro)/1.5 var(--mono);
+    letter-spacing: var(--tracking-technical);
+    text-transform: uppercase;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid var(--accent);
+    border-radius: 0;
+    text-shadow: var(--text-shadow);
+}
+.end .explore { grid-column: 1 / -1; }
+.end .explore::after { content: ' ↗'; margin-left: 16px; color: var(--accent); }
+#back-story {
+    position: fixed;
+    z-index: 6;
+    left: var(--margin);
+    bottom: calc(var(--index-h) + 24px);
+}
 #how {
     position: fixed;
     z-index: 5;
-    left: 24px;
-    right: 24px;
+    left: var(--margin);
+    right: var(--margin);
     top: 50%;
     transform: translateY(-50%);
     text-align: center;
@@ -204,224 +151,22 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
     opacity: 0;
     transition: opacity 0.25s ease;
 }
+#how.shown { opacity: 1; transition: opacity 0.6s ease 0.4s; }
+#how p { margin: 0 0 8px; font-size: var(--fs-text); line-height: var(--leading-reading); text-shadow: var(--text-shadow); }
+#how strong { font-weight: 700; }
 
-#how.shown {
-    opacity: 1;
-    transition: opacity 0.6s ease 0.4s;
-}
-
-#how p {
-    margin: 0 0 6px;
-    font-size: var(--fs-text);
-    line-height: 1.45;
-    color: #f7f0ee;
-    text-shadow: 0 0 4px rgba(0, 0, 0, 0.95), 0 1px 14px rgba(0, 0, 0, 0.9);
-}
-
-#how strong {
-    font-weight: 700;
-    color: #fff;
-}
-
-.end {
-    min-height: 70vh;
-    min-height: 70dvh;
-    display: grid;
-    align-content: center;
-    justify-items: start;
-    max-width: 34rem;
-    padding-bottom: 40px;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
-}
-
-.end .explore,
-#back-story {
-    padding: 6px 2px 4px;
-    font-family: var(--display);
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--ink);
-    background: none;
-    border: 0;
-    border-bottom: 2px solid var(--accent);
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(0, 0, 0, 0.85);
-}
-
-#back-story {
-    position: fixed;
-    z-index: 6;
-    left: 22px;
-    bottom: calc(var(--index-h) + 14px);
-}
-
-/* ---------- computadora: el texto en una columna a la izquierda ---------- */
-@media (min-width: 820px) {
-    #story {
-        padding: 0 44px;
-    }
-    .block,
-    .end {
-        max-width: min(31rem, 42vw);
-    }
-}
-
-
-/* ==========================================================================
-   2026 EDITORIAL STORY LAYER
-   Retícula, jerarquía y microtipografía. Sin cards, paneles ni cajas.
-   ========================================================================== */
-#scroller {
-    top: calc(max(20px, env(safe-area-inset-top)) + clamp(118px, 15vw, 184px));
-}
-
-#story {
-    padding: 0 clamp(18px, 3.2vw, 52px);
-}
-
-.block {
-    position: relative;
-    max-width: min(39rem, 88vw);
-    padding: 8px 0 30px;
-    text-shadow: 0 1px 10px rgba(0,0,0,.92);
-}
-
-.block::before {
-    content: attr(data-index);
-    position: absolute;
-    top: 11px;
-    left: 0;
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: .08em;
-    color: var(--muted);
-}
-
-.block .rule {
-    width: min(72px, 18vw);
-    margin: 0 0 18px;
-    background: var(--accent);
-}
-
-.block .kicker,
-.end .kicker {
-    margin-bottom: 9px;
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: .12em;
-    color: var(--accent);
-}
-
-.block .title,
-.end .title {
-    max-width: 10ch;
-    margin-bottom: 18px;
-    font-size: clamp(2.65rem, 10.8vw, 6.6rem);
-    font-weight: 700;
-    line-height: .86;
-    letter-spacing: -.065em;
-    text-transform: uppercase;
-    text-wrap: balance;
-}
-
-.block .text {
-    max-width: 34rem;
-    padding-left: clamp(0px, 5vw, 72px);
-}
-
-.block .text p {
-    font-size: var(--fs-text);
-    line-height: 1.48;
-    color: rgba(var(--ink-rgb), .92);
-}
-
-.block .text p:first-child::first-letter {
-    float: none;
-    margin: 0;
-    font-family: inherit;
-    font-size: inherit;
-    font-weight: inherit;
-    line-height: inherit;
-    color: inherit;
-}
-
-#scroll-cue-text {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 500;
-    letter-spacing: .12em;
-}
-
-.end {
-    max-width: 48rem;
-}
-
-.end .explore,
-#back-story {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    border-bottom-width: 1px;
-}
-
-#how p {
-    font-size: clamp(15px, 1.5vw, 18px);
+@media (min-width: 600px) and (max-width: 819px) {
+    .block .title, .block .text, .end .title { grid-column: 1 / 4; }
 }
 
 @media (min-width: 820px) {
-    #story {
-        padding: 0 clamp(44px, 6vw, 92px);
-    }
-    .block,
-    .end {
-        max-width: min(46rem, 52vw);
-    }
-    .block .text {
-        padding-left: clamp(54px, 6vw, 110px);
-    }
+    .block .kicker, .end .kicker { grid-column: 1 / 7; }
+    .block .title, .end .title { grid-column: 1 / 6; font-size: clamp(26px, 2.2vw, 32px); }
+    .block .text { grid-column: 2 / 6; }
+    .end .explore { grid-column: 2 / 6; }
 }
-
-
-/* 2026 spatial editorial refinement */
-.block {
-    max-width: min(44rem, 92vw);
-}
-.block .title,
-.end .title {
-    max-width: 11ch;
-    font-family: var(--display);
-    font-size: clamp(2.65rem, 11vw, 7rem);
-    font-weight: 400;
-    line-height: .9;
-    letter-spacing: -.045em;
-}
-.block .text {
-    max-width: 31rem;
-    padding-left: clamp(0px, 4vw, 58px);
-}
-.block .text p {
-    font-family: var(--text);
-    font-size: clamp(15px, 1.2vw, 17px);
-    font-weight: 500;
-    line-height: 1.5;
-    letter-spacing: -.012em;
-    text-shadow: 0 1px 8px rgba(0,0,0,.98), 0 0 18px rgba(0,0,0,.72);
-}
-.block .rule {
-    width: clamp(44px, 8vw, 92px);
-}
-@media (max-width: 819px) {
-    #scroller {
-        top: calc(max(20px, env(safe-area-inset-top)) + 150px);
-    }
-    .block .text {
-        max-width: min(29rem, 88vw);
-    }
-}
-@media (min-width: 820px) {
-    .block, .end {
-        max-width: min(52rem, 58vw);
-    }
+@media (max-height: 640px) {
+    #scroller { top: calc(var(--header-h) + 8px); }
+    .block .title, .end .title { font-size: 22px; }
+    .block .kicker, .end .kicker { margin-bottom: 12px; }
 }
