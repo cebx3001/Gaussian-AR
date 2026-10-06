@@ -24,6 +24,8 @@
 :root {
     color-scheme: dark;
     --bg: #0D0D0D;
+    --canvas-bg: #383A39;
+    --canvas-bg-rgb: 56, 58, 57;
     --bg-rgb: 13, 13, 13;
     --ink: #FFFFFF;
     --ink-rgb: 255, 255, 255;
@@ -69,7 +71,7 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: var(--bg);
+    background: var(--canvas-bg);
     color: var(--ink);
     font-family: var(--text);
     -webkit-font-smoothing: antialiased;
@@ -83,8 +85,8 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
 }
 ::selection { background: var(--accent); color: var(--ink); }
 
-/* The Gaussian fills the viewport; black is only the transparent-scene fallback. */
-#stage { position: fixed; inset: 0; background: var(--bg); }
+/* The Gaussian fills the viewport; exposed canvas uses the requested dark cobblestone grey. */
+#stage { position: fixed; inset: 0; background: var(--canvas-bg); }
 /* Keep the queried element, but replace full-screen dimming with local text shadows. */
 #veil { position: fixed; inset: 0; pointer-events: none; background: none; }
 
@@ -243,7 +245,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
     bottom: 0;
     left: calc(-1 * var(--margin));
     right: calc(-1 * var(--margin));
-    background: linear-gradient(to top, rgba(24, 26, 29, 0.95) 0%, rgba(24, 26, 29, 0.5) 60%, transparent 100%);
+    background: linear-gradient(to top, rgba(var(--canvas-bg-rgb), 0.88) 0%, rgba(var(--canvas-bg-rgb), 0.5) 60%, transparent 100%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     mask-image: linear-gradient(to bottom, transparent, #000 32px);
@@ -292,7 +294,7 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
     justify-items: start;
     gap: 16px;
     padding: var(--margin);
-    background: var(--bg);
+    background: var(--canvas-bg);
     transition: opacity 0.8s ease;
 }
 #loader[data-hidden='true'] { opacity: 0; pointer-events: none; }

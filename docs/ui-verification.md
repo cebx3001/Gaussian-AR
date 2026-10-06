@@ -49,3 +49,7 @@ Pages now reports `build_type: workflow`, confirming the account-level setting w
 ## Authorized follow-up: frosted bottom backing
 
 The user explicitly requested an edgeless frosted-glass gradient at the bottom, superseding the earlier prohibition for this navigation region. The existing `#index` gains a full-width pseudo-element with the requested rgba(24,26,29) gradient and 10px backdrop blur. A 32px masked fade removes the blur's upper rectangular edge. The pseudo-element ignores pointer input; navigation geometry, keyline, five visible destinations, typography, all other colors and application behavior remain unchanged.
+
+## Authorized follow-up: dark cobblestone grey
+
+The user requested a lighter, stone-like dark grey rather than the near-black background. `--canvas-bg: #383A39` now governs the exposed canvas, page/loading fallback and frosted footer backing. The footer's lower opacity changes from 0.95 to 0.88 to retain more scene presence. Technical black remains available for text shadows and authoring details. Gaussian rendering, colors, camera data, navigation, fonts and narrative remain unchanged.
