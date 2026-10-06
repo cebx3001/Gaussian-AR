@@ -84,3 +84,8 @@ The user superseded the local description treatment: descriptions now have no ba
 After the unchanged intro, Story starts with one empty scroll viewport, the scene, permanent UI, scroll cue and temporary tuner. The filter defaults to 0%. Scrolling brings the first article up naturally and drives its opacity directly from scroll distance, without a timer. The authored camera track holds its original first reading pose throughout this opening; keyframes, authored segment times and later choreography are unchanged. First-chapter navigation still reaches its reading position. Language changes at the clean opening preserve scroll zero; Tour returns preserve the saved Story position.
 
 Local native range checks passed for 0%, 50%, 49%, touch drag, transparent descriptions, viewport widths 320/390/1440, localized labels, and hiding/retaining the value across Story/Tour switching, with no browser errors.
+
+
+## Final contrast selection
+
+The user selected 30%. The Story filter now has fixed CSS opacity 0.3. The temporary panel, range, output, localized tuner labels, CSS custom property and input handlers are removed entirely. The scroll-led opening and transparent descriptions remain. The fixed filter still hides during loading and Tour mode, and never intercepts pointer events. This supersedes the temporary 0% starting value above.

@@ -73,7 +73,6 @@ type PageText = {
     back: string;
     storyMode: string;
     tourMode: string;
-    filterLabel: string;
 };
 const TEXT: Record<Lang, PageText> = {
     es: {
@@ -90,8 +89,7 @@ const TEXT: Record<Lang, PageText> = {
         explore: 'Explorar libremente',
         back: '← Volver a la historia',
         storyMode: 'Historia',
-        tourMode: 'Recorrido libre',
-        filterLabel: 'Filtro de Historia'
+        tourMode: 'Recorrido libre'
     },
     en: {
         cue: 'Scroll down to explore',
@@ -107,8 +105,7 @@ const TEXT: Record<Lang, PageText> = {
         explore: 'Explore freely',
         back: '← Back to the story',
         storyMode: 'Story mode',
-        tourMode: 'Tour mode',
-        filterLabel: 'Story filter'
+        tourMode: 'Tour mode'
     }
 };
 
@@ -127,21 +124,6 @@ const arLink = $<HTMLAnchorElement>('ar-link');
 const storyMode = $<HTMLButtonElement>('story-mode');
 const tourMode = $<HTMLButtonElement>('tour-mode');
 const tourCaption = $<HTMLElement>('tour-caption');
-// Temporal: 0–50% de una capa global, sin modificar el canvas ni la pista de cámara.
-const filterRange = $<HTMLInputElement>('story-filter-range');
-const filterValue = $<HTMLOutputElement>('story-filter-value');
-const updateFilter = () => {
-    const percent = Math.max(0, Math.min(50, filterRange.valueAsNumber));
-    document.documentElement.style.setProperty('--story-filter-opacity', String(percent / 100));
-    filterValue.value = `${percent} %`;
-};
-filterRange.addEventListener('input', updateFilter);
-// Keep slider keys in this control while preserving the browser's native range behavior.
-filterRange.addEventListener('keydown', (e) => e.stopPropagation());
-filterRange.addEventListener('keyup', (e) => e.stopPropagation());
-updateFilter();
-
-
 const story = defaultStory();
 const chapters: (Chapter & { pose: Pose })[] = story.chapters.filter((c): c is Chapter & { pose: Pose } => !!c.pose);
 let lang: Lang = detectLang();
@@ -353,7 +335,6 @@ const applyLang = () => {
         b.classList.toggle('on', b.dataset.lang === lang);
         b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
     });
-    $<HTMLElement>('story-filter-label').textContent = TEXT[lang].filterLabel;
     arLink.textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer;
