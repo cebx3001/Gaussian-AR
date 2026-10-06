@@ -76,7 +76,7 @@ type PageText = {
 };
 const TEXT: Record<Lang, PageText> = {
     es: {
-        cue: 'Desliza',
+        cue: 'Desliza hacia abajo',
         welcome: {
             kicker: 'Recorrido en tres dimensiones',
             title: 'Patrimonio que se recorre',
@@ -92,7 +92,7 @@ const TEXT: Record<Lang, PageText> = {
         tourMode: 'Recorrido libre'
     },
     en: {
-        cue: 'Scroll down',
+        cue: 'Scroll down to explore',
         welcome: {
             kicker: 'A three-dimensional tour',
             title: 'Heritage you can walk through',
@@ -267,7 +267,7 @@ const renderStory = () => {
         const body = t.text.replace('{tap}', coarsePointer ? u.tapTouch : u.tapMouse);
         art.innerHTML =
             `<div class="rule" aria-hidden="true"></div><p class="kicker" data-chapter="${String(i + 1).padStart(2, '0')} / ${String(chapters.length).padStart(2, '0')}">${esc(t.kicker)}</p><h2 class="title" id="chapter-${c.id}">${esc(t.title)}</h2>` +
-            `<div class="text">${body
+            `<div class="text story-description">${body
                 .split(/\n\n+/)
                 .map((p) => `<p>${esc(p)}</p>`)
                 .join('')}</div>`;

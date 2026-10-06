@@ -1,208 +1,97 @@
-:root {
-    color-scheme: dark;
-    --bg: #3b3a35;
-    --bg-rgb: 59, 58, 53;
-    --ink: #e7d8d6;
-    --ink-rgb: 231, 216, 214;
-    --accent: #a6473e;
-    --accent-rgb: 166, 71, 62;
-    --display: 'Cormorant Garamond', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-    --text: 'Libre Franklin', -apple-system, 'Segoe UI', Roboto, sans-serif;
-}
+@import './design-system.css';
 
-* {
-    box-sizing: border-box;
-}
+/* AR shares the viewer's typography, palette and modular axes; XR owns canvas input. */
+:root { --header-h: calc(var(--safe-top) + 112px + 1.96 * var(--fs-display)); --ar-footer-h: calc(64px + var(--safe-bottom)); }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--canvas-bg); background-image: var(--canvas-grid); background-size: 40px 40px; background-position: center center; color: var(--ink); font-family: var(--text); -webkit-font-smoothing: antialiased; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible, #start:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+button:disabled { opacity: 0.6; cursor: wait; }
+#application-canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+/* Keep the empty camera canvas from covering the shared entry/error background. */
+body:has(#start:not([hidden])) #application-canvas,
+body:has(#hint.err:not([hidden])) #application-canvas,
+body:has(#ar-start:not([hidden])) #application-canvas,
+body:has(#ar-error:not([hidden])) #application-canvas { visibility: hidden; }
+#ui { position: fixed; inset: 0; z-index: 5; touch-action: none; }
+#ar-ui { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+#ar-ui > * { pointer-events: auto; }
 
-[hidden] {
-    display: none !important;
-}
+#top { position: fixed; top: var(--safe-top); left: var(--margin); right: var(--margin); display: flex; justify-content: flex-end; z-index: 20; pointer-events: none; }
+#top-right { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
+#top-right > a { display: grid; place-items: center; width: var(--hit); height: var(--hit); }
+.logo { width: auto; height: 24px; pointer-events: none; filter: drop-shadow(0 1px 3px var(--bg)); }
+#logo-ar { position: fixed; top: var(--safe-top); right: var(--margin); }
+#lang, #ar-lang { display: flex; align-items: center; font: var(--weight-technical) var(--fs-micro)/1 var(--mono); letter-spacing: var(--tracking-technical); color: var(--muted); text-shadow: var(--text-shadow); }
+#ar-lang { position: fixed; top: var(--safe-top); right: var(--margin); }
+#lang span, #ar-lang span { color: var(--line); }
+#lang button, #ar-lang button { min-width: var(--hit); min-height: var(--hit); padding: 0 8px; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; letter-spacing: inherit; color: var(--muted); text-shadow: inherit; }
+#lang button.on, #ar-lang button.on { color: var(--ink); border-bottom-color: var(--accent); }
+#masthead { position: fixed; top: var(--safe-top); left: var(--margin); right: var(--margin); z-index: 15; pointer-events: none; text-shadow: var(--text-shadow); }
+#mast-kicker { margin: 44px 0 8px; padding-top: 16px; font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono); letter-spacing: var(--tracking-technical); text-transform: uppercase; color: var(--accent); }
+#mast-title { margin: 0; font: var(--weight-display) var(--fs-display)/var(--leading-display) var(--display); letter-spacing: var(--tracking-display); text-transform: uppercase; }
+#masthead::after { content: ''; position: fixed; top: var(--header-h); left: var(--margin); right: var(--margin); height: 1px; background: var(--line); }
+:root:has(#start[hidden]) { --header-h: calc(var(--safe-top) + 112px); }
+#start[hidden] ~ #ui #mast-title, body:has(#start[hidden]) #mast-title { font-size: clamp(20px, 5.4vw, 28px); }
 
-html,
-body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--ink);
-    font-family: var(--text);
-    -webkit-font-smoothing: antialiased;
-    -webkit-tap-highlight-color: transparent;
-}
+#start, .ar-card { position: fixed; left: var(--margin); right: var(--margin); top: calc(var(--header-h) + 16px); bottom: calc(var(--ar-footer-h) + 16px); display: grid; grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr)); column-gap: var(--gutter); align-content: start; row-gap: 20px; padding: 8px 0 24px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; text-align: left; background: none; border: 0; border-radius: 0; z-index: 10; }
+#start::-webkit-scrollbar, .ar-card::-webkit-scrollbar { display: none; }
+#start > *, .ar-card > * { grid-column: 1 / -1; margin: 0; }
+#start h2, .ar-card h1, .ar-card h2 { font: var(--weight-heading) clamp(23px, 5.8vw, 28px)/1.12 var(--text); letter-spacing: -0.04em; text-wrap: balance; color: var(--ink); }
+#start p, #start ol, .ar-card p { font: var(--weight-reading) var(--fs-text)/var(--leading-reading) var(--text); color: var(--ink); }
+#start ol { padding: 0; list-style: none; counter-reset: step; }
+#start li { position: relative; counter-increment: step; padding: 0 0 16px calc(var(--column) + var(--gutter)); }
+#start li:last-child { padding-bottom: 0; }
+#start li::before { content: counter(step, decimal-leading-zero); position: absolute; top: 4px; left: 0; font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono); color: var(--accent); }
+#start b { font-weight: 600; }
+#start .note { font-size: 13px; color: var(--muted); }
+.ar-kicker { font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono) !important; text-transform: uppercase; letter-spacing: var(--tracking-technical); color: var(--accent) !important; }
+#start-btn, #ar-start-btn, #again, #ar-again { justify-self: start; min-height: var(--hit); padding: 12px 0; color: var(--ink); background: none; border: 0; border-bottom: 2px solid var(--accent); border-radius: 0; font: 600 var(--fs-micro)/1.4 var(--mono); letter-spacing: var(--tracking-technical); text-transform: uppercase; text-shadow: var(--text-shadow); }
 
-#application-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-}
+#back, #ar-back { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; height: var(--ar-footer-h); padding: 12px var(--margin) var(--safe-bottom); isolation: isolate; pointer-events: auto; color: var(--muted); font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono); letter-spacing: var(--tracking-technical); text-decoration: none; text-transform: uppercase; text-shadow: var(--text-shadow); }
+#back::before, #ar-back::before { content: ''; position: absolute; z-index: -1; inset: -32px 0 0; background: linear-gradient(to top, rgba(var(--canvas-bg-rgb), 0.88), rgba(var(--canvas-bg-rgb), 0.5) 60%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); mask-image: linear-gradient(to bottom, transparent, #000 32px); pointer-events: none; }
+#back::after, #ar-back::after { content: ''; position: absolute; top: 0; left: var(--margin); right: var(--margin); height: 1px; background: var(--line); pointer-events: none; }
+#hint, #ar-hint { position: fixed; left: var(--margin); right: var(--margin); bottom: calc(var(--ar-footer-h) + 24px); margin: 0; font: var(--weight-reading) var(--fs-text)/var(--leading-reading) var(--text); color: var(--ink); text-align: left; text-shadow: var(--text-shadow); pointer-events: none; }
+#hint b, #ar-hint b { font-weight: 600; }
+#hint.err { top: calc(var(--header-h) + 32px); bottom: auto; max-height: calc(100dvh - var(--header-h) - var(--ar-footer-h) - 64px); overflow-y: auto; pointer-events: auto; }
+#hint.err b { display: inline-block; margin-bottom: 16px; font: var(--weight-heading) 24px/1.12 var(--text); }
+#again, #ar-again { position: fixed; left: var(--margin); bottom: calc(var(--ar-footer-h) + 24px); }
+body:has(#again:not([hidden])) #hint, body:has(#ar-again:not([hidden])) #ar-hint { bottom: calc(var(--ar-footer-h) + 88px); }
+#status, #ar-debug { position: fixed; top: calc(var(--header-h) + 16px); left: var(--margin); right: var(--margin); margin: 0; font: 11px/1.4 var(--mono); color: var(--muted); text-shadow: var(--text-shadow); pointer-events: none; overflow-wrap: anywhere; }
+#ar-error-detail { font: 11px/1.5 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+#loading { position: fixed; left: var(--margin); right: var(--margin); top: 50%; transform: translateY(-50%); display: grid; justify-items: start; gap: 16px; pointer-events: none; text-shadow: var(--text-shadow); }
+#loading p { margin: 0; }
+#loading-text { font: var(--weight-heading) 24px/1.12 var(--text); color: var(--ink); }
+#loading-bar { position: relative; width: min(240px, 100%); height: 2px; overflow: hidden; background: var(--line); }
+#loading-fill { position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(0); transition: transform 0.3s ease; }
+#loading.busy #loading-fill { width: 35%; transform: none; transition: none; animation: corre 1.2s ease-in-out infinite; }
+@keyframes corre { from { left: -35%; } to { left: 100%; } }
+#loading-pct { font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono); letter-spacing: var(--tracking-technical); color: var(--muted); }
 
-/* la interfaz va sobre la cámara y el modelo */
-#ar-ui {
-    position: fixed;
-    inset: 0;
-    z-index: 30;
-    pointer-events: none;
-    font-family: var(--text);
+@media (min-width: 820px) {
+    :root { --grid-columns: 12; --fs-display: clamp(64px, 7.6vw, 120px); }
+    #start > *, .ar-card > * { grid-column: 1 / 6; }
+    #mast-title { max-width: calc(8 * var(--column) + 7 * var(--gutter)); }
+    #start #kicker { grid-row: 1; }
+    #start #intro { grid-row: 2; }
+    #start #start-btn { grid-row: 3; }
+    #start #steps { grid-column: 7 / -1; grid-row: 1 / span 3; }
+    #start #install-note { grid-column: 7 / -1; grid-row: 4; }
+    #start li { padding-left: calc(var(--column) + var(--gutter)); }
 }
-
-#ar-ui > * {
-    pointer-events: auto;
+@media (max-height: 640px) {
+    :root { --fs-display: clamp(32px, 7vw, 44px); }
+    #start, .ar-card { top: calc(var(--header-h) + 8px); row-gap: 16px; }
 }
-
-#ar-back {
-    position: absolute;
-    top: max(12px, env(safe-area-inset-top));
-    left: 14px;
-    padding: 10px 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink);
-    text-decoration: none;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 10px rgba(0, 0, 0, 0.85);
+@media (max-height: 640px) and (orientation: landscape) {
+    :root { --header-h: calc(var(--safe-top) + 104px + 0.98 * var(--fs-display)); }
+    #mast-title { white-space: nowrap; }
 }
+/* The legacy diagnostic route has no project masthead; retain its utility-row clearance. */
+:root:not(:has(#masthead)) { --header-h: calc(var(--safe-top) + 56px); }
 
-#ar-lang {
-    position: absolute;
-    top: max(12px, env(safe-area-inset-top));
-    right: 12px;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    color: rgba(var(--ink-rgb), 0.8);
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 10px rgba(0, 0, 0, 0.85);
-}
-
-#ar-lang button {
-    padding: 10px 8px 7px;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    font: inherit;
-    letter-spacing: inherit;
-    color: inherit;
-    text-shadow: inherit;
-}
-
-#ar-lang button.on {
-    color: var(--ink);
-    border-bottom-color: var(--accent);
-}
-
-.ar-card {
-    position: absolute;
-    left: 20px;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    max-width: 30rem;
-    margin: 0 auto;
-    padding: 28px 24px 24px;
-    background: rgba(var(--bg-rgb), 0.92);
-    border: 1px solid rgba(var(--accent-rgb), 0.6);
-    border-radius: 18px;
-    text-align: center;
-}
-
-.ar-kicker {
-    margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--accent);
-}
-
-.ar-card h1,
-.ar-card h2 {
-    margin: 0 0 14px;
-    font-family: var(--display);
-    font-weight: 500;
-    font-size: 2rem;
-    line-height: 1.1;
-    color: var(--ink);
-}
-
-.ar-card p {
-    margin: 0 0 22px;
-    font-size: 16px;
-    line-height: 1.55;
-    color: var(--ink);
-}
-
-#ar-error p {
-    margin-bottom: 0;
-}
-
-#ar-start-btn,
-#ar-again {
-    padding: 14px 30px;
-    font: inherit;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--ink);
-    background: var(--accent);
-    border: none;
-    border-radius: 999px;
-}
-
-#ar-start-btn:disabled {
-    opacity: 0.6;
-}
-
-/* instrucciones sobre la cámara */
-#ar-hint {
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    top: calc(max(12px, env(safe-area-inset-top)) + 56px);
-    max-width: 28rem;
-    margin: 0 auto;
-    padding: 12px 18px;
-    font-size: 16px;
-    line-height: 1.45;
-    text-align: center;
-    color: var(--ink);
-    background: rgba(var(--bg-rgb), 0.82);
-    border: 1px solid rgba(var(--accent-rgb), 0.55);
-    border-radius: 14px;
-    pointer-events: none;
-}
-
-#ar-again {
-    position: absolute;
-    left: 50%;
-    bottom: max(24px, env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    white-space: nowrap;
-}
-
-/* detalle técnico del error: pequeño, para poder reportarlo */
-#ar-error-detail {
-    margin: 12px 0 0;
-    font-size: 11px;
-    line-height: 1.4;
-    color: rgba(var(--ink-rgb), 0.55);
-    word-break: break-word;
-}
-
-/* diagnóstico de la búsqueda de superficie */
-#ar-debug {
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: max(10px, env(safe-area-inset-bottom));
-    margin: 0;
-    padding: 6px 10px;
-    font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
-    color: rgba(var(--ink-rgb), 0.85);
-    background: rgba(var(--bg-rgb), 0.75);
-    border-radius: 8px;
-    pointer-events: none;
+@media (max-height: 640px) and (orientation: portrait) {
+    #mast-title { max-width: 90%; }
 }

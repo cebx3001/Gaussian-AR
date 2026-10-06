@@ -1,0 +1,67 @@
+/* One presentation system. Renderer and application state remain owned by TypeScript. */
+@font-face {
+    font-family: 'Syne';
+    src: url('./assets/fonts/syne.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 700 800;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Plus Jakarta Sans';
+    src: url('./assets/fonts/plus-jakarta-sans.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('./assets/fonts/jetbrains-mono.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 400 600;
+    font-display: swap;
+}
+
+:root {
+    color-scheme: dark;
+    --bg: #0D0D0D;
+    --canvas-bg: #26292E;
+    --canvas-bg-rgb: 38, 41, 46;
+    --canvas-grid: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    --bg-rgb: 13, 13, 13;
+    --ink: #FFFFFF;
+    --ink-rgb: 255, 255, 255;
+    --accent: #B84335;
+    --accent-rgb: 184, 67, 53;
+    --muted: #D1CDB8;
+    --ink-soft: var(--muted);
+    --line: rgba(255, 255, 255, 0.1);
+    --display: 'Syne', sans-serif;
+    --text: 'Plus Jakarta Sans', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+    --weight-display: 700;
+    --weight-heading: 700;
+    --weight-reading: 400;
+    --weight-technical: 500;
+    --tracking-display: -0.035em;
+    --tracking-technical: 0.08em;
+    --leading-display: 0.98;
+    --leading-reading: 1.65;
+    --fs-text: clamp(15px, 1.15vw, 17px);
+    --fs-micro: 11px;
+    --fs-display: clamp(36px, 11.4vw, 88px);
+    /* Ten mobile columns give five two-column destinations; desktop uses twelve. */
+    --grid-columns: 10;
+    --gutter: clamp(8px, 1.4vw, 24px);
+    --margin: clamp(20px, 6.1vw, 64px);
+    --unit: 8px;
+    --hit: 44px;
+    --mode-h: 0px;
+    --safe-top: max(16px, env(safe-area-inset-top));
+    --safe-bottom: max(12px, env(safe-area-inset-bottom));
+    --column: calc((100vw - 2 * var(--margin) - (var(--grid-columns) - 1) * var(--gutter)) / var(--grid-columns));
+    --content-width: calc(var(--grid-columns) * var(--column) + (var(--grid-columns) - 1) * var(--gutter));
+    --header-h: calc(var(--safe-top) + 144px + 1.96 * var(--fs-display) + var(--mode-h));
+    --index-h: calc(var(--safe-bottom) + 80px);
+    --text-shadow: 0 1px 2px rgba(var(--bg-rgb), 0.9), 0 2px 12px rgba(var(--bg-rgb), 0.65);
+}
+

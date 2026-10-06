@@ -13,6 +13,7 @@
 // Flujo: inicio → cámara → círculo sobre la superficie (hit test en el centro de la pantalla) → tocar coloca la
 // maqueta (scene.sog) con el Radial Reveal → pellizco para el tamaño. Textos en español e inglés.
 // ---------------------------------------------------------------------------
+import './ar.css';
 import * as pc from 'playcanvas';
 
 import { AR_CERO } from './ar-cero-text';

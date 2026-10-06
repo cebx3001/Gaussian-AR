@@ -53,3 +53,23 @@ The user explicitly requested an edgeless frosted-glass gradient at the bottom, 
 ## Authorized follow-up: dark cobblestone grey
 
 The user requested a lighter, stone-like dark grey rather than the near-black background. `--canvas-bg: #383A39` now governs the exposed canvas, page/loading fallback and frosted footer backing. The footer's lower opacity changes from 0.95 to 0.88 to retain more scene presence. Technical black remains available for text shadows and authoring details. Gaussian rendering, colors, camera data, navigation, fonts and narrative remain unchanged.
+
+## Authorized follow-up: shared AR presentation and mineral graphite grid
+
+AR now imports the same self-hosted fonts and design tokens as the spatial viewer through `design-system.css`. Its old embedded CSS, external font requests, ornamental pattern and legacy cards/pills are replaced by the shared grid, white/warm-secondary/terracotta hierarchy, natural Syne project identity, Jakarta reading text and Mono controls. Startup, language, loading, hints, reset, error and return elements retain their original IDs and handlers; the AR engine implementation changes only by adding its stylesheet import. Native DOM overlay gesture capture is preserved.
+
+The user's latest instruction replaces the stone background with #26292E and its exact 40px technical grid (1px white at 0.04 opacity, centered). The grid is painted behind the viewer canvas and behind AR's camera canvas, never as an overlay on the Gaussian or camera feed. The same mineral graphite is used for the frosted footer backing and browser theme color across all four page entries. This explicitly supersedes the earlier restriction on decorative background grids.
+
+The initial scroll cue now reads “Desliza hacia abajo” / “Scroll down to explore”, with 12–14px bold white Mono, a larger 2px directional chevron and alignment to the shared left margin. The existing footer backing extends 64px upward to support cue contrast. Its original reveal, bounce timing and dismissal-on-scroll behavior are preserved; it never captures input.
+
+### AR and cue validation
+
+Local Chromium checks exercised Spanish/English AR entry, Start and the existing unsupported-device error flow at 320×568, 390×844, 844×390 and 1440×900. All three fonts loaded; there was no horizontal overflow or JavaScript page error. Entry screens and desktop/mobile layouts were visually inspected. The initial viewer rendered and the cue resolved to bold white 14px text; its layer was raised above the frosted footer so the footer cannot blur the instruction itself. Native camera capture, tracking, placement and pinch remain unverified without a physical AR device; their code and gesture layer are preserved.
+
+Files in this follow-up: `src/design-system.css`, `src/viewer.css`, `src/ar.css`, `src/ar-cero.ts` (CSS import only), `src/historia.css`, `src/historia.ts` (cue translations only), the four HTML page entries, and this verification record. The AR entry retains its IDs while using h1 for the project identity and h2 for the AR instructions.
+
+## Authorized follow-up: Story reading contrast
+
+Story description wrappers retain `.text` and add `.story-description`. Within the story scroller they use the exact requested rgba(24,26,29,0.65→0.45) vertical gradient, 6px backdrop blur, 16px vertical padding, 12px vertical margin, #EAE6DF paragraph text and 0 1px 3px black shadow at 0.8 opacity. The reading band has no border, rounded corners or horizontal padding and stays aligned to the shared grid. It is scoped to Story mode; Tour and AR input layers are unaffected. Article geometry continues to be measured by the existing layout mapping.
+
+The story scroller's previous edge mask was removed so it does not isolate the backdrop sampling from the Gaussian canvas; the Tour caption keeps its existing edge mask. Story scrolling, camera-track construction and input ownership are preserved.

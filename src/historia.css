@@ -4,6 +4,7 @@
 body.exploring #stage { pointer-events: auto; }
 
 #scroller, #tour-caption {
+    mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 16px), transparent);
     position: fixed;
     z-index: 3;
     left: var(--margin);
@@ -14,8 +15,6 @@ body.exploring #stage { pointer-events: auto; }
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    /* Only fade the scroll region's edges, never the spatial canvas. */
-    mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 16px), transparent);
 }
 #tour-caption {
     display: grid;
@@ -80,18 +79,32 @@ body.exploring #veil { display: none; }
     text-wrap: pretty;
 }
 .block .text p:last-child { margin-bottom: 0; }
+/* Open reading band requested for Story mode; the tour caption keeps its own input layer. */
+#scroller .story-description {
+    background: linear-gradient(to bottom, rgba(24, 26, 29, 0.65) 0%, rgba(24, 26, 29, 0.45) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 16px 0;
+    margin: 12px 0;
+}
+#scroller .story-description p {
+    color: #EAE6DF;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
 .pause { pointer-events: none; }
 
 #scroll-cue {
     position: fixed;
-    z-index: 5;
-    right: var(--margin);
-    bottom: calc(var(--index-h) + 24px);
+    z-index: 7;
+    left: var(--margin);
+    bottom: calc(var(--index-h) + 8px);
+    min-height: var(--hit);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     pointer-events: none;
-    color: var(--muted);
+    color: var(--ink);
     text-shadow: var(--text-shadow);
     opacity: 0;
     transform: translateY(8px);
@@ -103,10 +116,10 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
     transition-delay: 1.2s;
 }
 #scroll-cue .chev {
-    width: 8px;
-    height: 8px;
-    border-right: 1px solid var(--accent);
-    border-bottom: 1px solid var(--accent);
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
     transform: rotate(45deg);
     animation: baja 1.6s ease-in-out infinite;
 }
@@ -115,8 +128,8 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
     50% { transform: translateY(3px) rotate(45deg); opacity: 1; }
 }
 #scroll-cue-text {
-    font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono);
-    letter-spacing: var(--tracking-technical);
+    font: 600 clamp(12px, 3.6vw, 14px)/1.4 var(--mono);
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
