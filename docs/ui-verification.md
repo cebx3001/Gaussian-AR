@@ -45,3 +45,7 @@ Pages now reports `build_type: workflow`, confirming the account-level setting w
 - Chapter text dismissed on tap. Text hit areas consume dismissal without selecting a new scene point; the surrounding overlay remains transparent to input. Both languages retain Tour mode and translate the selected caption. Returning to Story restores the selected chapter; subsequent Story navigation works.
 - Geometry checked at 320×740, 390×844, 844×390 and 1440×900: all five destinations fit; neither the root nor navigation labels overflow horizontally. Mobile controls retain 44px mode and 64px destination hit heights. A full-resolution 390×844 screenshot was inspected, alongside the other viewport captures.
 - Main viewer tests produced no JavaScript page errors. Existing AR links and modules remain intact; physical AR tracking is still unverified without a device.
+
+## Authorized follow-up: frosted bottom backing
+
+The user explicitly requested an edgeless frosted-glass gradient at the bottom, superseding the earlier prohibition for this navigation region. The existing `#index` gains a full-width pseudo-element with the requested rgba(24,26,29) gradient and 10px backdrop blur. A 32px masked fade removes the blur's upper rectangular edge. The pseudo-element ignores pointer input; navigation geometry, keyline, five visible destinations, typography, all other colors and application behavior remain unchanged.

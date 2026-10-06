@@ -232,6 +232,22 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
     border-top: 1px solid var(--line);
     counter-reset: destination;
     pointer-events: auto;
+    isolation: isolate;
+}
+/* Full-width frosted backing fades into the scene without changing the grid or hit areas. */
+#index::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    top: -32px;
+    bottom: 0;
+    left: calc(-1 * var(--margin));
+    right: calc(-1 * var(--margin));
+    background: linear-gradient(to top, rgba(24, 26, 29, 0.95) 0%, rgba(24, 26, 29, 0.5) 60%, transparent 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    mask-image: linear-gradient(to bottom, transparent, #000 32px);
+    pointer-events: none;
 }
 #index .chapter-link {
     counter-increment: destination;
