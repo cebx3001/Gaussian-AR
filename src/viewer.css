@@ -46,18 +46,19 @@
     --fs-text: clamp(15px, 1.15vw, 17px);
     --fs-micro: 11px;
     --fs-display: clamp(36px, 11.4vw, 88px);
-    /* Four mobile columns become twelve desktop columns, retaining the same axes. */
-    --grid-columns: 4;
-    --gutter: clamp(12px, 1.4vw, 24px);
+    /* Ten mobile columns give five two-column destinations; desktop uses twelve. */
+    --grid-columns: 10;
+    --gutter: clamp(8px, 1.4vw, 24px);
     --margin: clamp(20px, 6.1vw, 64px);
     --unit: 8px;
     --hit: 44px;
+    --mode-h: 0px;
     --safe-top: max(16px, env(safe-area-inset-top));
     --safe-bottom: max(12px, env(safe-area-inset-bottom));
     --column: calc((100vw - 2 * var(--margin) - (var(--grid-columns) - 1) * var(--gutter)) / var(--grid-columns));
-    --content-width: calc(4 * var(--column) + 3 * var(--gutter));
-    --header-h: calc(var(--safe-top) + 144px + 1.96 * var(--fs-display));
-    --index-h: calc(var(--safe-bottom) + 64px);
+    --content-width: calc(var(--grid-columns) * var(--column) + (var(--grid-columns) - 1) * var(--gutter));
+    --header-h: calc(var(--safe-top) + 144px + 1.96 * var(--fs-display) + var(--mode-h));
+    --index-h: calc(var(--safe-bottom) + 80px);
     --text-shadow: 0 1px 2px rgba(var(--bg-rgb), 0.9), 0 2px 12px rgba(var(--bg-rgb), 0.65);
 }
 
@@ -174,10 +175,11 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
 }
 #logo { display: block; height: 24px; width: auto; filter: drop-shadow(0 1px 3px var(--bg)); }
 #top-links {
-    top: calc(var(--header-h) - 56px);
+    top: calc(var(--header-h) - 56px - var(--mode-h));
     left: var(--margin);
     display: flex;
-    gap: var(--gutter);
+    flex-direction: column;
+    gap: 0;
     pointer-events: none;
 }
 #top-links a {
@@ -196,7 +198,25 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
 }
 #top-links a::before { content: '↗'; margin-right: 12px; color: var(--accent); font-size: 18px; }
 
-/* One navigation band: five grid-aligned destinations on desktop, a touch rail on mobile. */
+#mode-switch { display: flex; gap: calc(2 * var(--gutter)); }
+#mode-switch button {
+    min-height: var(--hit);
+    padding: 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    font: var(--weight-technical) var(--fs-micro)/1.4 var(--mono);
+    letter-spacing: var(--tracking-technical);
+    text-transform: uppercase;
+    color: var(--muted);
+    text-shadow: var(--text-shadow);
+    pointer-events: auto;
+}
+#mode-switch button[aria-pressed='true'] { color: var(--ink); border-bottom-color: var(--accent); }
+#mode-switch button:disabled, #index button:disabled { cursor: wait; }
+@media (pointer: coarse) { :root:has(#mode-switch) { --mode-h: 48px; } }
+
+/* Five destinations occupy the same modular grid, without horizontal scrolling. */
 #index {
     position: fixed;
     z-index: 6;
@@ -205,13 +225,9 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
     bottom: 0;
     height: var(--index-h);
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    column-gap: calc(var(--gutter) * 2);
+    grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+    column-gap: var(--gutter);
     align-content: start;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
     padding: var(--unit) 0 var(--safe-bottom);
     border-top: 1px solid var(--line);
     counter-reset: destination;
@@ -222,15 +238,18 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 120px;
-    min-height: var(--hit);
-    padding: 6px 0;
+    grid-column: span 2;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 64px;
+    padding: 4px 0;
     border: 0;
     border-bottom: 2px solid transparent;
     background: none;
     border-radius: 0;
     text-align: left;
-    font: var(--weight-technical) var(--fs-micro)/1.5 var(--mono);
+    font: var(--weight-technical) clamp(10px, 2.8vw, 11px)/1.35 var(--mono);
     color: var(--muted);
     text-shadow: var(--text-shadow);
     pointer-events: auto;
@@ -238,12 +257,12 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
 }
 #index .chapter-link::before {
     content: counter(destination, decimal-leading-zero);
-    align-self: center;
     flex: none;
     font-size: 10px;
     color: var(--muted);
 }
-#index::-webkit-scrollbar { display: none; }
+.nav-compact { white-space: pre-line; }
+.nav-full { display: none; }
 #index .chapter-link.on { color: var(--ink); border-bottom-color: var(--accent); }
 #index .chapter-link.on::before { color: var(--accent); }
 #index .chapter-link:hover, #lang button:hover { color: var(--ink); }
@@ -318,7 +337,7 @@ body.animar #masthead, body.animar #index, body.animar #chapter, body.animar #la
         --grid-columns: 12;
         --fs-display: clamp(64px, 7.6vw, 120px);
         --content-width: calc(5 * var(--column) + 4 * var(--gutter));
-        --header-h: calc(var(--safe-top) + 144px + 1.96 * var(--fs-display));
+        --header-h: calc(var(--safe-top) + 144px + 1.96 * var(--fs-display) + var(--mode-h));
         --index-h: calc(var(--safe-bottom) + 64px);
     }
     #index {
@@ -328,7 +347,9 @@ body.animar #masthead, body.animar #index, body.animar #chapter, body.animar #la
         grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
         column-gap: var(--gutter);
     }
-    #index .chapter-link { grid-column: span 2; min-width: 0; font-size: var(--fs-micro); gap: 12px; }
+    #index .chapter-link { grid-column: span 2; flex-direction: row; align-items: center; min-height: var(--hit); font-size: var(--fs-micro); gap: 12px; }
+    .nav-full { display: inline; }
+    .nav-compact { display: none; }
     #index .chapter-link:nth-child(2), #index .chapter-link:nth-child(4) { grid-column: span 3; }
     #index .chapter-link:last-child { grid-column: span 2; }
 }
@@ -337,11 +358,11 @@ body.animar #masthead, body.animar #index, body.animar #chapter, body.animar #la
 @media (max-height: 640px) {
     :root {
         --fs-display: clamp(32px, 7vw, 44px);
-        --header-h: calc(var(--safe-top) + 104px + 1.96 * var(--fs-display));
-        --index-h: calc(var(--safe-bottom) + 64px);
+        --header-h: calc(var(--safe-top) + 104px + 1.96 * var(--fs-display) + var(--mode-h));
+        --index-h: calc(var(--safe-bottom) + 80px);
     }
     #masthead-kicker { margin: 44px 0 8px; padding-top: 0; }
-    #top-links { top: calc(var(--header-h) - 32px); left: auto; right: var(--margin); }
+    #top-links { top: calc(var(--header-h) - 32px - var(--mode-h)); left: auto; right: var(--margin); }
 }
 @media (min-width: 820px) and (max-height: 640px) {
     :root { --index-h: calc(var(--safe-bottom) + 64px); }
@@ -350,14 +371,14 @@ body.animar #masthead, body.animar #index, body.animar #chapter, body.animar #la
 }
 
 @media (max-height: 640px) and (orientation: portrait) {
-    :root { --header-h: calc(var(--safe-top) + 124px + 1.96 * var(--fs-display)); }
-    #top-links { top: calc(var(--header-h) - 56px); left: var(--margin); right: auto; }
+    :root { --header-h: calc(var(--safe-top) + 124px + 1.96 * var(--fs-display) + var(--mode-h)); }
+    #top-links { top: calc(var(--header-h) - 56px - var(--mode-h)); left: var(--margin); right: auto; }
 }
 
 @media (max-height: 640px) and (orientation: landscape) {
-    :root { --header-h: calc(var(--safe-top) + 80px + 0.98 * var(--fs-display)); }
+    :root { --header-h: calc(var(--safe-top) + 80px + 0.98 * var(--fs-display) + var(--mode-h)); }
     #masthead-title .identity-line { display: inline; }
-    #top-links { top: calc(var(--header-h) - 48px); }
+    #top-links { top: calc(var(--header-h) - 48px - var(--mode-h)); }
 }
 
 /* ---------- Editor (?editar): una barra mínima ---------- */

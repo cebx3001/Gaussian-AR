@@ -3,7 +3,7 @@
 #stage { pointer-events: none; }
 body.exploring #stage { pointer-events: auto; }
 
-#scroller {
+#scroller, #tour-caption {
     position: fixed;
     z-index: 3;
     left: var(--margin);
@@ -17,11 +17,23 @@ body.exploring #stage { pointer-events: auto; }
     /* Only fade the scroll region's edges, never the spatial canvas. */
     mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 16px), transparent);
 }
+#tour-caption {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+    column-gap: var(--gutter);
+    align-content: start;
+    overflow: hidden;
+    pointer-events: none;
+}
+#tour-caption .kicker, #tour-caption .title, #tour-caption .text { pointer-events: auto; }
+#tour-caption.scroll { overflow-y: auto; pointer-events: auto; }
+#tour-caption::-webkit-scrollbar { display: none; }
 #scroller::-webkit-scrollbar { display: none; }
 #scroller:focus-visible { outline: 1px solid var(--line); outline-offset: 8px; }
 body.locked #scroller { overflow: hidden; opacity: 0; }
 body.ready #scroller { opacity: 1; transition: opacity 0.8s ease; }
-body.exploring #scroller, body.exploring #veil { display: none; }
+body.exploring #scroller { visibility: hidden; pointer-events: none; }
+body.exploring #veil { display: none; }
 
 #story {
     position: relative;
@@ -156,7 +168,7 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
 #how strong { font-weight: 700; }
 
 @media (min-width: 600px) and (max-width: 819px) {
-    .block .title, .block .text, .end .title { grid-column: 1 / 4; }
+    .block .title, .block .text, .end .title { grid-column: 1 / 8; }
 }
 
 @media (min-width: 820px) {
@@ -166,7 +178,7 @@ body.ready:not(.scrolled):not(.exploring) #scroll-cue {
     .end .explore { grid-column: 2 / 6; }
 }
 @media (max-height: 640px) {
-    #scroller { top: calc(var(--header-h) + 8px); }
+    #scroller, #tour-caption { top: calc(var(--header-h) + 8px); }
     .block .title, .end .title { font-size: 22px; }
     .block .kicker, .end .kicker { margin-bottom: 12px; }
 }

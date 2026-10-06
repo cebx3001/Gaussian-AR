@@ -1,3 +1,4 @@
+import { appendDestinationLabel } from './navigation-labels';
 // ---------------------------------------------------------------------------
 // San Sebastián · historia con scroll (scrollytelling).
 //
@@ -70,6 +71,8 @@ type PageText = {
     endTitle: string;
     explore: string;
     back: string;
+    storyMode: string;
+    tourMode: string;
 };
 const TEXT: Record<Lang, PageText> = {
     es: {
@@ -84,7 +87,9 @@ const TEXT: Record<Lang, PageText> = {
         endKicker: 'Fin del recorrido',
         endTitle: 'Ahora, explórala a tu manera',
         explore: 'Explorar libremente',
-        back: '← Volver a la historia'
+        back: '← Volver a la historia',
+        storyMode: 'Historia',
+        tourMode: 'Recorrido libre'
     },
     en: {
         cue: 'Scroll down',
@@ -98,7 +103,9 @@ const TEXT: Record<Lang, PageText> = {
         endKicker: 'End of the tour',
         endTitle: 'Now explore it your own way',
         explore: 'Explore freely',
-        back: '← Back to the story'
+        back: '← Back to the story',
+        storyMode: 'Story mode',
+        tourMode: 'Tour mode'
     }
 };
 
@@ -114,6 +121,9 @@ const loaderFill = $<HTMLElement>('loader-fill');
 const loaderMessage = $<HTMLElement>('loader-message');
 const backStory = $<HTMLButtonElement>('back-story');
 const arLink = $<HTMLAnchorElement>('ar-link');
+const storyMode = $<HTMLButtonElement>('story-mode');
+const tourMode = $<HTMLButtonElement>('tour-mode');
+const tourCaption = $<HTMLElement>('tour-caption');
 
 const story = defaultStory();
 const chapters: (Chapter & { pose: Pose })[] = story.chapters.filter((c): c is Chapter & { pose: Pose } => !!c.pose);
@@ -276,7 +286,7 @@ const renderStory = () => {
         `<button type="button" class="explore">${esc(tx.explore)}</button>`;
     // instrucciones de uso: salen al entrar en «Explorar libremente» y se van con el primer toque
     howEl.innerHTML = (coarsePointer ? u.howTouch : u.howMouse).map((h) => `<p>${bold(esc(h))}</p>`).join('');
-    end.querySelector('button')!.addEventListener('click', explore);
+    end.querySelector('button')!.addEventListener('click', () => explore(true));
     storyEl.append(end);
     backStory.textContent = tx.back;
     $<HTMLElement>('scroll-cue-text').textContent = tx.cue;
@@ -288,11 +298,12 @@ const renderIndex = () => {
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'chapter-link';
-        b.textContent = textOf(c).nav;
+        appendDestinationLabel(b, textOf(c).nav, i, lang);
+        b.disabled = !ready;
         b.addEventListener('click', () => {
-            // desde «Explorar libremente» también: se vuelve a la historia, en ese lugar
-            if (exploring) backToStory();
-            goTo(i);
+            if (!ready) return;
+            if (exploring) selectTourChapter(i);
+            else goTo(i);
         });
         indexEl.append(b);
     });
@@ -330,6 +341,8 @@ const applyLang = () => {
     arLink.hidden = !coarsePointer;
     layout();
     updateIndex();
+    updateMode();
+    if (exploring && !tourCaption.hidden) renderTourCaption();
 };
 
 $<HTMLElement>('lang')
@@ -348,6 +361,7 @@ $<HTMLElement>('lang')
             applyLang();
             // los textos cambian de largo: se vuelve al mismo lugar
             scroller.scrollTop = readStart(keep);
+            if (exploring) storyScrollOnTour = readStart(storyChapterOnTour);
         })
     );
 
@@ -414,6 +428,8 @@ let viewer: ViewerHandle | null = null;
 let ready = false; // terminó la entrada: el scroll manda
 let exploring = false;
 let tNow = INTRO_END;
+let storyScrollOnTour = 0;
+let storyChapterOnTour = 0;
 
 const mount = async () => {
     loader.dataset.hidden = 'false';
@@ -422,8 +438,11 @@ const mount = async () => {
     settings.background = { color: [0, 0, 0, 0] as unknown as [number, number, number] }; // transparente (alfa premultiplicado)
     const general = chapters[0].pose;
     settings.cameras = [{ initial: { ...general, target: MODEL_CENTER } }];
-    // para «Explorar libremente»: la Vista general como anotación (vuela allí y orbita alrededor del centro)
-    settings.annotations = [{ position: MODEL_CENTER, title: 'general', text: '', camera: { initial: { ...general, target: MODEL_CENTER } } }];
+    // Cada pose conserva sus coordenadas originales; su target es el ancla de la órbita libre.
+    settings.annotations = chapters.map((c, i) => {
+        const target = i === 0 ? MODEL_CENTER : c.pose.target;
+        return { position: target, title: c.id, text: '', camera: { initial: { ...c.pose, target } } };
+    });
     settings.animTracks = [track];
     settings.startMode = 'animTrack';
     try {
@@ -480,6 +499,7 @@ const finishIntro = (v: ViewerHandle) => {
     document.body.classList.remove('locked');
     document.body.classList.add('ready');
     layout();
+    updateMode();
 };
 
 // Cada cuadro: el instante de la pista sigue al scroll con un poco de suavizado (el dedo da saltos).
@@ -528,23 +548,59 @@ const updateIndex = () => {
 };
 
 // ---- explorar libremente: la cámara se suelta y la historia se esconde
-function explore() {
+function updateMode() {
+    storyMode.textContent = TEXT[lang].storyMode;
+    tourMode.textContent = TEXT[lang].tourMode;
+    storyMode.setAttribute('aria-pressed', String(!exploring));
+    tourMode.setAttribute('aria-pressed', String(exploring));
+    storyMode.disabled = tourMode.disabled = !ready;
+    indexEl.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.disabled = !ready));
+}
+
+function renderTourCaption() {
+    const article = blocks[activeChapter].cloneNode(true) as HTMLElement;
+    const title = article.querySelector<HTMLElement>('.title')!;
+    title.id = 'tour-chapter-title';
+    article.setAttribute('aria-labelledby', title.id);
+    tourCaption.replaceChildren(article);
+    tourCaption.hidden = false;
+    tourCaption.scrollTop = 0;
+    requestAnimationFrame(markTourScrollable);
+}
+
+function markTourScrollable() {
+    tourCaption.classList.toggle('scroll', tourCaption.scrollHeight > tourCaption.clientHeight + 1);
+}
+
+function selectTourChapter(i: number) {
     const v = viewer;
-    if (!v) return;
+    if (!v || !ready) return;
+    activeChapter = i;
+    howEl.hidden = true;
+    howEl.classList.remove('shown');
+    v.selectAnnotation(i);
+    updateIndex();
+    renderTourCaption();
+}
+
+function explore(showHelp = false) {
+    const v = viewer;
+    if (!v || !ready || exploring) return;
+    storyScrollOnTour = scroller.scrollTop;
+    storyChapterOnTour = activeChapter;
     exploring = true;
     document.body.classList.add('exploring');
-    backStory.hidden = false;
+    // El cambio de modo permanece arriba, alineado bajo AR.
+    backStory.hidden = true;
     veil.style.opacity = '0';
-    v.selectAnnotation(0);
+    selectTourChapter(activeChapter);
+    updateMode();
     // instrucciones: se van con el primer toque o clic (que ya mueve la maqueta)
-    howEl.hidden = false;
-    requestAnimationFrame(() => howEl.classList.add('shown'));
-    const hide = (e: PointerEvent) => {
-        if ((e.target as HTMLElement).closest('#back-story, #index, #lang, #top-links, #logo-link')) return;
-        howEl.classList.remove('shown');
-        window.removeEventListener('pointerdown', hide, true);
-    };
-    window.addEventListener('pointerdown', hide, true);
+    if (showHelp) {
+        tourCaption.hidden = true;
+        howEl.hidden = false;
+        requestAnimationFrame(() => howEl.classList.add('shown'));
+    }
 }
 
 function backToStory() {
@@ -553,6 +609,10 @@ function backToStory() {
     exploring = false;
     document.body.classList.remove('exploring');
     backStory.hidden = true;
+    tourCaption.hidden = true;
+    layout();
+    scroller.scrollTop = activeChapter === storyChapterOnTour ? storyScrollOnTour : readStart(activeChapter);
+    updateMode();
     if (v) {
         v.state.cameraMode = 'anim';
         v.state.animationPaused = true;
@@ -561,8 +621,36 @@ function backToStory() {
     }
 }
 backStory.addEventListener('click', backToStory);
+storyMode.addEventListener('click', () => {
+    if (exploring) backToStory();
+});
+tourMode.addEventListener('click', () => explore());
 
-window.addEventListener('resize', () => layout());
+// El primer gesto sobre la escena deja libre la vista sin cambiar el ancla orbital.
+let captionTap: { x: number; y: number; t: number } | null = null;
+window.addEventListener('pointerdown', (e) => {
+    if (!exploring || (e.target as HTMLElement).closest('#index, #lang, #top-links, #logo-link')) return;
+    if ((e.target as HTMLElement).closest('#tour-caption.scroll')) {
+        captionTap = { x: e.clientX, y: e.clientY, t: performance.now() };
+        return;
+    }
+    tourCaption.hidden = true;
+    howEl.classList.remove('shown');
+}, true);
+window.addEventListener('pointerup', (e) => {
+    const tap = captionTap;
+    captionTap = null;
+    if (tap && performance.now() - tap.t < 400 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 10) {
+        tourCaption.hidden = true;
+        stage.querySelector('canvas')?.focus();
+    }
+}, true);
+window.addEventListener('pointercancel', () => (captionTap = null));
+
+window.addEventListener('resize', () => {
+    layout();
+    if (!tourCaption.hidden) markTourScrollable();
+});
 document.fonts?.ready.then(() => layout());
 
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';

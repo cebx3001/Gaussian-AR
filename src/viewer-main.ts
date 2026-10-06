@@ -1,3 +1,4 @@
+import { appendDestinationLabel } from './navigation-labels';
 // ---------------------------------------------------------------------------
 // San Sebastián · visor patrimonial.
 //
@@ -530,7 +531,7 @@ const renderIndex = () => {
         b.type = 'button';
         b.className = 'chapter-link';
         b.dataset.index = String(i);
-        b.textContent = textOf(c).nav;
+        appendDestinationLabel(b, textOf(c).nav, i, lang);
         b.addEventListener('click', () => goTo(i));
         indexEl.append(b);
     });
