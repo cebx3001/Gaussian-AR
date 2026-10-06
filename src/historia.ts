@@ -73,6 +73,7 @@ type PageText = {
     back: string;
     storyMode: string;
     tourMode: string;
+    filterLabel: string;
 };
 const TEXT: Record<Lang, PageText> = {
     es: {
@@ -89,7 +90,8 @@ const TEXT: Record<Lang, PageText> = {
         explore: 'Explorar libremente',
         back: '← Volver a la historia',
         storyMode: 'Historia',
-        tourMode: 'Recorrido libre'
+        tourMode: 'Recorrido libre',
+        filterLabel: 'Filtro de Historia'
     },
     en: {
         cue: 'Scroll down to explore',
@@ -105,7 +107,8 @@ const TEXT: Record<Lang, PageText> = {
         explore: 'Explore freely',
         back: '← Back to the story',
         storyMode: 'Story mode',
-        tourMode: 'Tour mode'
+        tourMode: 'Tour mode',
+        filterLabel: 'Story filter'
     }
 };
 
@@ -124,6 +127,20 @@ const arLink = $<HTMLAnchorElement>('ar-link');
 const storyMode = $<HTMLButtonElement>('story-mode');
 const tourMode = $<HTMLButtonElement>('tour-mode');
 const tourCaption = $<HTMLElement>('tour-caption');
+// Temporal: 0–50% de una capa global, sin modificar el canvas ni la pista de cámara.
+const filterRange = $<HTMLInputElement>('story-filter-range');
+const filterValue = $<HTMLOutputElement>('story-filter-value');
+const updateFilter = () => {
+    const percent = Math.max(0, Math.min(50, filterRange.valueAsNumber));
+    document.documentElement.style.setProperty('--story-filter-opacity', String(percent / 100));
+    filterValue.value = `${percent} %`;
+};
+filterRange.addEventListener('input', updateFilter);
+// Keep slider keys in this control while preserving the browser's native range behavior.
+filterRange.addEventListener('keydown', (e) => e.stopPropagation());
+filterRange.addEventListener('keyup', (e) => e.stopPropagation());
+updateFilter();
+
 
 const story = defaultStory();
 const chapters: (Chapter & { pose: Pose })[] = story.chapters.filter((c): c is Chapter & { pose: Pose } => !!c.pose);
@@ -336,6 +353,7 @@ const applyLang = () => {
         b.classList.toggle('on', b.dataset.lang === lang);
         b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
     });
+    $<HTMLElement>('story-filter-label').textContent = TEXT[lang].filterLabel;
     arLink.textContent = AR_UI[lang].button;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer;
@@ -352,6 +370,7 @@ $<HTMLElement>('lang')
             const next = b.dataset.lang as Lang;
             if (next === lang) return;
             const keep = activeChapter;
+            const opening = !exploring && scroller.scrollTop === 0;
             lang = next;
             try {
                 localStorage.setItem(LANG_KEY, lang);
@@ -360,7 +379,7 @@ $<HTMLElement>('lang')
             }
             applyLang();
             // los textos cambian de largo: se vuelve al mismo lugar
-            scroller.scrollTop = readStart(keep);
+            scroller.scrollTop = opening ? 0 : readStart(keep);
             if (exploring) storyScrollOnTour = readStart(storyChapterOnTour);
         })
     );
@@ -373,11 +392,18 @@ let map: { s: number; t: number; i: number }[] = [];
 /** Dónde queda la parte de arriba del texto al terminar el viaje (px desde arriba del área de scroll). */
 const READ_TOP = 8;
 
-const readStart = (i: number) => (i === 0 ? 0 : (blocks[i]?.offsetTop ?? 0) - READ_TOP);
+const readStart = (i: number) => Math.max(0, (blocks[i]?.offsetTop ?? 0) - READ_TOP);
+
+// The opening is a scrollable, empty viewport, not a timed text reveal.
+const updateStoryEntry = () => {
+    const distance = Math.min(160, scroller.clientHeight * 0.35);
+    storyEl.style.setProperty('--story-entry', String(Math.min(1, scroller.scrollTop / Math.max(1, distance))));
+};
+scroller.addEventListener('scroll', updateStoryEntry, { passive: true });
 
 const layout = () => {
     const vh = scroller.clientHeight;
-    storyEl.style.paddingTop = `${READ_TOP}px`;
+    storyEl.style.paddingTop = `${vh + READ_TOP}px`;
     pauses.forEach((p, i) => (p.style.height = `${Math.round(vh * (1 + pauseScreens(i)))}px`));
     map = [];
     const segOf = (kind: Seg['kind'], i: number) => segs.find((g) => g.kind === kind && g.i === i)!;
@@ -389,11 +415,13 @@ const layout = () => {
             map.push({ s: top - vh, t: tr.t0, i: i - 1 }, { s: top - READ_TOP, t: tr.t1, i });
         }
         const rd = segOf('read', i);
-        map.push({ s: i === 0 ? 0 : top - READ_TOP, t: rd.t0, i }, { s: bottom, t: rd.t1, i });
+        if (i === 0) map.push({ s: 0, t: rd.t0, i });
+        map.push({ s: top - READ_TOP, t: rd.t0, i }, { s: bottom, t: rd.t1, i });
         const ob = segOf('orbit', i);
         map.push({ s: bottom, t: ob.t0, i }, { s: bottom + vh * pauseScreens(i), t: ob.t1, i });
     });
     map.sort((a, b) => a.s - b.s);
+    updateStoryEntry();
 };
 
 const timeAt = (s: number) => {

@@ -73,3 +73,14 @@ Files in this follow-up: `src/design-system.css`, `src/viewer.css`, `src/ar.css`
 Story description wrappers retain `.text` and add `.story-description`. Within the story scroller they use the exact requested rgba(24,26,29,0.65→0.45) vertical gradient, 6px backdrop blur, 16px vertical padding, 12px vertical margin, #EAE6DF paragraph text and 0 1px 3px black shadow at 0.8 opacity. The reading band has no border, rounded corners or horizontal padding and stays aligned to the shared grid. It is scoped to Story mode; Tour and AR input layers are unaffected. Article geometry continues to be measured by the existing layout mapping.
 
 The story scroller's previous edge mask was removed so it does not isolate the backdrop sampling from the Gaussian canvas; the Tour caption keeps its existing edge mask. Story scrolling, camera-track construction and input ownership are preserved.
+
+## Temporary global Story contrast tuner
+
+The user superseded the local description treatment: descriptions now have no background, backdrop blur, border, radius, box shadow, padding or margin. The independently positioned `#story-filter` fills the viewport at z-index 1, above the renderer and below all text. Its #181A1D fill uses the exact slider percentage as opacity, without blocking pointer input. A temporary, localized, keyboard-accessible native range offers integer values 0–50%, initially 0%, with a live percentage output. It is independent of the original animated veil and camera clock. Both filter and control hide outside ready Story mode; the chosen value remains during chapter/language/mode changes for this page session. No value is fixed as a final preference yet. Once the user supplies their preferred percentage, remove the panel and its tuning handler and fix that value in CSS.
+
+
+## Scroll-led opening (user-authorized presentation change)
+
+After the unchanged intro, Story starts with one empty scroll viewport, the scene, permanent UI, scroll cue and temporary tuner. The filter defaults to 0%. Scrolling brings the first article up naturally and drives its opacity directly from scroll distance, without a timer. The authored camera track holds its original first reading pose throughout this opening; keyframes, authored segment times and later choreography are unchanged. First-chapter navigation still reaches its reading position. Language changes at the clean opening preserve scroll zero; Tour returns preserve the saved Story position.
+
+Local native range checks passed for 0%, 50%, 49%, touch drag, transparent descriptions, viewport widths 320/390/1440, localized labels, and hiding/retaining the value across Story/Tour switching, with no browser errors.
