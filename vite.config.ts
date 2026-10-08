@@ -88,6 +88,7 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 main: fileURLToPath(new URL('./index.html', import.meta.url)),
+                elVado: fileURLToPath(new URL('./el-vado.html', import.meta.url)),
                 ar: fileURLToPath(new URL('./ar.html', import.meta.url)),
                 arCero: fileURLToPath(new URL('./ar-cero.html', import.meta.url)),
                 recorrido: fileURLToPath(new URL('./recorrido.html', import.meta.url))
