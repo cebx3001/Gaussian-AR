@@ -14,14 +14,31 @@
       "kicker": "El Vado",
       "title": "Vista general",
       "text": "El Vado es uno de los barrios tradicionales de Cuenca, vinculado al antiguo paso sobre el río Tomebamba. Sus calles, casas y espacios públicos conservan la memoria de oficios, celebraciones y expresiones artísticas.",
-      "pose": null,
+      "pose": {
+        "position": [
+          0.7097855806350708,
+          0.2899746894836426,
+          -0.48968392610549927
+        ],
+        "target": [
+          0.23040591360598367,
+          -0.056781390858006486,
+          -0.11798910750250363
+        ],
+        "fov": 85
+      },
       "en": {
         "nav": "Overview",
         "kicker": "El Vado",
         "title": "Overview",
         "text": "El Vado is one of Cuenca's traditional neighborhoods, linked to the historic crossing of the Tomebamba River."
       },
-      "howto": true
+      "howto": true,
+      "annotationPosition": [
+        0.28099203368469816,
+        -0.010659529558011138,
+        -0.12908008904955642
+      ]
     },
     {
       "id": "cruz",
@@ -29,13 +46,30 @@
       "kicker": "Límite histórico",
       "title": "Cruz del Vado",
       "text": "La Cruz del Vado forma parte de la memoria religiosa y urbana del barrio. Su presencia recuerda los antiguos accesos a la ciudad y las celebraciones populares vinculadas a la cruz.",
-      "pose": null,
+      "pose": {
+        "position": [
+          -0.003727939911186695,
+          0.058082301169633865,
+          -0.15413986146450043
+        ],
+        "target": [
+          0.017738032795846667,
+          0.024154858177280067,
+          -0.05763740692838999
+        ],
+        "fov": 85
+      },
       "en": {
         "nav": "The Cross",
         "kicker": "Historic landmark",
         "title": "The Cross",
         "text": "The Cross of El Vado recalls the neighborhood's religious traditions and its place along the historic approaches to Cuenca."
-      }
+      },
+      "annotationPosition": [
+        0.02111692675102277,
+        0.03652370319164605,
+        -0.05324370480316391
+      ]
     },
     {
       "id": "plazoleta",
@@ -43,13 +77,30 @@
       "kicker": "Espacio público",
       "title": "Plazoleta del Vado",
       "text": "La plazoleta reúne la vida cotidiana y la memoria colectiva del barrio. Su entorno conserva referencias a los antiguos oficios y las fiestas populares.",
-      "pose": null,
+      "pose": {
+        "position": [
+          0.2088276743888855,
+          0.3109457790851593,
+          -0.009225917048752308
+        ],
+        "target": [
+          0.20869805635400632,
+          0.030811433764030616,
+          -0.012010618840232405
+        ],
+        "fov": 85
+      },
       "en": {
         "nav": "El Vado Square",
         "kicker": "Public space",
         "title": "El Vado Square",
         "text": "The square brings together everyday neighborhood life, traditional crafts and popular festivities."
-      }
+      },
+      "annotationPosition": [
+        0.19340685539612057,
+        -0.0039661466458281724,
+        -0.038564471759798435
+      ]
     },
     {
       "id": "palo",
@@ -57,13 +108,30 @@
       "kicker": "Juegos populares",
       "title": "Palo encebado",
       "text": "La escultura de los niños en el palo encebado recuerda una tradición festiva: trepar un poste engrasado para alcanzar premios. Es una imagen de la memoria lúdica del barrio.",
-      "pose": null,
+      "pose": {
+        "position": [
+          0.3536657989025116,
+          0.013656347058713436,
+          -0.054994817823171616
+        ],
+        "target": [
+          0.40933402926871676,
+          0.027803784059977327,
+          -0.07652835628654228
+        ],
+        "fov": 85
+      },
       "en": {
         "nav": "Greased Pole",
         "kicker": "Popular games",
         "title": "Greased Pole",
         "text": "The sculpture of children climbing a greased pole recalls a traditional game played during neighborhood festivities."
-      }
+      },
+      "annotationPosition": [
+        0.4039641889434305,
+        0.0210893110657569,
+        -0.07603874368896789
+      ]
     },
     {
       "id": "lira",
@@ -71,13 +139,30 @@
       "kicker": "Música y patrimonio",
       "title": "Casa de la Lira",
       "text": "La Casa de la Lira es uno de los referentes arquitectónicos y culturales de El Vado. Su distintivo motivo de la lira remite a la tradición musical y artística del sector.",
-      "pose": null,
+      "pose": {
+        "position": [
+          -0.2275438904762268,
+          0.04917161539196968,
+          -0.0432186983525753
+        ],
+        "target": [
+          -0.20057326830344516,
+          0.04362003081831983,
+          0.06214235095557888
+        ],
+        "fov": 85
+      },
       "en": {
         "nav": "House of the Lyre",
         "kicker": "Music and heritage",
         "title": "House of the Lyre",
         "text": "The House of the Lyre is a distinctive architectural and cultural landmark of El Vado, associated with the neighborhood's musical heritage."
-      }
+      },
+      "annotationPosition": [
+        -0.19986948357969397,
+        0.02853307445959017,
+        0.057460183132478526
+      ]
     },
     {
       "id": "condamine",
@@ -85,13 +170,30 @@
       "kicker": "Memoria y colecciones",
       "title": "Casa Museo La Condamine",
       "text": "La Casa Museo La Condamine reúne objetos y testimonios de distintas épocas, una ventana a la vida doméstica y a la memoria cultural de Cuenca.",
-      "pose": null,
+      "pose": {
+        "position": [
+          0.11372099816799164,
+          0.03242456912994385,
+          0.061830926686525345
+        ],
+        "target": [
+          0.04072892438361693,
+          0.035197822773468064,
+          0.08917267503733059
+        ],
+        "fov": 85
+      },
       "en": {
         "nav": "La Condamine House Museum",
         "kicker": "Memory and collections",
         "title": "La Condamine House Museum",
         "text": "La Condamine House Museum preserves objects and collections that offer a glimpse into Cuenca's cultural and domestic history."
-      }
+      },
+      "annotationPosition": [
+        0.045023620616820664,
+        0.03990906714959414,
+        0.09427141332977923
+      ]
     },
     {
       "id": "prohibido",
@@ -113,13 +215,63 @@
       "kicker": "Panaderías y talleres",
       "title": "Oficios tradicionales",
       "text": "Panaderías, trabajos en metal y otros talleres artesanales formaron parte de la economía y la identidad de El Vado. Su memoria permite descubrir el barrio más allá de sus monumentos.",
-      "pose": null,
+      "pose": {
+        "position": [
+          0.16048215329647064,
+          0.03273232281208038,
+          0.08677931129932404
+        ],
+        "target": [
+          0.19269299603529977,
+          0.02504583391131117,
+          0.13808963554322268
+        ],
+        "fov": 85
+      },
       "en": {
         "nav": "Traditional crafts",
         "kicker": "Bakeries and workshops",
         "title": "Traditional crafts",
         "text": "Bakeries, metalworking and other workshops shaped El Vado's everyday economy and identity."
-      }
+      },
+      "annotationPosition": [
+        0.1926573844509697,
+        0.02744263616259757,
+        0.1395157098569001
+      ]
     }
-  ]
+  ],
+  "intro": {
+    "duration": 6,
+    "keyframes": [
+      {
+        "t": 0,
+        "position": [
+          -0.15974628925323486,
+          1.1255625486373901,
+          -0.5098142027854919
+        ],
+        "target": [
+          0.1849826577491924,
+          -0.04926614267803181,
+          0.023736615028262797
+        ],
+        "fov": 85
+      },
+      {
+        "t": 6,
+        "position": [
+          0.7097855806350708,
+          0.2899746894836426,
+          -0.48968392610549927
+        ],
+        "target": [
+          0.23040591360598367,
+          -0.056781390858006486,
+          -0.11798910750250363
+        ],
+        "fov": 85
+      }
+    ]
+  }
 }

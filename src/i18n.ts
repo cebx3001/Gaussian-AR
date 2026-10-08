@@ -1,7 +1,8 @@
 // Textos de la interfaz en español e inglés. Los textos de cada lugar viven en story.json.
+import { scene } from './scene';
 export type Lang = 'es' | 'en';
 
-export const LANG_KEY = 'san-sebastian:lang';
+export const LANG_KEY = `${scene.id}:lang`;
 
 /** Idioma: `?lang=`, el último elegido o el del navegador (español si empieza por «es»). */
 export const detectLang = (): Lang => {

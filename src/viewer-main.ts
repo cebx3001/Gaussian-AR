@@ -29,9 +29,10 @@ import { defaultStory, round } from './story';
 import { setupTimeline, timelineAfterMount, timelineKeyframes } from './timeline';
 import { revealOrigin, waitUntilDrawn } from './splat-util';
 import type { Chapter, ChapterText, Keyframe, Pose, Story } from './story';
+import { scene } from './scene';
 
-const CONTENT_URL = './scene.sog';
-const EDIT_KEY = 'san-sebastian:story-edit';
+const CONTENT_URL = scene.url;
+const EDIT_KEY = `${scene.id}:story-edit`;
 const EDIT_MODE = new URLSearchParams(location.search).has('editar');
 /** `?animar`: línea de tiempo para crear la animación de entrada. */
 const ANIMAR = new URLSearchParams(location.search).has('animar');
@@ -40,18 +41,18 @@ const AUTHORING = EDIT_MODE || ANIMAR;
 /** Animación de entrada al abrir (no al editar; `?sinintro` la salta). */
 const INTRO = !AUTHORING && !new URLSearchParams(location.search).has('sinintro');
 /** Altura (m) del suelo de la maqueta y zona (centro y radio, en planta) donde está el modelo. */
-const GROUND_Y = 23;
+const GROUND_Y = scene.ground;
 // centro real de la maqueta (centro del recuadro de los splats, medido en scene.sog): la Vista general gira alrededor
 // de este punto, a ras del suelo
-const SCENE_CENTER: [number, number] = [-1.5, 8.4];
-const MODEL_CENTER: Pose['target'] = [SCENE_CENTER[0], 23, SCENE_CENTER[1]];
-const SCENE_RADIUS = 75;
+const SCENE_CENTER: [number, number] = [scene.center[0], scene.center[2]];
+const MODEL_CENTER: Pose['target'] = scene.center;
+const SCENE_RADIUS = scene.id === 'san-sebastian' ? 75 : scene.diameter / 2;
 /** La órbita no baja de la horizontal del ancla (0°): no se ve la maqueta desde abajo. */
-const ORBIT_MAX_PITCH = 0;
+const ORBIT_MAX_PITCH = scene.orbitMaxPitch;
 /** Suelo del modo vuelo (m): la cámara no puede quedar bajo la maqueta. */
-const FLY_MIN_Y = GROUND_Y + 1.5;
+const FLY_MIN_Y = GROUND_Y + 1.5 * scene.unitScale;
 /** Distancia (m) a la pose del lugar a la que se considera que el vuelo terminó. */
-const ARRIVAL_DISTANCE = 0.6;
+const ARRIVAL_DISTANCE = 0.6 * scene.unitScale;
 /** Si el vuelo no termina en este tiempo, se muestra el texto igual. */
 const ARRIVAL_TIMEOUT_MS = 60000;
 
@@ -188,7 +189,7 @@ let introFirst: Keyframe | null = null;
 
 /** Convierte los capítulos en los ajustes que lee el visor: cámara inicial + anotaciones. */
 const buildSettings = (s: Story): ExperienceSettings => {
-    const settings = defaultSettings();
+    const settings = { ...defaultSettings(), ...scene.settings };
     // fondo transparente: se ve el fondo de la página (piedra oscura con el patrón de hexágonos, viewer.css)
     settings.background = { color: [0, 0, 0, 0] as unknown as [number, number, number] }; // transparente (alfa premultiplicado: el color debe ser 0)
     // Centro de giro de cada vista: la Vista general gira alrededor del centro de la maqueta; cada lugar, alrededor
@@ -205,7 +206,7 @@ const buildSettings = (s: Story): ExperienceSettings => {
         const cam = withAnchor(c.pose, i);
         annotationOf[i] = settings.annotations.length;
         settings.annotations.push({
-            position: cam.target,
+            position: c.annotationPosition ?? cam.target,
             title: c.nav.slice(0, 40),
             text: '',
             camera: { initial: cam }
@@ -273,7 +274,7 @@ const mountViewer = async () => {
             container: stage,
             settings: buildSettings(story),
             contentUrl: CONTENT_URL,
-            contentFilename: 'scene.sog',
+            contentFilename: scene.filename,
             renderer: 'webgl',
             ui: false,
             lang: 'es'
@@ -295,8 +296,9 @@ const mountViewer = async () => {
                 // cámara y llega a toda la maqueta al terminar la animación.
                 v.state.animationPaused = true;
                 const origin = introFirst ? revealOrigin(v, introFirst.position, introFirst.target) : center;
-                const radius = Math.hypot(origin[0] - MODEL_CENTER[0], origin[1] - MODEL_CENTER[1], origin[2] - MODEL_CENTER[2]) + 100;
-                const opts = { center: origin, ...revealFor(radius, REVEAL_SECONDS, 15, 0.7) };
+                const radius = Math.hypot(origin[0] - MODEL_CENTER[0], origin[1] - MODEL_CENTER[1], origin[2] - MODEL_CENTER[2]) + 100 * scene.unitScale;
+                const opts = { center: origin, ...revealFor(radius, REVEAL_SECONDS, 15 * scene.unitScale, 0.7),
+                    lift: 3 * scene.unitScale, band: 6 * scene.unitScale, dotScale: 60 * scene.unitScale };
                 // El efecto se pone ya para que sus shaders empiecen a compilarse; mientras no estén listos el
                 // Gaussian no se dibuja (en un teléfono puede tardar segundos). Cuando de verdad se dibuja, el efecto
                 // se reinicia desde cero, se quita la pantalla de carga y empieza el reloj de la entrada.
@@ -504,7 +506,7 @@ const waitForArrival = (v: ViewerHandle, position: Pose['position'], done: () =>
             const d = p.distance(goal);
             still = p.distance(last) < 0.01 ? still + 1 : 0;
             last.copy(p);
-            if (d < ARRIVAL_DISTANCE || (still > 30 && d < 3)) {
+            if (d < ARRIVAL_DISTANCE || (still > 30 && d < 3 * scene.unitScale)) {
                 done();
                 return;
             }
@@ -560,6 +562,7 @@ const applyLang = () => {
     langEl.querySelectorAll<HTMLElement>('button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
     // botón de realidad aumentada: solo en teléfonos (pantalla táctil como entrada principal)
     arLink.textContent = AR_UI[lang].button;
+    arLink.href = scene.arPage;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer || AUTHORING;
 };

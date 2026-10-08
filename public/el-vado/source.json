@@ -1,0 +1,19 @@
+{
+  "archive": "el vado.rar",
+  "settings": "settings-94db4b9e.json",
+  "author": "CB / Dr. Brown Labs",
+  "source": "https://superspl.at/scene/9dc27926",
+  "sha256": {
+    "license.txt": "241f3c1c33ec33ec088d9545369897aaa76303fdd31688554419e4d418147252",
+    "lod-meta.json": "fbc0b14bb367fae9abc3fea1fef808ec0ef438cf2315edcd79904a1338263ebe",
+    "0_0/means_u.webp": "5402576d95acd1075e098f38a4aa3e22bf45aadaf56451b9183d504c5cfbd5ff",
+    "0_0/.shN_centroids.webp.fqNoyR": "cf43db7c6cd8c3b61df91bf3030de84826755605815f4a7ab77ae5d3f4297ea0",
+    "0_0/sh0.webp": "3f51e8b6da393e56ebdc34580ccc253710c6dda7962fb543b4caa7b4810127c1",
+    "0_0/meta.json": "ef98357ae8962e17df1503006febba09768e93ecb6fcd7c10b3e19f61fef92d1",
+    "0_0/quats.webp": "7830e9f8771accdc424914106312b864a01f284678653b692bed937a96820fe0",
+    "0_0/shN_centroids.webp": "1a81f19d82a6d6bb4761d4fdf040641fa67c55226742d46bc1f426fa194eecac",
+    "0_0/scales.webp": "d0f707fbf1b8ade1b53a326959b2dce0cf5317cbde10ec31f5b4e5d7de2473a3",
+    "0_0/means_l.webp": "da58b8a934feaf112e94ef1da04cdf36c0725a19ab478d93cc4c62f488ef7822",
+    "0_0/shN_labels.webp": "8754af8f08decf845e944f525164eb177ce514ad4cf93dfaa3f78c83aabe23fc"
+  }
+}

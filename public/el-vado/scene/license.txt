@@ -1,0 +1,6 @@
+Title: el vado
+Author: CB (https://superspl.at/user/drbrownlabs)
+Source: https://superspl.at/scene/9dc27926
+License: CC Attribution (Creative Commons Attribution)
+License URL: http://creativecommons.org/licenses/by/4.0/
+Requirements: Author must be credited. Commercial use is allowed.

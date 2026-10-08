@@ -13,7 +13,7 @@
             // y crear la animación de entrada (?animar). Sin ellas, lleva a la historia.
             (function () {
                 var q = new URLSearchParams(location.search);
-                if (!q.has('editar') && !q.has('animar')) location.replace('./' + location.hash);
+                if (!q.has('editar') && !q.has('animar')) location.replace((q.get('scene') === 'el-vado' ? './el-vado.html' : './') + location.hash);
             })();
         </script>
         <div id="stage"></div>

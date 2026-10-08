@@ -28,16 +28,17 @@ import type { Lang } from './i18n';
 import { defaultStory, round } from './story';
 import type { Chapter, Keyframe, Pose, Vec3Tuple } from './story';
 import { revealOrigin, waitUntilDrawn } from './splat-util';
+import { scene } from './scene';
 
-const MODEL_CENTER: Vec3Tuple = [-1.5, 23, 8.4];
+const MODEL_CENTER: Vec3Tuple = scene.center;
 
 // Límites que lee el parche de SuperSplat (vite.config.ts), como en las herramientas de edición: al explorar no se puede mirar
 // por debajo de la maqueta, el vuelo no baja del suelo y un toque no cambia el centro de giro.
 {
     const g = globalThis as unknown as Record<string, number>;
     g.__ORBIT_PITCH_MIN = -90;
-    g.__ORBIT_PITCH_MAX = 0;
-    g.__FLY_MIN_Y = 23 + 1.5;
+    g.__ORBIT_PITCH_MAX = scene.orbitMaxPitch;
+    g.__FLY_MIN_Y = scene.ground + 1.5 * scene.unitScale;
     g.__NO_PICK = 1;
 }
 
@@ -137,7 +138,10 @@ type Seg = { kind: 'intro' | 'travel' | 'read' | 'orbit'; i: number; t0: number;
 const lerp = (a: number, b: number, u: number) => a + (b - a) * u;
 const lerp3 = (a: Vec3Tuple, b: Vec3Tuple, u: number): Vec3Tuple => [lerp(a[0], b[0], u), lerp(a[1], b[1], u), lerp(a[2], b[2], u)];
 const easeInOut = (u: number) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
-const r3 = (v: Vec3Tuple): Vec3Tuple => [round(v[0]), round(v[1]), round(v[2])];
+const r3 = (v: Vec3Tuple): Vec3Tuple => {
+    const digits = scene.unitScale === 1 ? 3 : 6;
+    return [round(v[0], digits), round(v[1], digits), round(v[2], digits)];
+};
 
 /** Gira la posición alrededor del eje vertical que pasa por el punto de mira. */
 const orbitPose = (p: Pose, deg: number): Pose => {
@@ -173,7 +177,7 @@ const tiltIfOverhead = (p: Pose, from: Pose): Pose => {
 const travelPose = (a: Pose, b: Pose, u: number): Pose => {
     const e = easeInOut(u);
     const d = Math.hypot(b.position[0] - a.position[0], b.position[1] - a.position[1], b.position[2] - a.position[2]);
-    const lift = Math.min(25, d * 0.15) * Math.sin(Math.PI * u);
+    const lift = Math.min(25 * scene.unitScale, d * 0.15) * Math.sin(Math.PI * u);
     const pos = lerp3(a.position, b.position, e);
     pos[1] += lift;
     return { position: pos, target: lerp3(a.target, b.target, e), fov: lerp(a.fov, b.fov, e) };
@@ -317,6 +321,7 @@ const renderMasthead = () => {
         title.append(line);
     });
     $<HTMLElement>('loader-kicker').textContent = p.kicker;
+    $<HTMLElement>('loader-title').textContent = p.title;
     document.title = `${p.title} · Cuenca`;
 };
 
@@ -331,6 +336,7 @@ const applyLang = () => {
         b.setAttribute('aria-pressed', String(b.dataset.lang === lang));
     });
     arLink.textContent = AR_UI[lang].button;
+    arLink.href = scene.arPage;
     arLink.setAttribute('aria-label', AR_UI[lang].buttonLabel);
     arLink.hidden = !coarsePointer;
     layout();
@@ -437,14 +443,14 @@ let storyChapterOnTour = 0;
 const mount = async () => {
     loader.dataset.hidden = 'false';
     loaderMessage.textContent = UI[lang].loading;
-    const settings = defaultSettings();
+    const settings = { ...defaultSettings(), ...scene.settings };
     settings.background = { color: [0, 0, 0, 0] as unknown as [number, number, number] }; // transparente (alfa premultiplicado)
     const general = chapters[0].pose;
     settings.cameras = [{ initial: { ...general, target: MODEL_CENTER } }];
     // Cada pose conserva sus coordenadas originales; su target es el ancla de la órbita libre.
     settings.annotations = chapters.map((c, i) => {
         const target = i === 0 ? MODEL_CENTER : c.pose.target;
-        return { position: target, title: c.id, text: '', camera: { initial: { ...c.pose, target } } };
+        return { position: c.annotationPosition ?? target, title: c.id, text: '', camera: { initial: { ...c.pose, target } } };
     });
     settings.animTracks = [track];
     settings.startMode = 'animTrack';
@@ -452,8 +458,8 @@ const mount = async () => {
         const v = await createViewer({
             container: stage,
             settings,
-            contentUrl: './scene.sog',
-            contentFilename: 'scene.sog',
+            contentUrl: scene.url,
+            contentFilename: scene.filename,
             renderer: 'webgl',
             ui: false,
             lang: 'es'
@@ -466,8 +472,9 @@ const mount = async () => {
             v.state.animationPaused = true;
             const k0 = keyframes[0];
             const origin = revealOrigin(v, k0.position, k0.target);
-            const radius = Math.hypot(origin[0] - MODEL_CENTER[0], origin[1] - MODEL_CENTER[1], origin[2] - MODEL_CENTER[2]) + 100;
-            const opts = { center: origin, ...revealFor(radius, REVEAL_SECONDS, 15, 0.7) };
+            const radius = Math.hypot(origin[0] - MODEL_CENTER[0], origin[1] - MODEL_CENTER[1], origin[2] - MODEL_CENTER[2]) + 100 * scene.unitScale;
+            const opts = { center: origin, ...revealFor(radius, REVEAL_SECONDS, 15 * scene.unitScale, 0.7),
+                lift: 3 * scene.unitScale, band: 6 * scene.unitScale, dotScale: 60 * scene.unitScale };
             let stop = startReveal(v.app, opts);
             waitUntilDrawn(v, () => {
                 stop();

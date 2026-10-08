@@ -20,6 +20,7 @@ import { AR_CERO } from './ar-cero-text';
 import { LANG_KEY, detectLang } from './i18n';
 import type { Lang } from './i18n';
 import { REVEAL, startReveal } from './reveal';
+import { scene } from './scene';
 
 type Hit = { type: string; position: { x: number; y: number; z: number } };
 type Module = {
@@ -69,8 +70,8 @@ app.root.addChild(camera);
 // ---- la maqueta: el mismo scene.sog del visor. Con la rotación de 180° del visor, el centro de la plaza (a ras de
 // suelo) está en MODEL_CENTER (centro del recuadro de los splats, medido en scene.sog); se lleva al punto tocado.
 // El 95 % de los splats está a menos de 86,7 de ese centro: ese diámetro (173) es el «tamaño» de la maqueta.
-const PLAZA_CENTER = new pc.Vec3(-1.5, 23, 8.4);
-const SCENE_DIAMETER = 173;
+const PLAZA_CENTER = new pc.Vec3(...scene.center);
+const SCENE_DIAMETER = scene.diameter;
 /** Tamaño al colocarla: 1 m (en el modo nativo las unidades son metros; en el web, aproximadamente). */
 const SIZE_M = 1;
 const anchor = new pc.Entity('anchor'); // posición y giro; su escala es el pellizco
@@ -101,8 +102,9 @@ function refreshHint() {
     render();
 }
 let loadPct = 0;
-const loadModel = (url: string) => {
-    const asset = new pc.Asset('scene.sog', 'gsplat', { url, filename: 'scene.sog' });
+const loadModel = async (url: string) => {
+    const data = scene.filename === 'meta.json' ? await (await fetch(url)).json() : undefined;
+    const asset = new pc.Asset(scene.filename, 'gsplat', { url, filename: scene.filename }, data);
     asset.once('load', () => {
         model.addComponent('gsplat', { asset });
         modelReady = true;
@@ -114,7 +116,11 @@ const loadModel = (url: string) => {
 };
 (async () => {
     try {
-        const res = await fetch('./scene.sog');
+        if (scene.filename === 'meta.json') {
+            await loadModel(scene.url);
+            return;
+        }
+        const res = await fetch(scene.url);
         if (!res.ok || !res.body) throw new Error(String(res.status));
         const total = Number(res.headers.get('content-length')) || 0;
         const reader = res.body.getReader();
@@ -131,9 +137,9 @@ const loadModel = (url: string) => {
                 if ((phase as Phase) === 'loading') refreshHint();
             }
         }
-        loadModel(URL.createObjectURL(new Blob(parts as BlobPart[])));
+        await loadModel(URL.createObjectURL(new Blob(parts as BlobPart[])));
     } catch {
-        loadModel('./scene.sog');
+        void loadModel(scene.url);
     }
 })();
 
@@ -157,10 +163,11 @@ if (DEBUG) setInterval(() => (status.textContent = `${mode || '—'} · ${tracki
 const render = () => {
     const u = t();
     document.documentElement.lang = lang;
-    document.title = `San Sebastián · ${u.kicker}`;
+    document.title = `${scene.title} · ${u.kicker}`;
     $('back').textContent = u.back;
+    ($('back') as HTMLAnchorElement).href = scene.page;
     $('mast-kicker').textContent = u.mastKicker;
-    $('mast-title').textContent = u.mastTitle;
+    $('mast-title').textContent = scene.title;
     $('kicker').textContent = u.kicker;
     $('intro').textContent = u.intro;
     $('steps').innerHTML = u.steps.map((s) => `<li>${s}</li>`).join('');
@@ -322,7 +329,10 @@ const place = () => {
     anchor.setEulerAngles(0, (Math.atan2(f.x, f.z) * 180) / Math.PI, 0);
     reticle.enabled = false;
     stopReveal?.();
-    stopReveal = startReveal(app, { center: [p.x, p.y, p.z], scale: modelScale, ...REVEAL }, () => (stopReveal = null));
+    const u = scene.unitScale;
+    stopReveal = startReveal(app, { center: [p.x, p.y, p.z], scale: modelScale, ...REVEAL,
+        radius: REVEAL.radius * u, speed: REVEAL.speed * u, acceleration: REVEAL.acceleration * u,
+        lift: REVEAL.lift * u, band: REVEAL.band * u, dotScale: REVEAL.dotScale * u }, () => (stopReveal = null));
     anchor.enabled = true;
     setPhase('placed');
 };

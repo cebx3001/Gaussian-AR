@@ -219,6 +219,8 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
     color: var(--muted);
 }
 .nav-compact { white-space: pre-line; }
+/* El Vado has two rows of destinations in the same ten/twelve-column grid. */
+html[data-scene="el-vado"] { --index-h: calc(var(--safe-bottom) + 17 * var(--unit)); }
 .nav-full { display: none; }
 #index .chapter-link.on { color: var(--ink); border-bottom-color: var(--accent); }
 #index .chapter-link.on::before { color: var(--accent); }
@@ -312,6 +314,7 @@ body.animar #masthead, body.animar #index, body.animar #chapter, body.animar #la
     .nav-compact { display: none; }
     #index .chapter-link:nth-child(2), #index .chapter-link:nth-child(4) { grid-column: span 3; }
     #index .chapter-link:last-child { grid-column: span 2; }
+    html[data-scene="el-vado"] { --index-h: calc(var(--safe-bottom) + 2 * var(--hit) + 2 * var(--unit)); }
 }
 
 /* Short viewports retain the same bands with a compact identity. */
