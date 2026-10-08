@@ -1,0 +1,125 @@
+{
+  "place": {
+    "kicker": "Cuenca · Patrimonio",
+    "title": "El Vado",
+    "en": {
+      "kicker": "Cuenca · Heritage",
+      "title": "El Vado"
+    }
+  },
+  "chapters": [
+    {
+      "id": "general",
+      "nav": "Vista general",
+      "kicker": "El Vado",
+      "title": "Vista general",
+      "text": "El Vado es uno de los barrios tradicionales de Cuenca, vinculado al antiguo paso sobre el río Tomebamba. Sus calles, casas y espacios públicos conservan la memoria de oficios, celebraciones y expresiones artísticas.",
+      "pose": null,
+      "en": {
+        "nav": "Overview",
+        "kicker": "El Vado",
+        "title": "Overview",
+        "text": "El Vado is one of Cuenca's traditional neighborhoods, linked to the historic crossing of the Tomebamba River."
+      },
+      "howto": true
+    },
+    {
+      "id": "cruz",
+      "nav": "Cruz del Vado",
+      "kicker": "Límite histórico",
+      "title": "Cruz del Vado",
+      "text": "La Cruz del Vado forma parte de la memoria religiosa y urbana del barrio. Su presencia recuerda los antiguos accesos a la ciudad y las celebraciones populares vinculadas a la cruz.",
+      "pose": null,
+      "en": {
+        "nav": "The Cross",
+        "kicker": "Historic landmark",
+        "title": "The Cross",
+        "text": "The Cross of El Vado recalls the neighborhood's religious traditions and its place along the historic approaches to Cuenca."
+      }
+    },
+    {
+      "id": "plazoleta",
+      "nav": "Plazoleta del Vado",
+      "kicker": "Espacio público",
+      "title": "Plazoleta del Vado",
+      "text": "La plazoleta reúne la vida cotidiana y la memoria colectiva del barrio. Su entorno conserva referencias a los antiguos oficios y las fiestas populares.",
+      "pose": null,
+      "en": {
+        "nav": "El Vado Square",
+        "kicker": "Public space",
+        "title": "El Vado Square",
+        "text": "The square brings together everyday neighborhood life, traditional crafts and popular festivities."
+      }
+    },
+    {
+      "id": "palo",
+      "nav": "Palo encebado",
+      "kicker": "Juegos populares",
+      "title": "Palo encebado",
+      "text": "La escultura de los niños en el palo encebado recuerda una tradición festiva: trepar un poste engrasado para alcanzar premios. Es una imagen de la memoria lúdica del barrio.",
+      "pose": null,
+      "en": {
+        "nav": "Greased Pole",
+        "kicker": "Popular games",
+        "title": "Greased Pole",
+        "text": "The sculpture of children climbing a greased pole recalls a traditional game played during neighborhood festivities."
+      }
+    },
+    {
+      "id": "lira",
+      "nav": "Casa de la Lira",
+      "kicker": "Música y patrimonio",
+      "title": "Casa de la Lira",
+      "text": "La Casa de la Lira es uno de los referentes arquitectónicos y culturales de El Vado. Su distintivo motivo de la lira remite a la tradición musical y artística del sector.",
+      "pose": null,
+      "en": {
+        "nav": "House of the Lyre",
+        "kicker": "Music and heritage",
+        "title": "House of the Lyre",
+        "text": "The House of the Lyre is a distinctive architectural and cultural landmark of El Vado, associated with the neighborhood's musical heritage."
+      }
+    },
+    {
+      "id": "condamine",
+      "nav": "Casa Museo La Condamine",
+      "kicker": "Memoria y colecciones",
+      "title": "Casa Museo La Condamine",
+      "text": "La Casa Museo La Condamine reúne objetos y testimonios de distintas épocas, una ventana a la vida doméstica y a la memoria cultural de Cuenca.",
+      "pose": null,
+      "en": {
+        "nav": "La Condamine House Museum",
+        "kicker": "Memory and collections",
+        "title": "La Condamine House Museum",
+        "text": "La Condamine House Museum preserves objects and collections that offer a glimpse into Cuenca's cultural and domestic history."
+      }
+    },
+    {
+      "id": "prohibido",
+      "nav": "El Prohibido",
+      "kicker": "Arte alternativo",
+      "title": "El Prohibido",
+      "text": "El Prohibido es un espacio cultural dedicado a expresiones artísticas alternativas, parte del contraste entre el patrimonio histórico y la creación contemporánea en El Vado.",
+      "pose": null,
+      "en": {
+        "nav": "El Prohibido",
+        "kicker": "Alternative art",
+        "title": "El Prohibido",
+        "text": "El Prohibido is a cultural venue for alternative artistic expression, connecting the historic neighborhood with contemporary creation."
+      }
+    },
+    {
+      "id": "oficios",
+      "nav": "Oficios tradicionales",
+      "kicker": "Panaderías y talleres",
+      "title": "Oficios tradicionales",
+      "text": "Panaderías, trabajos en metal y otros talleres artesanales formaron parte de la economía y la identidad de El Vado. Su memoria permite descubrir el barrio más allá de sus monumentos.",
+      "pose": null,
+      "en": {
+        "nav": "Traditional crafts",
+        "kicker": "Bakeries and workshops",
+        "title": "Traditional crafts",
+        "text": "Bakeries, metalworking and other workshops shaped El Vado's everyday economy and identity."
+      }
+    }
+  ]
+}
